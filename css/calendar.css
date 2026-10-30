@@ -164,6 +164,7 @@
   margin-bottom:14px;
   position:relative;
   z-index:1;
+  flex-wrap:wrap;
 }
 .bc-w-ico{
   width:32px;height:32px;
@@ -192,6 +193,31 @@
   margin-top:3px;
   letter-spacing:.3px;
 }
+.bc-w-detail{
+  font-size:10px;
+  color:#999;
+  margin-top:3px;
+  letter-spacing:.3px;
+}
+.bc-w-forecast{
+  display:flex;
+  gap:8px;
+  width:100%;
+  margin-top:10px;
+  padding-top:10px;
+  border-top:0.6px dashed #f0f0f0;
+}
+.bc-fc-item{
+  flex:1;
+  text-align:center;
+  font-size:10px;
+  color:#999;
+}
+.bc-fc-day{font-size:10px;color:#666;margin-bottom:3px}
+.bc-fc-ico{width:20px;height:20px;margin:0 auto 2px}
+.bc-fc-ico svg{width:16px;height:16px;stroke:#999;fill:none;stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round}
+.bc-fc-pop{font-size:9px;color:#8fc8ff}
+.bc-fc-temp{font-size:10px;color:#666;margin-top:1px}
 .bc-w-refresh{
   width:26px;height:26px;
   flex:none;
@@ -963,6 +989,8 @@
 
 .screen{position:fixed;inset:0;max-width:780px;margin:0 auto;height:100vh;height:100dvh;overflow:hidden;display:none;flex-direction:column;background:var(--th-bg0);z-index:100}
 .screen.on{display:flex}
+/* ★ 功能页内打开：屏幕搬进 #page-desk 后，改为相对定位填满功能页 */
+.screen.in-desk{position:relative !important;inset:auto !important;height:100% !important;max-width:none !important;margin:0 !important;width:100% !important;display:flex !important}
 #cardLibScreen,#cardDetailScreen,#moodScreen,#chatSearchScreen,#behaviorScreen{
   background:var(--th-bg0);
 }

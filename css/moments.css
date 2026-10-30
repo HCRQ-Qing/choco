@@ -29,6 +29,8 @@
 .lb-name{font-size:14.5px;font-weight:700;color:var(--th-text);line-height:1.2}
 .lb-time{font-size:11px;color:var(--th-text-mute);margin-top:4px}
 .lb-text{font-size:14.5px;line-height:1.8;color:var(--th-text);white-space:pre-wrap;word-break:break-word}
+.lb-img{margin-top:10px;border-radius:12px;overflow:hidden;background:#f5f5f5}
+.lb-img img{width:100%;max-height:360px;object-fit:cover;display:block;cursor:pointer}
 .lb-vis{display:inline-flex;align-items:center;gap:4px;margin-top:8px;font-size:11px;color:var(--th-accent);background:var(--th-accent-soft);border:1px solid var(--th-accent-line);padding:3px 9px;border-radius:10px;letter-spacing:.5px}
 .lb-vis svg{width:11px;height:11px;stroke:var(--th-accent);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .lb-vis.shield{color:var(--th-danger);background:rgba(255,77,109,.10);border-color:rgba(255,77,109,.28)}
@@ -249,3 +251,35 @@
 .apply-role-row .pname{flex:1;font-size:13.5px;color:var(--th-text)}
 .apply-role-row .pchk{width:22px;height:22px;border-radius:7px;flex:none;border:1.5px solid var(--th-accent-line);display:flex;align-items:center;justify-content:center;font-size:13px;color:transparent}
 .apply-role-row.on .pchk{background:var(--th-accent);border-color:var(--th-accent);color:#fff}
+
+/* ========== 写信/收信 ========== */
+#letterScreen{background:#fff;flex-direction:column;overflow:hidden}
+#letterScreen.on{display:flex}
+.lt-item{padding:14px 18px;border-bottom:0.6px solid rgba(0,0,0,.06);cursor:pointer;position:relative}
+.lt-item:active{background:rgba(0,0,0,.03)}
+.lt-item-head{display:flex;align-items:center;gap:6px;margin-bottom:6px}
+.lt-dot{width:8px;height:8px;border-radius:50%;background:#ff5a5a;flex:none}
+.lt-name{flex:1;font-size:14px;font-weight:600;color:#1a1a1a}
+.lt-time{font-size:11px;color:#999}
+.lt-preview{font-size:12.5px;color:#888;line-height:1.6;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* ========== 消息统计 ========== */
+#statsScreen{background:#f7f7f7;flex-direction:column;overflow:hidden}
+#statsScreen.on{display:flex}
+.st-wrap{flex:1;overflow-y:auto;padding:14px 16px}
+.st-overview{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px}
+.st-card{background:#fff;border-radius:14px;padding:16px 12px;text-align:center}
+.st-num{font-size:22px;font-weight:700;color:#1a1a1a;letter-spacing:1px}
+.st-label{font-size:11px;color:#999;margin-top:4px;letter-spacing:1px}
+.st-section{background:#fff;border-radius:14px;padding:14px 16px;margin-bottom:14px}
+.st-sec-title{font-size:13px;font-weight:600;color:#1a1a1a;margin-bottom:12px;letter-spacing:1px}
+.st-role-row{margin-bottom:12px}
+.st-role-row:last-child{margin-bottom:0}
+.st-role-name{font-size:13px;color:#1a1a1a;margin-bottom:5px}
+.st-role-bar{height:8px;border-radius:4px;background:#eee;overflow:hidden}
+.st-role-bar-user{height:100%;background:linear-gradient(90deg,#a8e6cf,#88d8b0);border-radius:4px;transition:width .3s}
+.st-role-meta{font-size:11px;color:#999;margin-top:4px}
+.st-hour-chart{display:flex;align-items:flex-end;gap:2px;height:120px;padding-top:8px}
+.st-hour-col{flex:1;display:flex;flex-direction:column;align-items:center;height:100%}
+.st-hour-bar{width:70%;background:linear-gradient(180deg,#ffb7b2,#ff9a9e);border-radius:3px 3px 0 0;min-height:2px;margin-top:auto;transition:height .3s}
+.st-hour-label{font-size:8px;color:#bbb;margin-top:3px}
