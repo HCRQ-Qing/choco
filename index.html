@@ -1,0 +1,4555 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<title>choco</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%23bde8f5'/%3E%3Cpath d='M62 22 A30 30 0 1 0 62 78 A24 24 0 1 1 62 22 Z' fill='%23ffffff'/%3E%3Ccircle cx='76' cy='34' r='2.6' fill='%23ffffff'/%3E%3Ccircle cx='82' cy='50' r='1.8' fill='%23ffffff'/%3E%3Ccircle cx='74' cy='64' r='1.4' fill='%23ffffff'/%3E%3C/svg%3E">
+
+<!-- ===== 设计常量表（唯一变量来源） ===== -->
+<link rel="stylesheet" href="css/tokens.css">
+<!-- ===== 基础重置 + app 外壳 ===== -->
+<link rel="stylesheet" href="css/base.css">
+<!-- ===== 共享组件（弹窗/抽屉/提示/输入中） ===== -->
+<link rel="stylesheet" href="css/components.css">
+<!-- ===== 各功能模块样式 ===== -->
+<link rel="stylesheet" href="css/calendar.css">
+<link rel="stylesheet" href="css/chat.css">
+<link rel="stylesheet" href="css/me.css">
+<link rel="stylesheet" href="css/friends.css">
+<link rel="stylesheet" href="css/card.css">
+<link rel="stylesheet" href="css/divine.css">
+<link rel="stylesheet" href="css/role.css">
+<link rel="stylesheet" href="css/chat-info.css">
+<link rel="stylesheet" href="css/search.css">
+<link rel="stylesheet" href="css/beauty.css">
+<link rel="stylesheet" href="css/relationship.css">
+<link rel="stylesheet" href="css/settings.css">
+<link rel="stylesheet" href="css/moments.css">
+<link rel="stylesheet" href="css/memo.css">
+<link rel="stylesheet" href="css/favorites.css">
+<link rel="stylesheet" href="css/extra.css">
+<link rel="stylesheet" href="css/groupchat.css">
+<link rel="stylesheet" href="css/media.css">
+</head>
+<body>
+ 
+
+<div id="app">
+  <div class="page-stack" id="pageStack">
+	<div class="page" id="page-friends">
+	  <div class="fr-wrap">
+		<div class="fr-toprow">
+		  <div class="search-box">
+			<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#1a1a1a" stroke-width="1.6"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
+			<input type="text" id="searchInput" placeholder="搜索角色名字…">
+		  </div>
+		  <button class="add-btn" id="btnAdd">＋</button>
+		</div>
+		<div id="friendList"></div>
+		<div class="fr-bottom-space"></div>
+	  </div>
+	</div>
+
+	<div class="page" id="page-chat">
+	  <div class="split-side" id="splitSide">
+		<div class="ss-ico on" data-act="smile"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="9" cy="10" r="1" fill="currentColor" stroke="none"/><circle cx="15" cy="10" r="1" fill="currentColor" stroke="none"/><path d="M8.5 14.5s1.2 1.8 3.5 1.8 3.5-1.8 3.5-1.8"/></svg></div>
+		<div class="ss-ico" data-act="divine"><svg viewBox="0 0 24 24"><path d="M2.5 12 C5 7.5 8.5 5.5 12 5.5 C15.5 5.5 19 7.5 21.5 12 C19 16.5 15.5 18.5 12 18.5 C8.5 18.5 5 16.5 2.5 12 Z"/><circle cx="12" cy="12" r="3.2"/></svg></div>
+		<div class="ss-ico" data-act="beauty"><svg viewBox="0 0 24 24"><path d="M12 3l2 5 5 .5-4 3.5 1.3 5L12 14.5 7.7 17l1.3-5-4-3.5L10 8z"/></svg></div>
+		<div class="ss-ico" data-act="moments"><svg viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="15" rx="2.5"/><circle cx="8.5" cy="10" r="1.6"/><path d="M3.5 17l5-5 4 4 3-3 5 5"/></svg></div>
+	  </div>
+	  <div class="split-main">
+	  <div class="chat-topbar" id="chatTopbar">
+		<div class="topbar-title">
+		  <span class="cn">彼岸</span>
+		  <span class="en">THE OTHER SIDE</span>
+		</div>
+		<div class="topbar-actions">
+		  <button class="topbar-btn" id="moreBtn" type="button" title="更多">
+			<svg viewBox="0 0 24 24">
+			  <circle cx="5" cy="12" r="1" fill="#1a1a1a" stroke="none"/>
+			  <circle cx="12" cy="12" r="1" fill="#1a1a1a" stroke="none"/>
+			  <circle cx="19" cy="12" r="1" fill="#1a1a1a" stroke="none"/>
+			</svg>
+		  </button>
+		  <button class="topbar-btn pink-icon" id="roleSwitchBtn" type="button" title="切换角色">
+			<svg viewBox="0 0 24 24">
+			  <path d="M17 2l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/>
+			  <path d="M7 22l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>
+			</svg>
+		  </button>
+		</div>
+		<div class="topbar-row">
+		  <div class="avatar-wrap">
+			<div class="chat-avatar" id="chatAvatar"></div>
+			<div class="tb-mb" id="tbMb"></div>
+		  </div>
+		  <div class="chat-info">
+			<div class="chat-name" id="chatName">梦角</div>
+			<div class="chat-status">
+			  <span class="seg"><span class="em" id="tbStatusEmoji">🎧</span><span id="tbStatusText">听歌中</span></span>
+			  <span class="seg" id="tbMood">开心</span>
+			</div>
+		  </div>
+		</div>
+	  </div>
+
+        <div id="chatList"></div>
+        <button class="scroll-bottom-btn" id="scrollBottomBtn" type="button" title="回到最新消息">
+          <svg viewBox="0 0 24 24"><polyline points="6,9 12,15 18,9"/></svg>
+        </button>
+        <div class="input-quote" id="inputQuote">
+          <div><b>引用：</b><span id="inputQuoteText"></span></div>
+          <div class="close" id="quoteClose">✕</div>
+        </div>
+        <div class="d-bar">
+          <button class="d-icon" id="smileBtn" type="button"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="9" cy="10" r="1" fill="currentColor" stroke="none"/><circle cx="15" cy="10" r="1" fill="currentColor" stroke="none"/><path d="M8.5 14.5s1.2 1.8 3.5 1.8 3.5-1.8 3.5-1.8"/></svg></button>
+          <button class="d-icon" id="plusBtn" type="button"><svg viewBox="0 0 24 24"><line x1="12" y1="6" x2="12" y2="18"/><line x1="6" y1="12" x2="18" y2="12"/></svg></button>
+          <textarea id="chatInput" rows="1" placeholder="说点什么…"></textarea>
+          <button class="d-icon" id="micBtn" type="button" title="录音"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><line x1="12" y1="18" x2="12" y2="21"/></svg></button>
+          <button class="send-btn" id="sendBtn" type="button"><svg viewBox="0 0 24 24"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg></button>
+        </div>
+
+        <div class="drawer" id="drawerContent">
+          <div class="content-tabs">
+            <button class="d-tab on" data-tab="emoji" type="button">表情</button>
+            <button class="d-tab" data-tab="kaomoji" type="button">颜文字</button>
+            <button class="d-tab" data-tab="sticker" type="button">表情图</button>
+          </div>
+          <div class="edit-side-mini" id="editSideMini" style="display:none"></div>
+          <div class="sub-tabs" id="subTabs"></div>
+          <div class="drawer-body" id="drawerBody"></div>
+          <div class="drawer-foot" id="drawerFoot"></div>
+        </div>
+
+        <div class="drawer" id="drawerFunc">
+          <div class="drawer-body">
+            <div class="func-grid">
+              <div class="func-item" data-func="choice"><div class="fi-box"><svg viewBox="0 0 24 24"><path d="M12 3v18"/><path d="M5 8l7-5 7 5"/><path d="M5 16l7 5 7-5"/></svg></div><span class="fi-label">选择</span></div>
+              <div class="func-item" data-func="divine"><div class="fi-box"><svg viewBox="0 0 24 24"><path d="M2.5 12 C5 7.5 8.5 5.5 12 5.5 C15.5 5.5 19 7.5 21.5 12 C19 16.5 15.5 18.5 12 18.5 C8.5 18.5 5 16.5 2.5 12 Z"/><circle cx="12" cy="12" r="3.2"/></svg></div><span class="fi-label">占卜</span></div>
+              <div class="func-item" data-func="quiz"><div class="fi-box"><svg viewBox="0 0 24 24"><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.8.4-1 .9-1 1.7"/><circle cx="12" cy="17" r="0.8" fill="currentColor" stroke="none"/></svg></div><span class="fi-label">问卷</span></div>
+              <div class="func-item" data-func="card"><div class="fi-box"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 9h18"/></svg></div><span class="fi-label">名片</span></div>
+              <div class="func-item" data-func="uploadimg"><div class="fi-box"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="M3.5 17l5-5 4 4 3-3 5 5"/></svg></div><span class="fi-label">图片</span></div>
+              <div class="func-item" data-func="voicecall"><div class="fi-box"><svg viewBox="0 0 24 24"><path d="M21 16.5v2.4a1.6 1.6 0 0 1-1.7 1.6 15.5 15.5 0 0 1-6.7-2.4 15 15 0 0 1-4.6-4.6A15.5 15.5 0 0 1 5.5 6.7 1.6 1.6 0 0 1 7.1 5h2.4a1.6 1.6 0 0 1 1.6 1.4c.1.9.3 1.7.6 2.5a1.6 1.6 0 0 1-.4 1.7l-1 1a12 12 0 0 0 4.6 4.6l1-1a1.6 1.6 0 0 1 1.7-.4c.8.3 1.6.5 2.5.6A1.6 1.6 0 0 1 21 16.5z"/></svg></div><span class="fi-label">语音通话</span></div>
+              <div class="func-item" data-func="videocall"><div class="fi-box"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="13" height="12" rx="2"/><path d="M16 10l5-3v10l-5-3"/></svg></div><span class="fi-label">视频通话</span></div>
+              <div class="func-item" data-func="reply"><div class="fi-box"><svg viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 0 1-8.5 8.3 9 9 0 0 1-3.6-.7L4 20.5l1.4-4.1a8.1 8.1 0 0 1-1.3-4.4A8.4 8.4 0 0 1 12.5 3.2 8.4 8.4 0 0 1 21 11.5z"/></svg></div><span class="fi-label">回复设置</span></div>
+              <div class="func-item" data-func="beauty"><div class="fi-box"><svg viewBox="0 0 24 24"><path d="M12 3l2 5 5 .5-4 3.5 1.3 5L12 14.5 7.7 17l1.3-5-4-3.5L10 8z"/></svg></div><span class="fi-label">美化</span></div>
+            </div>
+          </div>
+        </div>
+      </div><!-- /split-main -->
+    </div><!-- /#page-chat -->
+
+    <div class="page" id="page-desk">
+	  <div class="desk-top"><div class="desk-title">功 能 页<small>FUNCTIONS</small></div><div class="desk-clock" id="deskClock">--:--</div></div>
+	  <div class="desk-grid">
+		<div class="desk-app" data-open="music"><div class="da-ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2.4"/></svg></div><div class="da-name">音乐</div></div>
+		<div class="desk-app" data-open="divine"><div class="da-ic"><svg viewBox="0 0 24 24"><path d="M2.5 12 C5 7.5 8.5 5.5 12 5.5 C15.5 5.5 19 7.5 21.5 12 C19 16.5 15.5 18.5 12 18.5 C8.5 18.5 5 16.5 2.5 12 Z"/><circle cx="12" cy="12" r="3.2"/></svg></div><div class="da-name">占卜记录</div></div>
+		<div class="desk-app" data-open="behavior"><div class="da-ic"><svg viewBox="0 0 24 24"><path d="M4 4h16v16H4z"/><path d="M8 9h8"/><path d="M8 13h5"/></svg></div><div class="da-name">角色行为</div></div>
+		<div class="desk-app" data-open="relation"><div class="da-ic"><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="2"/><circle cx="19" cy="5" r="2"/><circle cx="19" cy="19" r="2"/><path d="M6.7 11.3l10.6-5.6"/><path d="M6.7 12.7l10.6 5.6"/><path d="M12 12h0"/></svg></div><div class="da-name">关系网</div></div>
+		<div class="desk-app" data-open="moments"><div class="da-ic"><svg viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="15" rx="2.5"/><circle cx="8.5" cy="10" r="1.6"/><path d="M3.5 17l5-5 4 4 3-3 5 5"/></svg></div><div class="da-name">动态</div></div>
+		<div class="desk-app" data-open="groupchat"><div class="da-ic"><svg viewBox="0 0 24 24"><circle cx="8" cy="9" r="3"/><circle cx="16" cy="9" r="3"/><path d="M3 19c0-2.8 2.2-5 5-5s5 2.2 5 5"/><path d="M13 19c0-2.8 2.2-5 5-5s3 .6 3 2"/></svg></div><div class="da-name">群聊</div></div>
+		<div class="desk-app" data-open="videopool"><div class="da-ic"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M10 9l5 3-5 3z"/></svg></div><div class="da-name">共享池</div></div>
+		<div class="desk-app" data-open="forcevideo"><div class="da-ic"><svg viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg></div><div class="da-name">让Ta刷</div></div>
+		<div class="desk-app" data-open="gameres"><div class="da-ic"><svg viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="11" rx="5"/><path d="M7 11v4"/><path d="M5 13h4"/><circle cx="16" cy="12" r="1" fill="currentColor" stroke="none"/><circle cx="18.5" cy="14" r="1" fill="currentColor" stroke="none"/></svg></div><div class="da-name">游戏资源</div></div>
+		<div class="desk-app" data-open="msgstat"><div class="da-ic"><svg viewBox="0 0 24 24"><path d="M4 20V10"/><path d="M10 20V4"/><path d="M16 20v-7"/><path d="M22 20H2"/></svg></div><div class="da-name">消息统计</div></div>
+		<div class="desk-app" data-open="memory"><div class="da-ic"><svg viewBox="0 0 24 24"><path d="M12 21s-7-4.5-7-10a4 4 0 0 1 7-2.5A4 4 0 0 1 19 11c0 5.5-7 10-7 10z"/></svg></div><div class="da-name">回忆</div></div>
+		<div class="desk-app" data-open="calendar"><div class="da-ic"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18"/><path d="M8 3v4"/><path d="M16 3v4"/><circle cx="8" cy="14" r="1" fill="currentColor" stroke="none"/><circle cx="12" cy="14" r="1" fill="currentColor" stroke="none"/><circle cx="16" cy="14" r="1" fill="currentColor" stroke="none"/></svg></div><div class="da-name">日历</div></div>
+	  </div>
+	</div>
+
+	<div class="page" id="page-me">
+	  <div class="me-page">
+		<div class="me-vert">MY SPACE</div>
+		<div class="me-hero">
+		  <div class="me-big-name" id="meBigName">我</div>
+		  <div class="me-big-en">MY PROFILE</div>
+		  <div class="me-info-row">
+			<div class="me-avatar" id="meAvatar"></div>
+			<div class="me-quote" id="meQuote">我想睡在梦里，醒在梦境</div>
+		  </div>
+		</div>
+		<div class="me-divider"></div>
+		<div class="me-tags" id="meTags"></div>
+		<div class="me-menu">
+		  <div class="me-row" data-func="collect">
+			<span class="num">01</span><span class="name">收藏</span><span class="en">COLLECT</span><span class="arr">→</span>
+		  </div>
+		  <div class="me-row hi" data-func="card">
+			<span class="num">02</span><span class="name">字卡</span><span class="en">CARD</span><span class="arr">→</span>
+		  </div>
+
+		  <div class="me-row" data-func="shop">
+			<span class="num">03</span><span class="name">商场</span><span class="en">STORE</span><span class="arr">→</span>
+		  </div>
+		  <div class="me-row" data-func="beauty">
+			<span class="num">04</span><span class="name">美化</span><span class="en">BEAUTY</span><span class="arr">→</span>
+		  </div>
+
+		  <div class="me-row" data-func="settings">
+			<span class="num">05</span><span class="name">设置</span><span class="en">SETTINGS</span><span class="arr">→</span>
+		  </div>
+		  <div class="me-row" data-func="about">
+			<span class="num">06</span><span class="name">关于</span><span class="en">ABOUT</span><span class="arr">→</span>
+		  </div>
+		</div>
+	  </div>
+	</div>
+  </div>
+
+
+</div>
+
+<div class="screen" id="cardLibScreen">
+  <div id="utopHostCardLib"></div>
+  <div class="owner-chips" id="ownerChips"></div>
+  <div class="group-list" id="groupList"></div>
+</div>
+
+<div class="screen" id="cardDetailScreen">
+  <div id="utopHostCardDetail"></div>
+  <div class="sel-bar" id="selBar">
+	<div class="sel-count" id="selCountWrap">已选 <b id="selCount">0</b> 条</div>
+	<button class="sel-btn" id="selAllBtn" type="button">全选</button>
+	<button class="sel-btn" id="selCopyBtn" type="button">复制</button>
+	<button class="sel-btn danger" id="selDelBtn" type="button">删除</button>
+	<button class="sel-btn" id="selMoveBtn" type="button">移动</button>
+	<button class="sel-btn" id="selCancelBtn" type="button">取消</button>
+  </div>
+  <div id="cdGcStrategyBar" style="display:none;padding:0 22px 12px;flex:none">
+    <div id="cdGcStrategyBtn" style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:14px;border:0.7px solid rgba(0,0,0,.12);background:#fff;cursor:pointer">
+      <span style="font-size:11px;color:#999;letter-spacing:1px">字卡策略</span>
+      <span id="cdGcStrategyVal" style="font-size:11.5px;color:#1a1a1a;letter-spacing:1px">只用角色专属</span>
+      <span style="font-size:9px;color:#ccc">▾</span>
+    </div>
+  </div>
+  <div class="cd-search" id="cdSearchWrap">
+	<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="var(--th-accent)" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
+	<input type="text" id="cdSearchInput" placeholder="搜索字卡…">
+  </div>
+  <!-- 搜索历史下拉 -->
+  <div class="cd-his-mask" id="cdHisMask"></div>
+  <div class="cd-his" id="cdHis">
+	<div class="cd-his-head">
+	  <span>最近搜索</span>
+	  <span class="cd-his-clear" id="cdHisClear">清空</span>
+	</div>
+	<div class="cd-his-list" id="cdHisList"></div>
+  </div>
+  <div class="cd-tabs-wrap" id="cdTabsWrap"><div class="cd-tabs" id="cdTabs"></div></div>
+  <div class="rename-hint">长按分类名可重命名</div>
+  <div class="cd-list-wrap">
+	<div class="cd-list" id="cdList"></div>
+	<div class="custom-scroll" id="customScroll"><div class="track"></div><div class="thumb" id="thumb"></div></div>
+  </div>
+</div>
+
+<div class="screen" id="moodScreen">
+  <div id="utopHostMood"></div>
+  <div class="mood-preview">
+	<div class="mp-av-wrap">
+	  <div class="mp-av" id="mpAv"></div>
+	  <div class="mp-mb" id="mpMb"></div>
+	</div>
+	<div class="mp-info" id="mpInfo">点击右侧按钮预览动画效果</div>
+	<button class="mp-replay" id="mpReplay" type="button">重播</button>
+  </div>
+  <div class="mood-list" id="moodList"></div>
+  <div class="mood-top-actions">
+	<button class="mood-btn primary" id="moodAddBtn" type="button"><svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>添加心情</button>
+	<button class="mood-btn" id="moodPlayAllBtn" type="button"><svg viewBox="0 0 24 24"><path d="M5 3l14 9-14 9V3z"/></svg>一键预览</button>
+  </div>.
+</div>
+
+<div class="screen" id="chatSearchScreen">
+  <div id="utopHostChatSearch"></div>
+  <div class="cs-input" style="margin:0 22px 12px;">
+	<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#999" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
+	<input type="text" id="csInput" placeholder="搜索聊天记录…">
+  </div>
+
+  <!-- 筛选：发送者 -->
+  <div class="cs-filter-row" id="csWhoRow">
+	<button class="cs-filter on" data-who="all" type="button">全部</button>
+	<button class="cs-filter" data-who="me" type="button">只看我</button>
+	<button class="cs-filter" data-who="ta" type="button">只看 Ta</button>
+  </div>
+
+  <!-- 筛选：消息类型 -->
+  <div class="cs-filter-row" id="csTypeRow">
+	<button class="cs-filter on" data-type="all" type="button">全部</button>
+	<button class="cs-filter" data-type="text" type="button">文字</button>
+	<button class="cs-filter" data-type="sticker" type="button">图片</button>
+	<button class="cs-filter" data-type="voice" type="button">语音</button>
+	<button class="cs-filter" data-type="namecard" type="button">名片</button>
+	<button class="cs-filter" data-type="divine" type="button">占卜</button>
+	<button class="cs-filter cs-date-btn" id="csDateBtn" type="button">日期 ▾</button>
+  </div>
+
+  <div class="cs-meta" id="csMeta">输入关键词开始搜索</div>
+  <div class="cs-list" id="csList"></div>
+
+  <!-- 日期选择面板 -->
+  <div class="cs-date-mask" id="csDateMask">
+	<div class="cs-date-panel">
+	  <div class="cs-date-title">跳到某一天</div>
+	  <div class="cs-date-list" id="csDateList"></div>
+	</div>
+  </div>
+</div>
+
+<div class="screen" id="mediaLibScreen">
+  <div class="media-wrap">
+    <div id="utopHostMediaLib"></div>
+
+    <div class="media-tabs">
+      <button class="media-tab on" data-t="audio" id="mlTabAudio" type="button">语 音</button>
+      <button class="media-tab" data-t="video" id="mlTabVideo" type="button">视 频</button>
+    </div>
+
+    <div class="media-tip" id="mlTip">为「梦角」上传音频，Ta 主动发消息时会随机抽一条发给你。</div>
+    <div class="media-list" id="mlList"></div>
+
+    <input type="file" id="mlAudioFile" accept="audio/*" multiple style="display:none">
+    <input type="file" id="mlVideoFile" accept="video/*" multiple style="display:none">
+    <input type="file" id="vlFile" accept="audio/*" multiple style="display:none">
+    <input type="file" id="vlVideoFile" accept="video/*" multiple style="display:none">
+  </div>
+</div>
+
+<div class="screen" id="collectScreen">
+  <div class="memo-wrap">
+    <div id="utopHostCollect"></div>
+    <div class="memo-tabs" id="colTabs">
+      <div class="memo-tab on" data-col-tab="mine" id="colTabMine">我的收藏</div>
+      <div class="memo-tab" data-col-tab="theirs" id="colTabTheirs">Ta 的收藏</div>
+    </div>
+    <div class="sel-bar" id="colSelBar">
+      <div class="sel-count" id="colSelCountWrap">已选 <b id="colSelCount">0</b> 条</div>
+      <button class="sel-btn" id="colSelAllBtn" type="button">全选</button>
+      <button class="sel-btn" id="colSelCopyBtn" type="button">复制</button>
+      <button class="sel-btn danger" id="colSelDelBtn" type="button">删除</button>
+      <button class="sel-btn" id="colSelCancelBtn" type="button">取消</button>
+    </div>
+    <div class="col-body" id="colBody"></div>
+  </div>
+</div>
+
+<div class="screen" id="memoryScreen">
+  <div class="memo-wrap">
+    <div id="utopHostMemory"></div>
+    <div class="mem-body" id="memBody"></div>
+  </div>
+</div>
+<div class="screen" id="memoScreen">
+  <div class="memo-wrap">
+    <div id="utopHostMemo"></div>
+
+    <div class="memo-tabs">
+      <div class="memo-tab on" data-memo-tab="template" id="memoTabTemplate">模板</div>
+      <div class="memo-tab" data-memo-tab="free" id="memoTabFree">自由书写</div>
+      <div class="memo-tpl-pick" id="memoTplPick">
+        <span id="memoTplName">默认模板</span>
+        <span class="arr">▾</span>
+      </div>
+    </div>
+
+    <div class="memo-body" id="memoBody"></div>
+
+    <div class="memo-savebar">
+      <button class="memo-save" id="memoSaveBtn" type="button">保 存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 模板切换底部弹层 -->
+<div class="memo-sheet-mask" id="memoSheetMask">
+  <div class="memo-sheet">
+    <div class="memo-sheet-h">
+      <span>我 的 模 板</span>
+      <span class="memo-sheet-x" id="memoSheetX">✕</span>
+    </div>
+    <div id="memoTplList"></div>
+    <div class="memo-tpl-new" id="memoTplNew">＋ 新建模板</div>
+  </div>
+</div>
+
+<div class="screen" id="behaviorScreen">
+  <div class="behavior-wrap">
+	<div id="utopHostBehavior"></div>
+	<div class="bh-search">
+	  <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="var(--th-accent)" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
+	  <input type="text" id="bhSearchInput" placeholder="搜索角色名或行为…">
+	</div>
+	<div class="bh-chips" id="bhChips">
+	  <button class="bh-chip on" data-type="all" type="button">全部</button>
+	  <button class="bh-chip" data-type="friend" type="button">加好友</button>
+	  <button class="bh-chip" data-type="relation" type="button">关系变化</button>
+	  <button class="bh-chip" data-type="delete" type="button">删好友</button>
+	  <button class="bh-chip" data-type="revive" type="button">和好</button>
+	</div>
+	<div id="bhList"></div>
+  </div>
+</div>
+
+<div class="screen" id="relationScreen">
+  <div class="rel-wrap">
+	<div id="utopHostRelation"></div>
+	<div class="rel-search">
+	  <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="var(--th-accent)" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
+	  <input type="text" id="relSearchInput" placeholder="搜索角色名…">
+	</div>
+	<div class="rel-hint">每天每段关系都会有一次变化的机会</div>
+	<div class="rel-list" id="relList"></div>
+  </div>
+</div>
+
+<div class="modal" id="mRelationSet">
+  <div class="overlay" data-close></div>
+  <div class="sheet">
+    <div class="sheet-head"><h3>关系网设置</h3><button class="x" data-close type="button">✕</button></div>
+    <div class="sheet-body">
+      <div class="rs-tabs" id="relSetTabs">
+        <button class="rs-tab on" data-tab="basic" type="button">基础设置</button>
+        <button class="rs-tab" data-tab="oc" type="button">OC 专用</button>
+      </div>
+      <div id="relSetBody"></div>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="mRelationDetail">
+  <div class="overlay" data-close></div>
+  <div class="sheet">
+    <div class="sheet-head"><h3>关系详情</h3><button class="x" data-close type="button">✕</button></div>
+    <div class="sheet-body" id="relDetailBody"></div>
+  </div>
+</div>
+
+<div class="modal" id="mRelationPairing">
+  <div class="overlay" data-close></div>
+  <div class="sheet">
+    <div class="sheet-head"><h3>官配管理</h3><button class="x" data-close type="button">✕</button></div>
+    <div class="sheet-body">
+      <div class="hint" style="margin:0 0 10px;font-size:11.5px;color:#bbb;line-height:1.7">官配只是标记，不特殊影响关系摇摆。</div>
+      <label>选择两个角色</label>
+      <div id="pairingPick"></div>
+      <button class="primary-btn" id="pairingAddBtn" type="button" style="margin-top:12px">添加官配</button>
+      <label style="margin-top:16px">已有官配</label>
+      <div id="pairingList"></div>
+    </div>
+  </div>
+</div>
+<!-- ============ 设置桌面页 ============ -->
+<div class="screen" id="settingsScreen">
+  <div class="set-wrap">
+    <div id="utopHostSettings"></div>
+
+    <div class="set-list">
+      <div class="set-row" data-set="notify">
+        <span class="num">01</span><span class="name">通知</span>
+        <span class="val">3 项</span><span class="en">NOTIFY</span><span class="arr">→</span>
+      </div>
+      <div class="set-row" data-set="fullscreen">
+        <span class="num">02</span><span class="name">全屏</span>
+        <span class="val" id="setFullscreenState">关</span><span class="en">FULLSCREEN</span><span class="arr">→</span>
+      </div>
+      <div class="set-row" data-set="blocked">
+        <span class="num">03</span><span class="name">已拉黑</span>
+        <span class="val" id="setBlockedCount">0</span><span class="en">BLOCKED</span><span class="arr">→</span>
+      </div>
+      <div class="set-row" data-set="update">
+        <span class="num">04</span><span class="name">更新</span>
+        <span class="val">查看更新</span><span class="en">UPDATE</span><span class="arr">→</span>
+      </div>
+      <div class="set-row" data-set="refresh">
+        <span class="num">05</span><span class="name">刷新</span>
+        <span class="val">强制刷新</span><span class="en">REFRESH</span><span class="arr">→</span>
+      </div>
+      <div class="set-row" data-set="wipe">
+        <span class="num">06</span><span class="name">清除全部数据</span>
+        <span class="val">不可恢复</span><span class="en">WIPE</span><span class="arr">→</span>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ============ 通知设置页 ============ -->
+<div class="screen" id="notifyScreen">
+  <div class="set-wrap">
+    <div id="utopHostNotify"></div>
+
+    <div class="set-list">
+      <div class="sw-row">
+        <div class="sw-main">
+          <div class="t1">聊天界面通知</div>
+          <div class="t2">聊天页收到消息时，弹出顶部横幅提醒</div>
+        </div>
+        <label class="switch"><input type="checkbox" id="notifyChat"><span class="slider"></span></label>
+      </div>
+      <div class="sw-row">
+        <div class="sw-main">
+          <div class="t1">后台通知</div>
+          <div class="t2">切到其它应用或锁屏时，用系统通知提醒</div>
+        </div>
+        <label class="switch"><input type="checkbox" id="notifySys"><span class="slider"></span></label>
+      </div>
+      <div class="sw-row">
+        <div class="sw-main">
+          <div class="t1">动态通知</div>
+          <div class="t2">角色发动态、点赞、评论时提醒</div>
+        </div>
+        <label class="switch"><input type="checkbox" id="notifyMoment"><span class="slider"></span></label>
+      </div>
+      <div class="sw-row">
+        <div class="sw-main">
+          <div class="t1">后台音频保活</div>
+          <div class="t2">切到后台时循环播放一段极轻的音频，让角色定时器继续运行（费电，谨慎开启）</div>
+        </div>
+        <label class="switch"><input type="checkbox" id="notifyKeepAlive"><span class="slider"></span></label>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 关于页 ============ -->
+<div class="screen" id="aboutScreen">
+  <div class="set-wrap">
+    <div id="utopHostAbout"></div>
+
+    <div class="about-version">choco · v1.0</div>
+
+    <div class="sec-title">WORDS</div>
+    <div class="sec-title-cn">写 在 最 后</div>
+    <div class="notice">
+      <p>感谢你使用 our-dreamland。</p>
+      <p>本网站包含较多功能，其中一部分来自朋友的反馈与需求。如果使用习惯不太契合或者感到害怕，你也可以选择其它字卡网站，或自行使用 AI 生成一个更适合自己的字卡网站。</p>
+      <p>如果有任何问题和建议，也欢迎随时提出。</p>
+    </div>
+
+    <div class="sec-title">NOTICE</div>
+    <div class="sec-title-cn">借 鉴 声 明</div>
+    <div class="notice">
+      <p>本网站的部分功能（包含但不限于时间段字卡、天气字卡等功能）均为本人构思的设计，借鉴使用我的功能或想法，请标注署名。</p>
+      <p style="font-size:11.5px;color:#bbb;margin-top:18px">联系作者请找：@001（小红书号 27739216821）</p>
+    </div>
+
+    <div class="sec-title">THANKS</div>
+    <div class="sec-title-cn">灵 感 来 源</div>
+    <div class="thanks">
+      选择功能借鉴 <b>@FelixFelicis</b><br>
+      <span class="id">小红书号：9416318007</span><br><br>
+      吐槽、收藏、后台通知保活逻辑借鉴 <b>@言序</b><br>
+      <span class="id">小红书号：1842523578</span><br><br>
+      公用字卡和专享字卡、语音、拼好卡功能借鉴 <b>@默玉</b><br>
+      <span class="id">小红书号：8012400317</span>
+    </div>
+
+    <div class="end">谢 谢 你 来 过 这 里</div>
+  </div>
+</div>
+
+<!-- ============ 编辑桌面 ============ -->
+<div class="screen" id="deskEditScreen">
+  <div class="de-wrap">
+
+    <div id="utopHostDeskEdit"></div>
+
+    <div class="de-tabs" id="deTabs">
+      <button class="de-tab on" data-de-tab="date" type="button">日 期</button>
+      <button class="de-tab" data-de-tab="todo" type="button">待 办</button>
+      <button class="de-tab" data-de-tab="weather" type="button">天 气</button>
+      <button class="de-tab" data-de-tab="role" type="button">角 色</button>
+      <button class="de-tab" data-de-tab="setting" type="button">设 置</button>
+    </div>
+
+    <div class="de-body" id="deBody"></div>
+
+  </div>
+</div>
+
+
+
+<!-- ============ 群聊列表 ============ -->
+<div class="screen" id="groupListScreen">
+  <div id="utopHostGroupList"></div>
+  <div class="gc-body" id="gcBody"></div>
+</div>
+
+<!-- ============ 新建群聊 ============ -->
+<div class="screen" id="groupCreateScreen">
+  <div id="utopHostGroupCreate"></div>
+  <div class="gcc-body">
+    <div class="nf-form-row">
+      <label>群名</label>
+      <input type="text" id="gccName" placeholder="给这个群起个名字" maxlength="20">
+    </div>
+    <div class="nf-form-row">
+      <label>选择成员</label>
+      <div id="gccPick" class="gcc-pick"></div>
+    </div>
+  </div>
+  <div class="gcc-foot">
+    <button class="primary-btn" id="gccOk" type="button">创 建</button>
+  </div>
+</div>
+
+<!-- ============ 群聊页 ============ -->
+<div class="screen" id="groupChatScreen">
+  <div id="utopHostGroupChat"></div>
+  <div class="gch-members" id="gchMembers"></div>
+  <div class="gch-list" id="gchList"></div>
+  <div class="gch-bar">
+    <button class="d-icon" id="gchSmileBtn" type="button"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="9" cy="10" r="1" fill="currentColor" stroke="none"/><circle cx="15" cy="10" r="1" fill="currentColor" stroke="none"/><path d="M8.5 14.5s1.2 1.8 3.5 1.8 3.5-1.8 3.5-1.8"/></svg></button>
+    <button class="d-icon" id="gchPlusBtn" type="button"><svg viewBox="0 0 24 24"><line x1="12" y1="6" x2="12" y2="18"/><line x1="6" y1="12" x2="18" y2="12"/></svg></button>
+    <textarea id="gchInput" rows="1" placeholder="说点什么…"></textarea>
+    <button class="d-icon" id="gchMicBtn" type="button" title="语音"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><line x1="12" y1="18" x2="12" y2="21"/></svg></button>
+    <button class="send-btn" id="gchSend" type="button"><svg viewBox="0 0 24 24"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg></button>
+  </div>
+
+  <!-- 群聊功能抽屉（和聊天页对齐，去掉回复设置） -->
+  <div class="gch-func" id="gchFunc">
+    <div class="gch-func-grid">
+      <div class="gch-func-item" data-gfunc="quiz"><div class="gch-fi-box"><svg viewBox="0 0 24 24"><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.8.4-1 .9-1 1.7"></path><circle cx="12" cy="17" r="0.8" fill="currentColor" stroke="none"></circle></svg></div><span class="gch-fi-label">问卷</span></div>
+      <div class="gch-func-item" data-gfunc="divine"><div class="gch-fi-box"><svg viewBox="0 0 24 24"><path d="M2.5 12 C5 7.5 8.5 5.5 12 5.5 C15.5 5.5 19 7.5 21.5 12 C19 16.5 15.5 18.5 12 18.5 C8.5 18.5 5 16.5 2.5 12 Z"></path><circle cx="12" cy="12" r="3.2"></circle></svg></div><span class="gch-fi-label">占卜</span></div>
+      <div class="gch-func-item" data-gfunc="beauty"><div class="gch-fi-box"><svg viewBox="0 0 24 24"><path d="M12 3l2 5 5 .5-4 3.5 1.3 5L12 14.5 7.7 17l1.3-5-4-3.5L10 8z"></path></svg></div><span class="gch-fi-label">美化</span></div>
+      <div class="gch-func-item" data-gfunc="choice"><div class="gch-fi-box"><svg viewBox="0 0 24 24"><path d="M12 3v18"></path><path d="M5 8l7-5 7 5"></path><path d="M5 16l7 5 7-5"></path></svg></div><span class="gch-fi-label">选择</span></div>
+      <div class="gch-func-item" data-gfunc="card"><div class="gch-fi-box"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="13" rx="2"></rect><path d="M3 9h18"></path></svg></div><span class="gch-fi-label">名片</span></div>
+      <div class="gch-func-item" data-gfunc="uploadimg"><div class="gch-fi-box"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="M3.5 17l5-5 4 4 3-3 5 5"/></svg></div><span class="gch-fi-label">图片</span></div>
+      <div class="gch-func-item" data-gfunc="voicecall"><div class="gch-fi-box"><svg viewBox="0 0 24 24"><path d="M21 16.5v2.4a1.6 1.6 0 0 1-1.7 1.6 15.5 15.5 0 0 1-6.7-2.4 15 15 0 0 1-4.6-4.6A15.5 15.5 0 0 1 5.5 6.7 1.6 1.6 0 0 1 7.1 5h2.4a1.6 1.6 0 0 1 1.6 1.4c.1.9.3 1.7.6 2.5a1.6 1.6 0 0 1-.4 1.7l-1 1a12 12 0 0 0 4.6 4.6l1-1a1.6 1.6 0 0 1 1.7-.4c.8.3 1.6.5 2.5.6A1.6 1.6 0 0 1 21 16.5z"></path></svg></div><span class="gch-fi-label">语音通话</span></div>
+      <div class="gch-func-item" data-gfunc="videocall"><div class="gch-fi-box"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="13" height="12" rx="2"></rect><path d="M16 10l5-3v10l-5-3"></path></svg></div><span class="gch-fi-label">视频通话</span></div>
+    </div>
+  </div>
+
+  <!-- 群聊表情抽屉（独立，跟聊天页隔离） -->
+  <div class="gch-drawer" id="gchDrawer">
+    <div class="content-tabs">
+      <button class="d-tab on" data-gtab="emoji" type="button">表情</button>
+      <button class="d-tab" data-gtab="kaomoji" type="button">颜文字</button>
+      <button class="d-tab" data-gtab="sticker" type="button">表情图</button>
+    </div>
+    <div class="sub-tabs" id="gchSubTabs"></div>
+    <div class="drawer-body" id="gchDrawerBody"></div>
+    <div class="drawer-foot" id="gchDrawerFoot"></div>
+  </div>
+</div>
+
+<!-- ============ 群聊详情 ============ -->
+<div class="gchd-mask" id="gchdMask">
+  <div class="gchd-sheet">
+    <div class="a-top" style="border-bottom:0;padding:0 0 16px;">
+      <div class="a-title">群 聊 详 情</div>
+      <button class="a-act" id="gchdClose" type="button">✕</button>
+    </div>
+    <div class="gchd-body">
+      <div class="gchd-row" id="gchdAvatarRow">
+        <span class="gchd-k">群头像</span>
+        <div class="gchd-av" id="gchdAvatar"></div>
+        <span class="gchd-arr">›</span>
+      </div>
+      <div class="gchd-row">
+        <span class="gchd-k">群名</span>
+        <span class="gchd-v" id="gchdName">群聊</span>
+        <span class="gchd-arr">›</span>
+      </div>
+      <div class="gchd-row">
+        <div class="gchd-sw-main">
+          <div class="gchd-sw-t1">同意拉好友进群</div>
+          <div class="gchd-sw-t2">关闭后群内角色不会自动拉人</div>
+        </div>
+        <label class="switch"><input type="checkbox" id="gchdAllowInvite"><span class="slider"></span></label>
+      </div>
+      <div class="gchd-sec">成员（<span id="gchdMemCount">0</span>）</div>
+      <div class="gchd-mems" id="gchdMems"></div>
+      <div class="gchd-danger" id="gchdDisband">解散群聊</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 共享池 ============ -->
+<div class="screen" id="videoPoolScreen">
+  <div id="utopHostVideoPool">
+    <div class="utop">
+      <button class="utop-back" id="vpBack" type="button">‹</button>
+      <div class="utop-title">共 享 池</div>
+      <div class="utop-right">
+        <button class="utop-act txt" id="vpAdd" type="button">＋ 上传</button>
+      </div>
+    </div>
+  </div>
+  <div class="vp-body" id="vpBody"></div>
+</div>
+
+<!-- 上传视频表单 -->
+<div class="modal" id="mVideoUpload">
+  <div class="overlay" data-close></div>
+  <div class="sheet" style="
+    max-width:320px;
+    border-radius:20px;
+    box-shadow:0 20px 60px rgba(0,0,0,.18);
+    padding:24px 22px 20px;
+    overflow:visible;
+  ">
+    <div class="sheet-head" style="
+      display:block;
+      padding:0;
+      border-bottom:none;
+      text-align:center;
+      margin-bottom:22px;
+      position:relative;
+    ">
+      <h3 style="
+        font-size:15px;
+        font-weight:300;
+        letter-spacing:4px;
+        color:#1a1a1a;
+        -webkit-text-stroke:0.15px #1a1a1a;
+        -webkit-font-smoothing:antialiased;
+        -moz-osx-font-smoothing:grayscale;
+        text-align:center;
+        margin:0;
+      ">上传视频链接</h3>
+      <button class="x" data-close type="button" style="
+        position:absolute;
+        top:-8px;
+        right:-4px;
+        width:28px;height:28px;
+        border:none;background:transparent;
+        color:#ccc;font-size:14px;
+        display:flex;align-items:center;justify-content:center;
+        cursor:pointer;font-family:inherit;
+        transition:color .2s;
+      ">✕</button>
+    </div>
+    <div class="sheet-body" style="padding:0;">
+      <label style="
+        display:block;
+        font-size:11px;
+        color:#bbb;
+        letter-spacing:1px;
+        margin-bottom:8px;
+        font-weight:300;
+        -webkit-font-smoothing:antialiased;
+      ">视频链接</label>
+      <style>
+        #vuUrl::placeholder{font-size:12px;color:#c8c8c8}
+      </style>
+      <input type="text" id="vuUrl" placeholder="粘贴视频链接（抖音 / B站 / 小红书 / 微博等）" style="
+        width:100%;
+        border:none;
+        border-bottom:0.7px solid rgba(0,0,0,.15);
+        background:transparent;
+        padding:10px 2px;
+        font-size:14px;
+        color:#1a1a1a;
+        font-family:inherit;
+        outline:none;
+        letter-spacing:.5px;
+        transition:border-color .2s;
+        box-sizing:border-box;
+      ">
+      <button class="primary-btn" id="vuOk" type="button" style="
+        width:100%;
+        margin-top:28px;
+        padding:14px 0;
+        border:none;
+        border-radius:22px;
+        background:#1a1a1a;
+        color:#fff;
+        font-size:13.5px;
+        font-family:inherit;
+        letter-spacing:6px;
+        text-indent:6px;
+        font-weight:300;
+        cursor:pointer;
+        box-shadow:0 2px 8px rgba(0,0,0,.12);
+        transition:opacity .18s;
+      ">上 传</button>
+    </div>
+  </div>
+</div>
+<div class="cd-menu pop-menu" id="cdMenu">
+  <div class="grp">
+    <div class="grp-label">编辑</div>
+    <div class="it" data-act="add"><svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>添加字卡</div>
+    <div class="it" data-act="sort"><svg viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M3 12h12"/><path d="M3 18h6"/></svg>排序</div>
+    <div class="it" data-act="trim"><svg viewBox="0 0 24 24"><path d="M4 7h16"/><path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/><path d="M6 7l1 12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-12"/></svg>去末尾标点</div>
+    <div class="it" data-act="move-only-same"><svg viewBox="0 0 24 24"><path d="M4 12l4-4M4 12l4 4M4 12h12"/><path d="M18 4v16"/></svg><span id="cdMoveOnlyLabel">只移动到该分组 · 开</span></div>
+    <div class="it" data-act="sign-switch"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>个签切换设置</div>
+  </div>
+  <div class="cd-divider" id="cdSpecialDivider" style="display:none"></div>
+  <div class="grp" id="cdSpecialGrp" style="display:none">
+    <div class="grp-label">特殊</div>
+  </div>
+  <div class="cd-divider"></div>
+  <div class="grp">
+    <div class="grp-label">数据</div>
+    <div class="it" data-act="import"><svg viewBox="0 0 24 24"><path d="M12 20V8"/><path d="M7 13l5-5 5 5"/><path d="M5 4h14"/></svg>导入</div>
+    <div class="it" data-act="export"><svg viewBox="0 0 24 24"><path d="M12 4v12"/><path d="M7 11l5 5 5-5"/><path d="M5 20h14"/></svg>导出</div>
+    <div class="it" data-act="trash"><svg viewBox="0 0 24 24"><path d="M4 7h16"/><path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/><path d="M6 7l1 12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-12"/><path d="M10 11l4 4"/><path d="M14 11l-4 4"/></svg>回收站</div>
+  </div>
+</div>
+<div class="cd-menu" id="cdSortMenu">
+  <div class="it" data-sort="custom">自定义排序</div>
+  <div class="it" data-sort="newest">最新在前</div>
+  <div class="it" data-sort="oldest">最旧在前</div>
+</div>
+
+<!-- 字卡回收站 -->
+<div class="cat-panel-mask" id="cardTrashMask">
+  <div class="trash-desk">
+    <div class="trash-desk-inner">
+      <div class="a-top">
+        <button class="a-back" id="cardTrashBack" type="button">‹</button>
+        <div class="a-title">回 收 站</div>
+        <div class="a-act" id="cardTrashAll" style="font-size:12px;width:auto;padding:0 6px;">全选</div>
+      </div>
+      <div class="trash-list" id="cardTrashList"></div>
+    </div>
+    <div class="trash-acts">
+      <button id="cardTrashRestore" type="button" class="primary">还 原</button>
+      <button id="cardTrashDelete" type="button" class="ghost">彻底删除</button>
+      <button id="cardTrashClear" type="button" class="ghost">清 空</button>
+    </div>
+  </div>
+</div>
+<div class="modal" id="mSortPicker">
+  <div class="overlay" data-close></div>
+  <div class="sheet">
+	<div class="sheet-head"><h3>排序方式</h3><button class="x" data-close>✕</button></div>
+	<div class="sheet-body">
+	  <div class="sort-opt" id="sortAz" data-sort="az">
+		<div class="chk"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>
+		<div class="opt-main">
+		  <div class="opt-title">字母 A → Z</div>
+		  <div class="opt-sub">按首字单字字卡/字母升序排列</div>
+		</div>
+	  </div>
+	  <div class="sort-opt" id="sortZa" data-sort="za">
+		<div class="chk"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>
+		<div class="opt-main">
+		  <div class="opt-title">字母 Z → A</div>
+		  <div class="opt-sub">按首字单字字卡/字母降序排列</div>
+		</div>
+	  </div>
+	  <div class="sort-opt" id="sortNewest" data-sort="newest">
+		<div class="chk"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>
+		<div class="opt-main">
+		  <div class="opt-title">最新在前</div>
+		  <div class="opt-sub">最近添加的排在最上面</div>
+		</div>
+	  </div>
+	  <div class="sort-opt" id="sortOldest" data-sort="oldest">
+		<div class="chk"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>
+		<div class="opt-main">
+		  <div class="opt-title">最旧在前</div>
+		  <div class="opt-sub">最早添加的排在最上面</div>
+		</div>
+	  </div>
+	</div>
+  </div>
+</div>
+<div class="modal" id="mTrimPicker">
+  <div class="overlay" data-close></div>
+  <div class="sheet">
+	<div class="sheet-head"><h3>去末尾标点</h3><button class="x" data-close>✕</button></div>
+	<div class="sheet-body">
+	  <div class="hint">
+		会把选中分类里所有字卡 <b>末尾的标点</b> 去掉（。．.，,；;：:！!？?… 等），中间的标点不受影响。
+	  </div>
+	  <div id="trimCatList"></div>
+	  <div class="btn-row">
+		<button class="ghost-btn" data-close type="button">取 消</button>
+		<button class="primary-btn" id="btnTrimOk" type="button" style="margin-top:0">开始去除</button>
+	  </div>
+	</div>
+  </div>
+</div>
+<div class="msg-menu" id="msgMenu"></div>
+
+<div class="sel-overlay" id="selOverlay">
+  <div class="sel-tip">点一下起点，再点一下终点</div>
+  <div class="sel-content"><div class="sel-text" id="selText"></div></div>
+  <div class="sel-preview" id="selPreview">未选择</div>
+  <div class="sel-actions"><button class="cancel" id="selCancel">取消</button><button class="ok" id="selOk">引用选中</button></div>
+</div>
+<div class="modal" id="mCardEdit">
+  <div class="overlay" data-close></div>
+  <div class="sheet">
+	<div class="sheet-head"><h3>编辑字卡</h3><button class="x" data-close type="button">✕</button></div>
+	<div class="sheet-body">
+	  <label>内容</label>
+	  <textarea id="cardEditText" rows="4"></textarea>
+	  <label>所在分类</label>
+	  <div class="card-edit-cats" id="cardEditCats"></div>
+	  <div class="btn-row">
+		<button class="ghost-btn" data-close type="button">取消</button>
+		<button class="primary-btn" id="cardEditOk" type="button" style="margin-top:0">保存</button>
+	  </div>
+	</div>
+  </div>
+</div>
+<div class="modal" id="mAddCards">
+  <div class="overlay" data-close></div>
+  <div class="sheet">
+    <div class="sheet-head">
+      <h3>添加字卡</h3>
+      <button class="x" data-close>✕</button>
+    </div>
+    <div class="sheet-body">
+      <div class="mode-tabs" id="acModes">
+        <div class="mode-tab on" data-mode="line">一行一个</div>
+        <div class="mode-tab" data-mode="bracket">[] 括号包</div>
+      </div>
+      <div class="mode-desc" id="acDesc"></div>
+      <textarea id="acText" rows="7"></textarea>
+      <div class="cat-pick-wrap" id="acCatPick">
+        <span class="cat-label">添加到</span>
+        <span class="cat-value" id="acCatValue">短句</span>
+        <span class="cat-arr">›</span>
+      </div>
+      <button class="primary-btn" id="btnAddCardsOk">添 加</button>
+    </div>
+  </div>
+</div>
+
+<!-- 分类选择底部面板 -->
+<div class="cat-panel-mask" id="acCatMask">
+  <div class="cat-panel">
+	<div class="cp-title">选择分类</div>
+	<div id="acCatList"></div>
+  </div>
+</div>
+
+<div class="modal" id="mConfirmDel">
+  <div class="overlay" data-close></div>
+  <div class="confirm-clear-sheet">
+    <div class="cc-ic"><svg viewBox="0 0 24 24"><path d="M4 7h16"/><path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/><path d="M6 7l1 12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-12"/></svg></div>
+    <div class="cc-tt">确认删除？</div>
+    <div class="cc-sb" id="confirmDelText">将删除 <b>0</b> 条字卡。<br>（30 天内可在回收站还原）</div>
+    <div class="cc-acts">
+      <button class="cc-cancel" data-close type="button">取 消</button>
+      <button class="cc-ok" id="confirmDelOk" type="button">删 除</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="mConfirmClear">
+  <div class="overlay" data-close></div>
+  <div class="confirm-clear-sheet">
+    <div class="cc-ic"><svg viewBox="0 0 24 24"><path d="M4 7h16"/><path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/><path d="M6 7l1 12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-12"/></svg></div>
+    <div class="cc-tt">清空聊天记录</div>
+    <div class="cc-sb" id="confirmClearText">将清空和「梦角」的全部聊天，清空后无法恢复。</div>
+    <div class="cc-acts">
+      <button class="cc-cancel" data-close type="button">取 消</button>
+      <button class="cc-ok" id="confirmClearOk" type="button">清 空</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="mMoodEdit">
+  <div class="overlay" data-close></div>
+  <div class="sheet"><div class="sheet-head"><h3 id="moodEditTitle">添加心情</h3><button class="x" data-close>✕</button></div>
+  <div class="sheet-body">
+	<label>心情名</label>
+	<input type="text" id="inMoodName" placeholder="开心 / 平静 / 有点想你" maxlength="10">
+	<label>颜文字</label>
+	<input type="text" id="inMoodKao" placeholder="(◍＞◡＜◍)">
+	<div class="field-count"><span>字符 <b id="cChars">0</b> / 20</span><span>宽度 <b id="cWidth">0</b> / 30</span><span id="cState">—</span></div>
+	<div class="quick-kao" id="quickKao"></div>
+	<label>出场动画</label>
+	<div class="mode-tabs" id="moodAnimTabs">
+	  <div class="mode-tab" data-anim="1">弹一下</div>
+	  <div class="mode-tab" data-anim="3">从左下飘出</div>
+	  <div class="mode-tab" data-anim="5">淡入 + 上浮</div>
+	</div>
+	<div class="btn-row"><button class="ghost-btn" data-close>取 消</button><button class="primary-btn" id="btnMoodSave">保 存</button></div>
+  </div></div>
+</div>
+
+<div class="modal" id="mMoodSettings">
+  <div class="overlay" data-close></div>
+  <div class="sheet"><div class="sheet-head"><h3>心情设置</h3><button class="x" data-close>✕</button></div>
+  <div class="sheet-body">
+	<label>心情随机</label>
+	<div class="mode-desc">每隔随机时间自动切换一次心情，切换时会弹气泡</div>
+	<div style="display:flex;gap:8px;align-items:center;margin-top:14px">
+	  <input type="number" id="inMoodMin" min="1" max="1440" style="width:80px;text-align:center">
+	  <span style="font-size:12px;color:var(--th-text-soft)">分钟 到</span>
+	  <input type="number" id="inMoodMax" min="1" max="1440" style="width:80px;text-align:center">
+	  <span style="font-size:12px;color:var(--th-text-soft)">分钟</span>
+	</div>
+	<button class="primary-btn" id="btnMoodSettingsOk" style="margin-top:22px">保 存</button>
+  </div></div>
+</div>
+
+<div class="modal" id="mAnimPick">
+  <div class="overlay" data-close></div>
+  <div class="sheet"><div class="sheet-head"><h3>选择出场动画</h3><button class="x" data-close>✕</button></div>
+  <div class="sheet-body">
+	<div class="mode-tabs" id="animPickTabs" style="flex-direction:column">
+	  <div class="mode-tab" data-anim="1" style="margin-bottom:6px">1 · 弹一下</div>
+	  <div class="mode-tab" data-anim="3" style="margin-bottom:6px">3 · 从左下飘出</div>
+	  <div class="mode-tab" data-anim="5">5 · 淡入 + 上浮</div>
+	</div>
+  </div></div>
+</div>
+
+<div class="modal" id="mTimedRate">
+  <div class="overlay" data-close></div>
+  <div class="sheet">
+    <div class="sheet-head"><h3>时间字卡开关</h3><button class="x" data-close>✕</button></div>
+    <div class="sheet-body" id="timedRateBody"></div>
+  </div>
+</div>
+
+<!-- ★ 个签切换设置 -->
+<div class="modal" id="mSignSwitch">
+  <div class="overlay" data-close></div>
+  <div class="sheet">
+    <div class="sheet-head"><h3>个签切换</h3><button class="x" data-close>✕</button></div>
+    <div class="sheet-body" id="signSwitchBody"></div>
+  </div>
+</div>
+
+<div class="screen" id="mReply">
+  <div class="reply-page">
+    <div class="reply-top">
+      <button class="reply-back" id="replyBack" type="button">‹</button>
+      <div class="reply-title">回 复 设 置</div>
+      <div class="reply-top-right">
+        <button class="reply-more-btn" id="replyMoreBtn" type="button">⋯</button>
+      </div>
+    </div>
+    <div class="rs-tabs" id="replyTabsFixed"></div>
+    <div class="sheet-body" id="replyBody"></div>
+  </div>
+</div>
+
+<!-- ★ 回复设置 · 右上角「…」小菜单 -->
+<div class="reply-menu-mask" id="replyMenuMask"></div>
+<div class="reply-menu" id="replyMenu">
+  <div class="rm-item" id="rmRoleSelfSet">角色自己设定回复设置</div>
+  <div class="rm-item" id="rmRoleFloor">角色可调参数</div>
+</div>
+
+<!-- ★ 角色自己设定回复设置 弹窗（第 1 步先做空壳，内容第 2 步填） -->
+<div class="modal" id="mRoleSelfSet">
+  <div class="overlay" data-close></div>
+  <div class="sheet">
+    <div class="sheet-head">
+      <h3>角色自己设定回复设置</h3>
+      <button class="x" data-close type="button">✕</button>
+    </div>
+    <div class="sheet-body" id="roleSelfSetBody"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ★ 角色可调参数 · 全屏页 -->
+<div class="screen" id="roleFloorScreen">
+  <div class="rf-wrap" style="display:flex;flex-direction:column;height:100%;background:#fff;">
+    <div class="rf-top" style="flex:none;display:flex;align-items:center;padding:20px 22px 12px;border-bottom:0.6px solid #f2f2f2;">
+      <button class="rf-back" id="roleFloorBackBtn" type="button" style="width:38px;height:38px;border:none;background:transparent;color:#1a1a1a;font-size:22px;line-height:1;display:flex;align-items:center;justify-content:center;padding:0 0 4px;font-family:inherit;cursor:pointer;opacity:.55;">‹</button>
+      <div class="rf-title" style="flex:1;text-align:center;font-size:15px;font-weight:300;letter-spacing:6px;color:#1a1a1a;margin-left:-38px;">角 色 可 调 参 数</div>
+    </div>
+    <div class="rf-body" id="roleFloorBody" style="flex:1;overflow-y:auto;padding:10px 22px 40px;scrollbar-width:none;"></div>
+  </div>
+</div>
+
+<div class="cd-menu pop-menu" id="mAdd">
+  <div class="it" id="optNewFriend"><svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6"/><path d="M22 11h-6"/></svg>增加角色</div>
+  <div class="it" id="optNewBuiltin"><svg viewBox="0 0 24 24"><path d="M12 3l2.5 5 5.5.8-4 3.9.9 5.5L12 15.9 7.1 18.2l.9-5.5-4-3.9L9.5 8z"/></svg>建立内置角色</div>
+  <div class="it" id="optBuiltinList"><svg viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13"/><path d="M3 6h.01M3 12h.01M3 18h.01"/></svg>内置角色一览</div>
+  <div class="it" id="optNewGroup"><svg viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>建立分组</div>
+  <div class="it" id="optManageGroup"><svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>分组管理</div>
+</div>
+<div class="modal" id="mNewFriend"><div class="overlay" data-close></div><div class="sheet"><div class="sheet-head"><h3>增加角色</h3><button class="x" id="closeNewFriend">✕</button></div><div class="sheet-body">
+
+  <!-- 头像块 -->
+  <div class="nf-avatar-block">
+    <div class="nf-avatar-preview" id="nfAvatarPreview"></div>
+    <div class="nf-avatar-actions">
+      <div class="nf-hint">点击上传或使用默认头像</div>
+      <div class="nf-mini-btns">
+        <button type="button" class="nf-mini-btn primary" id="btnNfUploadAv">上传</button>
+        <button type="button" class="nf-mini-btn" id="btnNfClearAv">默认</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 名字 -->
+  <div class="nf-form-row">
+    <label>名字</label>
+    <input type="text" id="nfName" placeholder="角色的名字">
+  </div>
+
+  <!-- 个签 -->
+  <div class="nf-form-row">
+    <label>个签</label>
+    <input type="text" id="nfSign" placeholder="这个人很懒，什么都没有留下。">
+  </div>
+
+  <!-- 分组 -->
+  <div class="nf-form-row">
+    <label>分组</label>
+    <div class="nf-group-pick" id="nfGroupPick">
+      <span class="nf-group-val" id="nfGroupVal">未分组</span>
+      <span class="nf-group-arr">›</span>
+    </div>
+  </div>
+
+  <!-- 关系网（新增） -->
+  <div class="nf-form-row">
+    <label>关系网</label>
+    <div class="nf-group-pick" id="nfRelPick">
+      <span class="nf-group-val" id="nfRelVal">未设置</span>
+      <span class="nf-group-arr">›</span>
+    </div>
+  </div>
+
+  <!-- 勾选框已移到「建立内置角色」表单 -->
+  <button class="primary-btn" id="btnCreateFriend">创建</button>
+</div></div></div>
+
+<!-- 分组选择底部弹层 -->
+<div class="cat-panel-mask" id="nfGroupMask">
+  <div class="cat-panel">
+    <div class="cp-title">选择分组</div>
+    <div id="nfGroupList"></div>
+  </div>
+</div><!-- 建立内置角色 -->
+<div class="modal" id="mNewBuiltin"><div class="overlay" data-close></div><div class="sheet"><div class="sheet-head"><h3>建立内置角色</h3><button class="x" id="closeNewBuiltin">✕</button></div><div class="sheet-body">
+
+  <div class="nf-avatar-block">
+    <div class="nf-avatar-preview" id="biAvatarPreview"></div>
+    <div class="nf-avatar-actions">
+      <div class="nf-hint">创建后会随机加你为好友</div>
+      <div class="nf-mini-btns">
+        <button type="button" class="nf-mini-btn primary" id="btnBiUploadAv">上传</button>
+        <button type="button" class="nf-mini-btn" id="btnBiClearAv">默认</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="nf-form-row">
+    <label>名字</label>
+    <input type="text" id="biName" placeholder="角色的名字">
+  </div>
+
+  <div class="nf-form-row">
+    <label>个签</label>
+    <input type="text" id="biSign" placeholder="这个人很懒，什么都没有留下。">
+  </div>
+
+  <div class="nf-form-row">
+    <label>自主添加好友</label>
+    <div class="nf-group-pick" id="biAutoAddPick">
+      <span class="nf-group-val" id="biAutoAddVal">关</span>
+      <span class="nf-group-arr">›</span>
+    </div>
+  </div>
+
+  <div class="nf-form-row">
+    <label>关系网</label>
+    <div class="nf-group-pick" id="biRelPick">
+      <span class="nf-group-val" id="biRelVal">未设置</span>
+      <span class="nf-group-arr">›</span>
+    </div>
+  </div>
+
+  <button class="primary-btn" id="btnCreateBuiltin">创建内置角色</button>
+</div></div></div>
+
+<!-- 移动字卡：选择目标分类 -->
+<div class="cat-panel-mask" id="moveCatMask">
+  <div class="cat-panel">
+    <div id="moveCatList"></div>
+  </div>
+</div>
+
+<!-- 内置角色：分组选择底部弹层 -->
+<div class="cat-panel-mask" id="biGroupMask">
+  <div class="cat-panel">
+    <div class="cp-title">选择分组</div>
+    <div id="biGroupList"></div>
+  </div>
+</div>
+
+<!-- 通用：关系网选择底部弹层（增加角色和内置角色共用） -->
+<div class="cat-panel-mask" id="biRelMask">
+  <div class="cat-panel">
+    <div class="cp-title">选择好友关系</div>
+    <div id="biRelList" style="max-height:50vh;overflow-y:auto;padding:0 16px 10px;scrollbar-width:none"></div>
+  </div>
+</div>
+ 
+
+<div class="modal" id="mNewGroup"><div class="overlay" data-close></div><div class="sheet"><div class="sheet-head"><h3>建立分组</h3><button class="x" id="closeNewGroup">✕</button></div><div class="sheet-body">
+  <label>分组名</label><input type="text" id="ngName" placeholder="例如：我的爱人们" style="margin-bottom:18px">
+  <label style="margin-top:0">选择要放进这个组的角色</label><div id="ngPick"></div>
+  <button class="primary-btn" id="btnCreateGroup">建立分组</button>
+</div></div></div>
+<div class="cd-menu pop-menu" id="mFriendMenu">
+  <div class="it" id="fmEditFriend"><svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>编辑好友</div>
+  <div class="it" id="fmChangeGroup"><svg viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><path d="M16 13H8"/></svg>修改分组</div>
+  <div class="it" id="fmDelete" style="color:var(--th-danger)"><svg viewBox="0 0 24 24" style="stroke:var(--th-danger)"><path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M6 7l1 13h10l1-13"/></svg>删除好友</div>
+</div>
+
+<!-- 删除好友确认 -->
+<div class="modal" id="mDelFriend">
+  <div class="overlay" data-close></div>
+  <div class="del-dlg">
+    <div class="del-head">
+      <div class="del-av" id="delFriendAv">
+        <svg viewBox="0 0 100 100"><circle class="silhouette" cx="50" cy="38" r="19"/><path class="silhouette" d="M12 100 C12 74 28 62 50 62 C72 62 88 74 88 100 Z"/></svg>
+      </div>
+      <div class="del-txts">
+        <div class="del-tt">删除好友</div>
+        <div class="del-sb">无法恢复，请谨慎</div>
+      </div>
+    </div>
+    <div class="del-body" id="delFriendText">确定删除好友 <b>「。」</b> ？<br>聊天记录也会一起清空。</div>
+    <div class="del-acts">
+      <button class="del-cancel" data-close type="button">取 消</button>
+      <button class="del-ok" id="delFriendOk" type="button">删 除</button>
+    </div>
+  </div>
+</div>
+
+<!-- 重命名分组弹窗 -->
+<div class="modal" id="mRenameGroup">
+  <div class="overlay" data-close></div>
+  <div class="sheet">
+    <div class="sheet-head"><h3>重命名分组</h3><button class="x" data-close>✕</button></div>
+    <div class="sheet-body">
+      <label>分组名</label>
+      <input type="text" id="rgName" placeholder="输入新的分组名">
+      <button class="primary-btn" id="rgOk" style="margin-top:12px">确 定</button>
+    </div>
+  </div>
+</div>
+
+<!-- 删除分组确认 -->
+<div class="modal" id="mDelGroup">
+  <div class="overlay" data-close></div>
+  <div class="confirm-sheet">
+    <div class="ic"><svg viewBox="0 0 24 24"><path d="M4 7h16"/><path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/><path d="M6 7l1 12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-12"/></svg></div>
+    <div class="tt">删除分组？</div>
+    <div class="sb" id="delGroupText">分组「<b>未命名</b>」里的角色会回到「未分组」，分组本身会被删除。</div>
+    <div class="acts">
+      <button class="cancel-btn" data-close>取 消</button>
+      <button class="ok-btn" id="delGroupOk">删 除</button>
+    </div>
+  </div>
+</div>
+
+<!-- 分组管理 -->
+<div class="modal" id="mGroupManager">
+  <div class="overlay" data-close></div>
+  <div class="sheet">
+    <div class="sheet-head"><h3>分组管理</h3><button class="x" data-close>✕</button></div>
+    <div class="sheet-body">
+      <div class="hint" style="margin:0 0 8px;font-size:11px;color:#bbb">长按拖动排序 · 长按分组名可重命名 · 点 ✕ 删除</div>
+      <div id="gmList"></div>
+    </div>
+  </div>
+</div>
+
+<!-- 改分组弹窗 -->
+<div class="modal" id="mChangeGroup">
+  <div class="overlay" data-close></div>
+  <div class="sheet">
+    <div class="sheet-head"><h3>改分组</h3><button class="x" data-close>✕</button></div>
+    <div class="sheet-body">
+      <label>选择分组</label>
+      <div id="cgList"></div>
+      <label style="margin-top:14px">或新建分组</label>
+      <input type="text" id="cgNewName" placeholder="输入新的分组名">
+      <button class="primary-btn" id="cgOk" style="margin-top:12px">确 定</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="mSign">
+  <div class="overlay" data-close></div>
+  <div class="confirm-sheet" style="text-align:left;max-width:340px;background:#FDFDF0;border:2px solid #DD1440;box-shadow:0 16px 40px rgba(221,20,64,.35);border-radius:22px;padding:24px 20px 20px">
+	<div class="tt" style="color:#DD1440;letter-spacing:2px;text-align:center;margin-bottom:6px">写下你的签名</div>
+	<div class="sb" style="color:#8A6E60;text-align:center;margin-bottom:16px">这句话会显示在“我的”页</div>
+	<input type="text" id="signInput" placeholder="我想睡在梦里，醒在梦境"
+	  style="width:100%;border:1.5px solid rgba(221,20,64,.40);border-radius:14px;padding:12px 14px;font-size:14px;font-family:inherit;color:#1F1C1D;outline:none;background:#FFFFFF">
+	<!-- 随机切换我的个签 -->
+	<div style="display:flex;align-items:center;gap:10px;margin-top:16px;padding-top:16px;border-top:0.6px dashed rgba(221,20,64,.20)">
+	  <div style="flex:1;min-width:0">
+	    <div style="font-size:13px;color:#1F1C1D;letter-spacing:1px;font-weight:400">随机切换我的个签</div>
+	    <div style="font-size:11px;color:#8A6E60;margin-top:4px;letter-spacing:.5px;font-weight:300">1~21 天随机换一次</div>
+	  </div>
+	  <label class="switch"><input type="checkbox" id="mySignAutoSwitch"><span class="slider"></span></label>
+	</div>
+	<div class="acts" style="display:flex;gap:10px;margin-top:18px">
+	  <button class="cancel-btn" data-close
+		style="flex:1;padding:12px 0;border-radius:14px;font-size:14px;font-family:inherit;cursor:pointer;font-weight:700;letter-spacing:2px;border:1.5px solid rgba(221,20,64,.40);background:transparent;color:#DD1440">取 消</button>
+	  <button class="ok-btn" id="signOk"
+		style="flex:1;padding:12px 0;border-radius:14px;font-size:14px;font-family:inherit;cursor:pointer;font-weight:700;letter-spacing:2px;border:none;background:#DD1440;color:#FDFDF0;box-shadow:0 6px 14px rgba(221,20,64,.35)">确 定</button>
+	</div>
+  </div>
+</div>
+<div class="modal" id="mEdit"><div class="overlay" data-close></div><div class="sheet"><div class="sheet-head"><h3>编辑资料</h3><button class="x" id="closeEdit">✕</button></div><div class="sheet-body edit-d">
+  <div class="line-row">
+	<span class="lb">名字</span>
+	<input type="text" id="inName" placeholder="角色的名字">
+  </div>
+  <div class="line-row">
+	<span class="lb">头像</span>
+	<div class="av-prev" id="editAvPrev"></div>
+	<div class="btns">
+	  <button type="button" class="mini-btn" id="btnEditUploadAv">上传</button>
+	  <button type="button" class="mini-btn" id="btnEditClearAv">默认</button>
+	</div>
+  </div>
+  <div class="line-row">
+	<span class="lb">签名</span>
+	<input type="text" id="inSign" placeholder="这个人很懒，什么都没有留下。">
+  </div>
+  
+  <div class="line-row">
+	<span class="lb">关系网</span>
+	<div id="nfRelPick" style="display:flex;align-items:center;flex:1;cursor:pointer;border-bottom:0.7px solid rgba(0,0,0,.12);padding:6px 2px 8px;">
+	  <span id="nfRelVal" style="flex:1;font-size:13.5px;color:#999;letter-spacing:.5px;">未设置</span>
+	  <span style="color:#ccc;font-size:14px;font-family:Arial;margin-left:auto;">›</span>
+	</div>
+  </div>
+
+  <button class="primary-btn" id="btnSaveEdit">保存</button>
+</div></div></div>
+
+<div class="beauty-panel" id="beautyPanel">
+  <div class="bp-head">
+	<button class="bp-back" id="beautyBack" type="button">‹</button>
+	<div class="bp-title">美 化</div>
+	<div class="bp-head-right"></div>
+  </div>
+  <div class="bp-body">
+	<div class="bp-row" data-panel="theme"><span class="num">01</span><div class="r-name">主题</div><span class="r-val" id="themeVal">粉樱</span><span class="r-arr">›</span></div>
+	<div class="bp-row" data-panel="avatar"><span class="num">02</span><div class="r-name">头像方圆</div><span class="r-val" id="avatarVal">方形</span><span class="r-arr">›</span></div>
+	<div class="bp-row" data-panel="bgimg"><span class="num">03</span><div class="r-name">上传图片</div><span class="r-arr">›</span></div>
+	<div class="bp-row" data-panel="titletext"><span class="num">04</span><div class="r-name">文字</div><span class="r-arr">›</span></div>
+	<div class="bp-row" data-panel="bubble"><span class="num">05</span><div class="r-name">聊天气泡</div><span class="r-arr">›</span></div>
+	<div class="bp-row" data-panel="layout"><span class="num">06</span><div class="r-name">聊天页布局</div><span class="r-val" id="layoutVal">默认</span><span class="r-arr">›</span></div>
+
+	</div>
+  </div>
+
+ <!-- 我的美化 · 独立界面 -->
+<div class="my-beauty-panel" id="myBeautyPanel">
+  <div class="bp-head">
+    <button class="bp-back" id="myBeautyBack" type="button">‹</button>
+    <div class="bp-title">美 化</div>
+    <div class="bp-head-right"></div>
+  </div>
+  <div class="bp-body">
+    <div class="bp-row" data-panel="theme"><span class="num">01</span><div class="r-name">主题</div><span class="r-val" id="myThemeVal">黑白</span><span class="r-arr">›</span></div>
+    <div class="bp-row" data-panel="avatar"><span class="num">02</span><div class="r-name">头像方圆</div><span class="r-val" id="myAvatarVal">方形</span><span class="r-arr">›</span></div>
+    <div class="bp-row" data-panel="bgimg"><span class="num">03</span><div class="r-name">上传图片</div><span class="r-arr">›</span></div>
+    <div class="bp-row" data-panel="titletext"><span class="num">04</span><div class="r-name">文字</div><span class="r-arr">›</span></div>
+  </div>
+</div>
+<!-- 我的美化 · 上传图片子页 -->
+<div class="sub-panel" id="mySpBg">
+  <div class="bp-head">
+    <button class="bp-back" id="myBgBack" type="button">‹</button>
+    <div class="bp-title">上 传 图 片</div>
+    <div class="bp-head-right"></div>
+  </div>
+  <div class="sp-body">
+    <div class="up-sec">
+      <div class="up-title">我的页面背景</div>
+      <div class="up-desc">换了以后，「我的」页那层底就变成这张图。</div>
+      <div class="up-prev" id="myBgPrev">还没上传</div>
+      <div class="up-acts">
+        <button class="up-btn primary" id="myBgUpload" type="button">上传图片</button>
+        <button class="up-btn ghost" id="myBgReset" type="button">恢复默认</button>
+      </div>
+      <div class="op-row"><span class="op-lbl">透明度</span><input type="range" class="op-range" id="myBgOpacity" min="0" max="100" value="85"><span class="op-val" id="myBgOpacityVal">85%</span></div>
+      <div class="op-row"><span class="op-lbl">模糊</span><input type="range" class="op-range" id="myBgBlur" min="0" max="20" value="0"><span class="op-val" id="myBgBlurVal">0px</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- 我的美化 · 文字子页 -->
+<div class="sub-panel" id="mySpTxt">
+  <div class="bp-head">
+    <button class="bp-back" id="myTxtBack" type="button">‹</button>
+    <div class="bp-title">文 字</div>
+    <div class="bp-head-right"></div>
+  </div>
+  <div class="sp-body">
+    <div class="txt-sec">
+      <div class="txt-title">大名字下那行英文</div>
+      <div class="txt-desc">默认是「MY PROFILE」，最多 24 个字符。</div>
+      <input class="txt-input" id="myInTitleEn" value="MY PROFILE" maxlength="24">
+      <div class="txt-count"><span id="myTitleEnCount">10</span> / 24</div>
+    </div>
+    <div class="txt-sec">
+      <div class="txt-title">右上角竖排那串</div>
+      <div class="txt-desc">默认是「MY SPACE」，最多 24 个字符。</div>
+      <input class="txt-input" id="myInVert" value="MY SPACE" maxlength="24">
+      <div class="txt-count"><span id="myVertCount">8</span> / 24</div>
+    </div>
+    <div class="txt-sec">
+      <div class="txt-title">字体</div>
+      <div class="txt-desc">上传 .ttf / .otf 字体文件，全站文字都换成这个字体。</div>
+      <div class="font-box">
+        <div class="font-row">
+          <div class="font-name empty" id="myFontName">还没上传</div>
+          <button class="font-btn primary" id="myFontUpload" type="button">上传字体</button>
+          <button class="font-btn ghost" id="myFontReset" type="button">恢复默认</button>
+        </div>
+        <div class="font-hint">上传后全站生效。字体文件较大，建议 5MB 以内。</div>
+      </div>
+    </div>
+    <div class="txt-prev">
+      <div class="txt-prev-lbl">P R E V I E W</div>
+      <div class="txt-prev-cn">我</div>
+      <div class="txt-prev-en" id="myPrevTitleEn">MY PROFILE</div>
+      <div class="txt-prev-en" id="myPrevVert" style="margin-top:14px">MY SPACE</div>
+    </div>
+  </div>
+</div>
+<div class="sub-panel" id="spTheme">
+  <div class="bp-head">
+    <button class="bp-back" data-close type="button">‹</button>
+    <div class="bp-title">主题</div>
+    <div class="bp-head-right"></div>
+  </div>
+  <div class="sp-body">
+	<div class="preset-grid" id="presetGrid">
+	  <div class="preset bw on" data-theme="bw"><div class="p-name">黑白</div></div>
+	</div>
+  </div>
+</div>
+
+<div class="sub-panel" id="spBubble">
+  <div class="bp-head">
+    <button class="bp-back" data-close type="button">‹</button>
+    <div class="bp-title">聊天气泡</div>
+    <div class="bp-head-right"></div>
+  </div>
+  <div class="sp-body">
+	<div class="bubble-soft-grid" id="bubbleStyleGrid" style="margin-bottom:18px">
+  <div class="bubble-soft on" data-bubble="gray">
+    <div class="bs-demo">
+      <div class="bs-line"></div>
+      <div class="bs-line right"></div>
+    </div>
+    <div class="bs-label">气泡尖角</div>
+  </div>
+  <div class="bubble-soft" data-bubble="bracket">
+    <div class="bs-demo">
+      <div class="bs-line"></div>
+      <div class="bs-line right"></div>
+    </div>
+    <div class="bs-label">方括号</div>
+  </div>
+  <div class="bubble-soft" data-bubble="custom">
+    <div class="bs-demo">
+      <div class="bs-line"></div>
+      <div class="bs-line right"></div>
+    </div>
+    <div class="bs-label">自定义 CSS</div>
+  </div>
+</div>
+
+<!-- 气泡预览区 -->
+<div id="bubblePreviewBox" style="
+  margin:0 0 18px;
+  padding:20px 16px;
+  background:#ffffff;
+  border-radius:16px;
+  border:0.7px solid rgba(0,0,0,.06);
+  box-shadow:0 1px 5px rgba(0,0,0,.02);
+  display:flex;flex-direction:column;gap:14px;
+">
+  <div style="font-size:10px;color:#ccc;letter-spacing:4px;
+              font-family:Georgia,serif;text-align:center;
+              margin-bottom:2px">PREVIEW</div>
+
+  <!-- ta 的气泡 -->
+  <div style="display:flex;align-items:flex-start;gap:8px">
+    <div style="width:28px;height:28px;border-radius:50%;
+                background:#f0f0f0;flex:none;overflow:hidden;
+                display:flex;align-items:center;justify-content:center">
+      <svg viewBox="0 0 100 100" style="width:100%;height:100%">
+        <circle fill="#c8c8c8" cx="50" cy="38" r="19"/>
+        <path fill="#c8c8c8" d="M12 100 C12 74 28 62 50 62 C72 62 88 74 88 100 Z"/>
+      </svg>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:4px;max-width:70%">
+      <div style="font-size:9px;color:#d0d0d0;letter-spacing:1px;
+                  font-family:Georgia,serif">07:24</div>
+      <div class="preview-bubble preview-bubble-in">在呢，怎么啦？</div>
+    </div>
+  </div>
+
+  <!-- 我的气泡 -->
+  <div style="display:flex;align-items:flex-start;gap:8px;flex-direction:row-reverse">
+    <div style="width:28px;height:28px;border-radius:50%;
+                background:#f0f0f0;flex:none;overflow:hidden;
+                display:flex;align-items:center;justify-content:center">
+      <svg viewBox="0 0 100 100" style="width:100%;height:100%">
+        <circle fill="#c8c8c8" cx="50" cy="38" r="19"/>
+        <path fill="#c8c8c8" d="M12 100 C12 74 28 62 50 62 C72 62 88 74 88 100 Z"/>
+      </svg>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:4px;max-width:70%;align-items:flex-end">
+      <div style="font-size:9px;color:#d0d0d0;letter-spacing:1px;
+                  font-family:Georgia,serif">07:24</div>
+      <div class="preview-bubble preview-bubble-out">没什么，就是想你了</div>
+    </div>
+  </div>
+</div>
+
+<!-- 自定义 CSS 编辑区 -->
+<div id="customCssWrap" style="display:none;margin-top:16px">
+
+  <!-- 已保存的预设 -->
+  <div style="font-size:11px;color:var(--th-text-mute);letter-spacing:1px;margin-bottom:8px">
+    我的预设（点一下即可应用）
+  </div>
+  <div id="cssPresetList" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px"></div>
+
+  <!-- 编辑区 -->
+  <div style="font-size:11px;color:var(--th-text-mute);letter-spacing:1px;margin-bottom:8px">
+    编辑 CSS · 保存只是存起来，点上面标签才会应用
+  </div>
+  <textarea id="customCssInput" rows="10" placeholder="在这里粘贴你的 CSS，例如：&#10;.message-sent{ background:#fff5f9 !important; ... }" style="width:100%;border:1.5px solid var(--th-accent-line);border-radius:12px;padding:12px 14px;font-size:12px;font-family:ui-monospace,Menlo,Consolas,monospace;color:var(--th-text);background:var(--th-accent-soft);outline:none;resize:vertical;line-height:1.6"></textarea>
+  <div style="display:flex;gap:8px;margin-top:10px">
+    <button class="ghost-btn" id="customCssSave" type="button" style="flex:1">保 存</button>
+    <button class="primary-btn" id="customCssApply" type="button" style="flex:1;margin-top:0">应 用</button>
+  </div>
+
+  <!-- 当前生效状态 -->
+  <div id="cssCurrentTip" style="font-size:11px;color:var(--th-text-mute);letter-spacing:.5px;margin-top:14px;line-height:1.7"></div>
+</div>
+
+  </div>
+</div>
+
+<div class="modal" id="spAvatar">
+  <div class="overlay" data-close></div>
+  <div class="sheet">
+    <div class="sheet-head">
+      <div class="title-wrap">
+        <h3>头像方圆</h3>
+        <div class="sub-en">AVATAR SHAPE</div>
+      </div>
+      <button class="x" data-close type="button">✕</button>
+    </div>
+    <div class="sheet-body">
+	<div class="shape-row">
+	  <button class="shape-btn on" data-shape="square"><span class="pv sq"></span>方形</button>
+	  <button class="shape-btn" data-shape="circle"><span class="pv ci"></span>圆形</button>
+	</div>
+    </div>
+  </div>
+</div>
+<div class="sub-panel" id="spLayout">
+  <div class="utop">
+    <button class="utop-back" data-close type="button">‹</button>
+    <div class="utop-title">布 局</div>
+    <div class="utop-right"></div>
+  </div>
+  <div class="sp-body">
+	<div class="layout-preview">
+	  <div class="layout-opt on" data-layout="default">
+		<div class="lo-demo">
+		  <div class="row"><div class="bub"></div></div>
+		  <div class="row r"><div class="bub"></div></div>
+		  <div class="row"><div class="bub"></div></div>
+		</div>
+		<div class="lo-name">默认</div>
+	  </div>
+	  <div class="layout-opt split" data-layout="split">
+		<div class="lo-demo">
+		  <div class="side-bar"><div class="sb"></div><div class="sb"></div><div class="sb"></div></div>
+		  <div class="main-col">
+			<div class="row"><div class="bub"></div></div>
+			<div class="row r"><div class="bub"></div></div>
+			<div class="row"><div class="bub"></div></div>
+		  </div>
+		</div>
+		<div class="lo-name">分栏</div>
+	  </div>
+	  <div class="layout-opt minimal" data-layout="minimal">
+		<div class="lo-demo">
+		  <div class="min-row"><div class="min-dot"></div><div class="min-line"></div></div>
+		  <div class="min-row"><div class="min-dot"></div><div class="min-line short"></div></div>
+		  <div class="min-row"><div class="min-dot"></div><div class="min-line"></div></div>
+		  <div class="min-row"><div class="min-dot"></div><div class="min-line"></div></div>
+		</div>
+		<div class="lo-name">极简</div>
+	  </div>
+	</div>
+	<div style="font-size:11.5px;color:var(--th-text-mute);padding:10px 0">分栏模式会在左侧显示角色快捷栏</div>
+  </div>
+</div>
+
+<!-- ============ 音效 子页 ============ -->
+<div class="sub-panel" id="spBgImg">
+  <div class="bp-head">
+    <button class="bp-back" data-close type="button">‹</button>
+    <div class="bp-title">上传图片</div>
+    <div class="bp-head-right"></div>
+  </div>
+  <div class="sp-body">
+    <div class="up-section">
+      <div class="up-title">聊天界面背景</div>
+      <div class="up-desc">换了以后，聊天页气泡后面那层底就变成这张图。</div>
+      <div class="up-preview" id="chatBgPreview"><span class="ph">还没上传</span></div>
+      <div class="up-acts">
+        <button class="up-btn primary" id="btnChatBgUpload" type="button">上传图片</button>
+        <button class="up-btn ghost" id="btnChatBgReset" type="button">恢复默认</button>
+      </div>
+      <div class="op-row"><span class="op-lbl">透明度</span><input type="range" class="op-range" id="chatBgOpacity" min="0" max="100" value="85"><span class="op-val" id="chatBgOpacityVal">85%</span></div>
+      <div class="op-row"><span class="op-lbl">模糊</span><input type="range" class="op-range" id="chatBgBlur" min="0" max="20" value="0"><span class="op-val" id="chatBgBlurVal">0px</span></div>
+      <div class="op-row"><span class="op-lbl">对齐</span>
+        <div class="align-tabs">
+          <button class="align-btn on" data-align="center" type="button">居中</button>
+          <button class="align-btn" data-align="top" type="button">顶部</button>
+          <button class="align-btn" data-align="bottom" type="button">底部</button>
+        </div>
+      </div>
+    </div>
+    <div class="up-section">
+      <div class="up-title">顶部栏背景</div>
+      <div class="up-desc">只换顶部那一块（标题 + 英文那行所在的区域），跟聊天背景分开。</div>
+      <div class="up-preview" id="topbarBgPreview" style="aspect-ratio:16/6;"><span class="ph">还没上传</span></div>
+      <div class="up-acts">
+        <button class="up-btn primary" id="btnTopbarBgUpload" type="button">上传图片</button>
+        <button class="up-btn ghost" id="btnTopbarBgReset" type="button">恢复默认</button>
+      </div>
+      <div class="op-row"><span class="op-lbl">透明度</span><input type="range" class="op-range" id="topbarBgOpacity" min="0" max="100" value="100"><span class="op-val" id="topbarBgOpacityVal">100%</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="sub-panel" id="spTitleText">
+  <div class="bp-head">
+    <button class="bp-back" data-close type="button">‹</button>
+    <div class="bp-title">文字</div>
+    <div class="bp-head-right"></div>
+  </div>
+  <div class="sp-body">
+    <div class="txt-section">
+      <div class="txt-title">中文标题</div>
+      <div class="txt-desc">就是顶部那两个字，默认是「彼岸」。</div>
+      <input class="txt-input" id="inTitleCn" value="彼岸" placeholder="写两个字" maxlength="8">
+      <div class="txt-count"><span id="titleCnCount">2</span> / 8</div>
+    </div>
+    <div class="txt-section">
+      <div class="txt-title">英文副标题</div>
+      <div class="txt-desc">中文旁边那串小英文，默认是「THE OTHER SIDE」。</div>
+      <input class="txt-input" id="inTitleEn" value="THE OTHER SIDE" placeholder="写点英文" maxlength="24">
+      <div class="txt-count"><span id="titleEnCount">14</span> / 24</div>
+    </div>
+    <div class="sw-row" style="padding:16px 2px">
+      <div class="sw-main"><div class="t1">浅色文字</div><div class="t2">背景图偏深时打开，文字变白更清楚</div></div>
+      <label class="switch"><input type="checkbox" id="titleTextLight"><span class="slider"></span></label>
+    </div>
+    <div class="txt-preview">
+      <div class="txt-preview-lbl">P R E V I E W</div>
+      <div class="txt-preview-inner" id="titlePreviewBox">
+        <span class="txt-preview-cn" id="prevTitleCn">彼岸</span>
+        <span class="txt-preview-en" id="prevTitleEn">THE OTHER SIDE</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="sub-panel" id="spSound">
+  <div class="sp-head"><div class="bp-back" data-close>‹</div><div class="bp-title" style="font-size:15px">音效</div></div>
+  <div class="sp-body">
+    <div class="sound-row" data-sound="inMsg">
+      <div class="sound-info"><div class="sound-tt">收到消息</div><div class="sound-sub">对方发消息时播放</div></div>
+      <div class="sound-acts">
+        <button class="sound-btn play" data-play="inMsg" type="button">▶</button>
+        <button class="sound-btn upload" data-upload="inMsg" type="button">上 传</button>
+        <button class="sound-btn del" data-del="inMsg" type="button">✕</button>
+      </div>
+      <div class="sound-name" data-name="inMsg">未设置</div>
+    </div>
+    <div class="sound-row" data-sound="outMsg">
+      <div class="sound-info"><div class="sound-tt">发出消息</div><div class="sound-sub">自己发消息时播放</div></div>
+      <div class="sound-acts">
+        <button class="sound-btn play" data-play="outMsg" type="button">▶</button>
+        <button class="sound-btn upload" data-upload="outMsg" type="button">上 传</button>
+        <button class="sound-btn del" data-del="outMsg" type="button">✕</button>
+      </div>
+      <div class="sound-name" data-name="outMsg">未设置</div>
+    </div>
+    <div class="sound-row" data-sound="ring">
+      <div class="sound-info"><div class="sound-tt">来电铃声</div><div class="sound-sub">梦角打来时循环播放</div></div>
+      <div class="sound-acts">
+        <button class="sound-btn play" data-play="ring" type="button">▶</button>
+        <button class="sound-btn upload" data-upload="ring" type="button">上 传</button>
+        <button class="sound-btn del" data-del="ring" type="button">✕</button>
+      </div>
+      <div class="sound-name" data-name="ring">未设置</div>
+    </div>
+    <div class="sound-row" data-sound="hangup">
+      <div class="sound-info"><div class="sound-tt">挂断音</div><div class="sound-sub">通话结束时播放</div></div>
+      <div class="sound-acts">
+        <button class="sound-btn play" data-play="hangup" type="button">▶</button>
+        <button class="sound-btn upload" data-upload="hangup" type="button">上 传</button>
+        <button class="sound-btn del" data-del="hangup" type="button">✕</button>
+      </div>
+      <div class="sound-name" data-name="hangup">未设置</div>
+    </div>
+    <input type="file" id="soundFilePicker" accept="audio/*" style="display:none">
+  </div>
+</div>
+
+<div class="sub-panel" id="spCall">
+  <div class="sp-head"><div class="bp-back" data-close>‹</div><div class="bp-title" style="font-size:15px">通话</div></div>
+  <div class="sp-body" id="spCallBody">
+    <div class="section">
+      <div class="sw-row">
+        <div class="sw-main"><div class="t1">允许梦角主动打来</div><div class="t2">关闭后不再主动来电</div></div>
+        <label class="switch"><input type="checkbox" id="callCfgOn"><span class="slider"></span></label>
+      </div>
+    </div>
+    <div class="section">
+      <div class="s-row"><span class="tag">概率</span><input type="range" id="callCfgRate" min="0" max="100"><span class="num" id="callCfgRateVal">5%</span></div>
+    </div>
+    <div class="section">
+      <div class="title">掷骰间隔</div>
+      <div class="n-row">
+        <span class="lbl">最短</span><input type="number" id="callCfgRollMin" min="1" max="1440"><span class="unit">分</span>
+        <span class="to">到</span>
+        <span class="lbl">最长</span><input type="number" id="callCfgRollMax" min="1" max="1440"><span class="unit">分</span>
+      </div>
+    </div>
+    <div class="section">
+      <div class="title">语音窗口</div>
+      <div class="n-row">
+        <span class="lbl">最短</span><input type="number" id="callCfgWinMin" min="1" max="1440"><span class="unit">分</span>
+        <span class="to">到</span>
+        <span class="lbl">最长</span><input type="number" id="callCfgWinMax" min="1" max="1440"><span class="unit">分</span>
+      </div>
+    </div>
+    <div class="section">
+      <div class="title">一次最多几条</div>
+      <div class="n-row">
+        <input type="number" id="callCfgMaxVoice" min="1" max="20"><span class="unit">条</span>
+      </div>
+    </div>
+    <div class="section">
+      <div class="sw-row">
+        <div class="sw-main"><div class="t1">来电直接小窗</div><div class="t2">梦角打来时不占全屏</div></div>
+        <label class="switch"><input type="checkbox" id="callCfgStartMiniIn"><span class="slider"></span></label>
+      </div>
+    </div>
+    <div class="section">
+      <div class="sw-row">
+        <div class="sw-main"><div class="t1">主动打接通后直接小窗</div><div class="t2">你打给梦角时不占全屏</div></div>
+        <label class="switch"><input type="checkbox" id="callCfgStartMiniOut"><span class="slider"></span></label>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<div class="profile-screen" id="profileScreen">
+  <div class="profile-wrap">
+	<div class="profile-top">
+	  <button class="profile-back" id="profileBack" type="button">‹</button>
+	</div>
+	<div class="profile-hero">
+	  <div class="big-en">DREAM PROFILE</div>
+	  <div class="big-name" id="profileName">梦角</div>
+	  <div class="info-row">
+		<div class="profile-avatar" id="profileAvatar"></div>
+		<div class="quote" id="profileSign">这个人很懒，什么都没有留下。</div>
+	  </div>
+	</div>
+	<div class="profile-divider"></div>
+	<div class="profile-tags" id="profileTags"></div>
+	<div class="profile-status-row">
+	  <div class="status-item"><div class="k">STATUS</div><div class="v" id="profileStatus">听歌中</div></div>
+	  <div class="status-item"><div class="k">MOOD</div><div class="v" id="profileMood">开心</div></div>
+	</div>
+	<div class="profile-cta">
+	  <button class="profile-cta-main" id="profileGoChat">
+		<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-8.5 8.3 9 9 0 0 1-3.6-.7L4 20.5l1.4-4.1a8.1 8.1 0 0 1-1.3-4.4A8.4 8.4 0 0 1 12.5 3.2 8.4 8.4 0 0 1 21 11.5z"/></svg>
+		发消息
+	  </button>
+	  <button class="btn-ghost" id="profileVoice">语音</button>
+	  <button class="btn-ghost" id="profileVideo">视频</button>
+	</div>
+	<div class="profile-menu">
+	  <div class="row" id="profilePinRow">
+		<span class="num">01</span>
+		<span class="name">聊天置顶</span>
+		<span class="en">PIN</span>
+		<label class="switch"><input type="checkbox" id="profilePin"><span class="slider"></span></label>
+	  </div>
+	  <div class="row" id="profileMoments">
+		<span class="num">02</span>
+		<span class="name">动态</span>
+		<span class="en">MOMENTS</span>
+		<span class="arr">→</span>
+	  </div>
+	  <div class="row" id="profileEdit">
+		<span class="num">03</span>
+		<span class="name">编辑好友</span>
+		<span class="en">EDIT</span>
+		<span class="arr">→</span>
+	  </div>
+	</div>
+  </div>
+</div>
+
+<div class="rec-panel" id="recPanel">
+  <div class="backdrop" id="recBackdrop"></div>
+  <div class="rec-float">
+    <div class="rec-time-big" id="recTime">00:00</div>
+    <div class="rec-hint" id="recHint">录 音 中</div>
+    <div class="rec-wave" id="recWave">
+      <span></span><span></span><span></span><span></span>
+      <span></span><span></span><span></span>
+    </div>
+    <div class="rec-actions" id="recActions"></div>
+  </div>
+</div>
+
+<!-- 录音确认卡已合并进 #recPanel -->
+
+<div class="modal" id="mImportMode">
+  <div class="overlay" data-close></div>
+  <div class="sheet">
+	<div class="sheet-head"><h3>导入方式</h3><button class="x" data-close>✕</button></div>
+	<div class="sheet-body">
+	  <div class="hint">检测到文件有效，共 <b id="impCount">0</b> 条字卡。</div>
+	  <div class="hint">请选择导入方式：</div>
+	  <button class="primary-btn" id="btnMerge" style="margin-top:12px">合并（追加到现有字卡）</button>
+	  <button class="ghost-btn" id="btnOverwrite" style="margin-top:8px;width:100%">覆盖（替换现有全部字卡）</button>
+	  <button class="ghost-btn" data-close style="margin-top:8px;width:100%">取消</button>
+	</div>
+  </div>
+</div>
+
+ 
+
+<div class="modal" id="mDivine">
+  <div class="overlay" data-close></div>
+  <div class="sheet">
+	<div class="sheet-head"><h3>占卜</h3><button class="x" data-close>✕</button></div>
+	<div class="sheet-body" id="divineBody"></div>
+  </div>
+</div>
+
+<div class="modal" id="mChoice">
+  <div class="overlay" data-close></div>
+  <div class="sheet">
+	<div class="sheet-head"><h3>选择</h3><button class="x" data-close type="button">✕</button></div>
+	<div class="sheet-body" id="choiceBody"></div>
+  </div>
+</div>
+
+<div class="rd-modal" id="mRead">
+  <div class="overlay" data-close></div>
+  <div class="sheet read-sheet-a">
+    <div class="read-a-head">
+      <div class="read-a-title" id="readTitle">写 下 你 的 理 解</div>
+      <button class="read-a-close" data-close type="button">✕</button>
+    </div>
+
+    <div class="read-a-q" id="readQPreview">Q：（未填写问题）</div>
+
+    <textarea id="readText" class="read-a-textarea" placeholder="写下你对这次占卜的理解、感受、后续印证…"></textarea>
+
+    <div class="read-a-acts">
+      <button class="read-a-btn cancel" data-close type="button">取 消</button>
+      <button class="read-a-btn ok" id="btnSaveRead" type="button">保 存</button>
+    </div>
+  </div>
+</div>
+
+<div class="screen" id="divineRecordScreen">
+  <div class="dr-wrap">
+	<div id="utopHostDivineRec"></div>
+	<div class="dr-search dr-search-line" id="drSearchBox" style="display:none;">
+	  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#bbb" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
+	  <input type="text" id="drSearchInput" placeholder="搜索问题或理解…">
+	</div>
+	<div class="dr-filter-row" id="drWhoRow">
+	  <button class="dr-filter on" data-who="all" type="button">全部</button>
+	  <button class="dr-filter" data-who="me" type="button">我抽的</button>
+	  <button class="dr-filter" data-who="role" type="button">Ta 抽的</button>
+	</div>
+	<div id="drList"></div>
+  </div>
+</div>
+
+<div class="modal" id="mRoleCats">
+  <div class="overlay" data-close></div>
+  <div class="sheet">
+	<div class="sheet-head"><h3 id="mRoleCatsTitle">可用分类</h3><button class="x" data-close>✕</button></div>
+	<div class="sheet-body">
+	  <p class="hint" id="roleCatsWhoTip"></p>
+	  <div id="roleCatChips" style="display:flex;flex-wrap:wrap;gap:8px"></div>
+	</div>
+  </div>
+</div>
+
+<div class="modal" id="mApplyOthers">
+  <div class="overlay" data-close></div>
+  <div class="sheet">
+	<div class="sheet-head">
+	  <h3>应用到其Ta角色</h3>
+	  <div class="all-btn" id="applySelectAll">全选</div>
+	</div>
+	<div class="sheet-body">
+	  <label>应用内容</label>
+	  <div class="chk-row on" id="applyIncludePanel"><div class="ck">✓</div><div class="nm">面板</div></div>
+	  <div class="chk-row on" id="applyIncludeUsable"><div class="ck">✓</div><div class="nm">可用分类</div></div>
+	  <label>选择角色</label>
+	  <div id="applyRoleList"></div>
+	</div>
+	<div class="sheet-foot">
+	  <button class="ghost-btn" id="applyCancel" type="button">取消</button>
+	  <button class="primary-btn" id="applyConfirm" type="button">确定应用</button>
+	</div>
+  </div>
+</div>
+
+
+
+<div class="modal" id="mAddKao">
+  <div class="overlay" data-close></div>
+  <div class="sheet">
+	<div class="sheet-head"><h3>添加颜文字</h3><button class="x" data-close>✕</button></div>
+	<div class="sheet-body">
+	  <div class="mode-tabs" id="akModes">
+		<div class="mode-tab on" data-mode="line">一行一个</div>
+		<div class="mode-tab" data-mode="bracket">[] 括号包</div>
+	  </div>
+	  <div class="mode-desc" id="akDesc" style="display:none"></div>
+	  <div class="cat-pick-wrap" id="akCatPick">
+		<span class="cat-label">添加到</span>
+		<span class="cat-value" id="akCatValue"></span>
+		<span class="cat-arr">›</span>
+	  </div>
+	  <textarea id="newKaoText" rows="7" placeholder=""></textarea>
+	  <button class="primary-btn" id="btnAddKaoOk">添 加</button>
+	</div>
+  </div>
+</div>
+<div class="cat-panel-mask" id="akCatMask">
+  <div class="cat-panel">
+	<div class="cp-title">选择分类</div>
+	<div id="akCatList"></div>
+  </div>
+</div>
+<div class="modal" id="mAddEmoji">
+  <div class="overlay" data-close></div>
+  <div class="sheet">
+	<div class="sheet-head"><h3>添加 emoji</h3><button class="x" data-close>✕</button></div>
+	<div class="sheet-body">
+	  <div class="mode-tabs" id="aeModes">
+		<div class="mode-tab on" data-mode="line">一行一个</div>
+		<div class="mode-tab" data-mode="bracket">[] 括号包</div>
+	  </div>
+	  <div class="mode-desc" id="aeDesc" style="display:none"></div>
+	  <div class="cat-pick-wrap" id="aeCatPick">
+		<span class="cat-label">添加到</span>
+		<span class="cat-value" id="aeCatValue">常用</span>
+		<span class="cat-arr">›</span>
+	  </div>
+	  <textarea id="aeText" rows="7" placeholder=""></textarea>
+	  <button class="primary-btn" id="btnAddEmojiOk">添 加</button>
+	</div>
+  </div>
+</div>
+<div class="cat-panel-mask" id="aeCatMask">
+  <div class="cat-panel">
+	<div class="cp-title">选择分类</div>
+	<div id="aeCatList"></div>
+  </div>
+</div>
+
+<div class="modal" id="mBehSet">
+  <div class="overlay" data-close></div>
+  <div class="sheet">
+	<div class="sheet-head"><h3>行为面板设置</h3><button class="x" data-close>✕</button></div>
+	<div class="sheet-body">
+	  <div class="chk-row on" id="bhSetAvatar"><div class="ck">✓</div><div class="nm">显示头像</div></div>
+	  <div class="chk-row on" id="bhSetSub"><div class="ck">✓</div><div class="nm">显示补充说明</div></div>
+	  <div class="chk-row" id="bhSetCompact"><div class="ck">✓</div><div class="nm">紧凑模式</div></div>
+	  <label>时间显示</label>
+	  <div class="mode-tabs" id="bhSetTimeTabs">
+		<div class="mode-tab on" data-time="rel">相对（刚刚/昨天）</div>
+		<div class="mode-tab" data-time="abs">绝对（具体时间）</div>
+	  </div>
+
+	  <label style="margin-top:20px">状态随机</label>
+	  <div class="mode-desc">每隔随机时间自动切换一次状态（<b>不弹气泡</b>，只换顶部栏文字）</div>
+	  <div style="display:flex;gap:8px;align-items:center">
+		<input type="number" id="inStatusMin" min="1" max="1440" style="width:80px;text-align:center">
+		<span style="font-size:12px;color:var(--th-text-soft)">分钟 到</span>
+		<input type="number" id="inStatusMax" min="1" max="1440" style="width:80px;text-align:center">
+		<span style="font-size:12px;color:var(--th-text-soft)">分钟</span>
+	  </div>
+	  <button class="primary-btn" id="btnBhStatusOk" style="margin-top:14px">保 存 状 态 随 机</button>
+	</div>
+  </div>
+</div>
+
+<div class="modal" id="mCardPicker">
+  <div class="overlay" data-close></div>
+  <div class="sheet">
+	<div class="sheet-head"><h3>选择要发送的名片</h3><button class="x" data-close>✕</button></div>
+	<div class="sheet-body">
+	  <div style="font-size:11.5px;color:var(--th-text-soft);line-height:1.7;margin-bottom:14px">从你的好友里选一个人，把 Ta 的名片发给当前聊天角色。</div>
+	  <div id="cardPickerBody"></div>
+	</div>
+  </div>
+</div>
+<div class="modal" id="mExport">
+  <div class="overlay" data-close></div>
+  <div class="sheet" id="expSheet">
+	<div class="sheet-head"><h3>导出字卡</h3><button class="x" data-close>✕</button></div>
+	<div class="sheet-body">
+	  <div class="sub-row" id="expSubRow">
+		<span>选择要导出的分类</span>
+		<span class="all" id="expToggleAll">全选 / 取消全选</span>
+	  </div>
+	  <div id="expCatList" class="exp-cat-list"></div>
+	  <div class="acts"><button id="btnExportOk" type="button">导 出</button></div>
+	</div>
+  </div>
+</div>
+<!-- 重命名分类弹窗 -->
+<div class="rename-mask" id="renameMask">
+  <div class="rename-sheet">
+    <div class="rs-title">重命名分类</div>
+    <input type="text" class="rs-input" id="renameInput" placeholder="输入新的分类名">
+    <div class="rs-acts">
+      <button class="rs-btn cancel" id="renameCancel">取 消</button>
+      <button class="rs-btn ok" id="renameOk">确 定</button>
+    </div>
+  </div>
+</div>
+
+<!-- ========== 动态模块 ========== -->
+<div class="screen" id="momentsScreen">
+  <div id="utopHostMoments">
+    <div class="utop">
+	  <button class="utop-back" id="mmBack" type="button">‹</button>
+	  <div class="utop-title">动 态</div>
+	  <div class="utop-right">
+		<button class="utop-act" id="mmSetBtn" type="button">⚙</button>
+	  </div>
+    </div>
+  </div>
+  <div class="mm-tabs" id="mmTabs">
+	<button class="mm-tab on" data-tab="all" type="button">全部</button>
+	<button class="mm-tab" data-tab="mine" type="button">我的</button>
+	<button class="mm-tab" data-tab="others" type="button">别人的</button>
+  </div>
+  <div class="mm-wrap">
+	<div class="mm-body" id="mmBody"></div>
+  </div>
+  <button class="mm-post-btn hide" id="mmPostBtn" type="button">＋</button>
+</div>
+
+<div class="modal" id="mPost">
+  <div class="overlay" data-close></div>
+  <div class="sheet">
+	<div class="sheet-head"><h3>发布动态</h3><button class="x" data-close type="button">✕</button></div>
+	<div class="sheet-body">
+	  <textarea id="postText" placeholder="这一刻的想法…" style="min-height:120px"></textarea>
+	  <label>谁可以看</label>
+	  <div class="vis-row">
+		<div class="vis-btn on" data-vis="private">🔒 仅自己可见</div>
+		<div class="vis-btn" data-vis="public">🌍 公开</div>
+	  </div>
+	  <button class="primary-btn" id="btnPostOk" type="button">发 布</button>
+	</div>
+  </div>
+</div>
+
+<div class="modal" id="mMomentSet">
+  <div class="sheet">
+	<div class="sheet-head"><h3>动态设置</h3><button class="x" data-close type="button">✕</button></div>
+	<div class="chips-row">
+	  <div class="chips" id="mChips">
+		<button class="chip pub on" data-owner="public" type="button">公共</button>
+	  </div>
+	  <div class="ctrl-row" id="mCtrlRow" style="display:none">
+		<label class="switch"><input type="checkbox" id="mSwCustom"><span class="slider"></span></label>
+		<span class="ctrl-label" id="mCtrlLabel">自定义（关：用公共设置）</span>
+		<button class="apply-btn" id="mApplyBtn" type="button">应用到其它角色</button>
+	  </div>
+	</div>
+	<div class="moment-rs-tabs" id="mTabs">
+	  <button class="moment-rs-tab on" data-tab="look" type="button">外观</button>
+	  <button class="moment-rs-tab" data-tab="time" type="button">时间</button>
+	  <button class="moment-rs-tab" data-tab="content" type="button">内容</button>
+	  <button class="moment-rs-tab" data-tab="master" type="button">总开关</button>
+	</div>
+	<div class="sheet-body" id="mSetBody"></div>
+  </div>
+</div>
+
+<div class="modal" id="mApplyRoleSet">
+  <div class="overlay" data-close></div>
+  <div class="sheet">
+	<div class="sheet-head"><h3>应用到其它角色</h3><button class="x" data-close type="button">✕</button></div>
+	<div class="sheet-body" id="applyRoleSetBody"></div>
+  </div>
+</div>
+
+
+<div class="modal" id="mComment">
+  <div class="overlay" data-close></div>
+  <div class="sheet">
+	<div class="sheet-head"><h3 id="cmtTitle">评论</h3><button class="x" data-close type="button">✕</button></div>
+	<div class="sheet-body">
+	  <div id="cmtList" style="max-height:240px;overflow-y:auto;margin-bottom:12px"></div>
+	  <textarea id="cmtInput" placeholder="说点什么…" style="min-height:80px"></textarea>
+	  <button class="primary-btn" id="btnCmtOk" type="button">发 送</button>
+	</div>
+  </div>
+</div>
+
+
+<!-- ========== 动态模块结束 ========== -->
+
+<input type="file" id="cipAvFile" accept="image/*" style="display:none">
+<input type="file" id="stickerFile" accept="image/*" multiple style="display:none">
+<input type="file" id="editAvFile" accept="image/*" style="display:none">
+<input type="file" id="meAvFile" accept="image/*" style="display:none">
+<input type="file" id="topbarBgFile" accept="image/*" style="display:none">
+<input type="file" id="importCardFile" accept=".json,application/json" style="display:none">
+<input type="file" id="chatImagePicker" accept="image/*" multiple style="display:none">
+
+
+<!-- ============ 通话 UI · 全屏来电 ============ -->
+<div class="call-screen" id="callIncoming">
+  <div class="call-bg-blur" id="callIncomingBg"></div>
+  <div class="call-inner">
+    <div class="call-avatar" id="callIncomingAvatar"></div>
+    <div class="call-name" id="callIncomingName">梦角</div>
+    <div class="call-sub" id="callIncomingSub">邀 请 你 通 话</div>
+    <div class="call-type-icon" id="callIncomingType">📞</div>
+  </div>
+  <div class="call-acts">
+    <button class="call-btn reject" id="callRejectBtn" type="button">
+      <span class="call-btn-ic">📵</span>
+      <span class="call-btn-lb">拒 接</span>
+    </button>
+    <button class="call-btn accept" id="callAcceptBtn" type="button">
+      <span class="call-btn-ic">📞</span>
+      <span class="call-btn-lb">接 听</span>
+    </button>
+  </div>
+  <div class="call-shrink-row">
+    <button class="call-shrink-btn" id="callIncomingShrink" type="button">缩 小</button>
+  </div>
+</div>
+
+<!-- ============ 通话 UI · 全屏呼叫（我方发起） ============ -->
+<div class="call-screen" id="callOutgoing">
+  <div class="call-bg-blur" id="callOutgoingBg"></div>
+  <div class="call-inner">
+    <div class="call-avatar" id="callOutgoingAvatar"></div>
+    <div class="call-name" id="callOutgoingName">梦角</div>
+    <div class="call-sub" id="callOutgoingSub">正 在 呼 叫…</div>
+    <div class="call-type-icon" id="callOutgoingType">📞</div>
+  </div>
+  <div class="call-acts call-acts-single">
+    <button class="call-btn reject" id="callHangupBtn" type="button">
+      <span class="call-btn-ic">📵</span>
+      <span class="call-btn-lb">挂 断</span>
+    </button>
+  </div>
+  <div class="call-shrink-row">
+    <button class="call-shrink-btn" id="callOutgoingShrink" type="button">缩 小</button>
+  </div>
+</div>
+
+<!-- ============ 通话 UI · 小窗 ============ -->
+<div class="call-mini" id="callMini">
+  <div class="call-mini-head" id="callMiniHead">
+    <div class="call-mini-avatar" id="callMiniAvatar"></div>
+    <div class="call-mini-info">
+      <div class="call-mini-name" id="callMiniName">梦角</div>
+      <div class="call-mini-time" id="callMiniTime">00:00</div>
+    </div>
+    <button class="call-mini-accept" id="callMiniAccept" type="button" style="display:none">✓</button>
+    <button class="call-mini-hangup" id="callMiniHangup" type="button">✕</button>
+  </div>
+  <div class="call-mini-media" id="callMiniMedia" style="display:none">
+    <video id="callMiniVideo" playsinline webkit-playsinline></video>
+    <div class="call-mini-media-close" id="callMiniMediaClose" type="button">✕</div>
+  </div>
+</div>
+
+<!-- ============ 通话 UI · 视频上传选源面板 ============ -->
+<div class="cat-panel-mask" id="vlVideoSrcMask">
+  <div class="cat-panel">
+    <div class="cp-title">上传视频</div>
+    <div id="vlVideoSrcList">
+      <div class="cp-item" data-src="file"><div class="cp-chk"></div><span>从本地选视频</span></div>
+      <div class="cp-item" data-src="url"><div class="cp-chk"></div><span>粘贴视频链接</span></div>
+    </div>
+  </div>
+</div>
+
+<input type="file" id="gchImagePicker" accept="image/*" multiple style="display:none">
+
+<div class="toast" id="toast"></div>
+
+ 
+<div class="msg-notify" id="msgNotify"></div>
+<!-- ===== 统一输入弹窗 · 方案 A ===== -->
+<div class="uni-mask" id="uniMask" onclick="if(event.target===this)uniCancel()">
+  <div class="dlg-a">
+    <div class="t" id="uniTitle">请输入</div>
+    <div class="s" id="uniSub">—</div>
+    <input type="text" id="uniInput" placeholder="">
+    <div class="acts">
+      <button class="cancel" onclick="uniCancel()">取消</button>
+      <button class="ok" id="uniOk">确定</button>
+    </div>
+  </div>
+</div>
+
+
+
+
+
+
+
+
+<!-- ============ 问卷桌面 ============ -->
+<div class="screen" id="quizDeskScreen">
+  <div class="qd-wrap">
+    <div id="utopHostQuizDesk"></div>
+    <div class="qd-list" id="qdList"></div>
+  </div>
+</div>
+
+/* ============ 问卷弹窗 · 方案 A 极简线 ============ */
+/* ★ 问卷弹窗里的「单问 / 多问」去掉加粗 */
+#mQuizPick .chk-row .nm,
+#mQuizPick .chk-row .nm *{
+  font-weight: 300 !important;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+<style>
+/* ===== 问卷桌面 ===== */
+#quizDeskScreen{
+  background:#ffffff;
+  flex-direction:column;
+  font-family:"Songti SC","STSong","SimSun","宋体",serif;
+}
+#quizDeskScreen.on{display:flex}
+.qd-wrap{
+  max-width:520px;
+  margin:0 auto;
+  width:100%;
+  height:100%;
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+}
+ 
+.qd-list{
+  flex:1;
+  overflow-y:auto;
+  padding:6px 22px 40px;
+  scrollbar-width:none;
+}
+.qd-list::-webkit-scrollbar{display:none}
+.qd-item{
+  padding:18px 2px;
+  border-bottom:.6px dashed rgba(0,0,0,.06);
+  cursor:pointer;
+  transition:background .18s ease;
+}
+.qd-item:last-child{border-bottom:none}
+.qd-item:active{background:rgba(0,0,0,.02)}
+.qd-item .qd-name{
+  font-size:15px;
+  font-weight:300;
+  letter-spacing:1.5px;
+  color:#1a1a1a;
+  -webkit-text-stroke:.1px #1a1a1a;
+  -webkit-font-smoothing:antialiased;
+  margin-bottom:6px;
+}
+.qd-item .qd-sub{
+  font-size:11px;
+  color:#bbb;
+  letter-spacing:.5px;
+  font-weight:300;
+}
+.qd-empty{
+  text-align:center;color:#bbb;
+  font-size:13px;padding:70px 30px;
+  line-height:2;letter-spacing:.5px;
+  font-weight:300;
+}
+.qd-empty .big{
+  display:block;font-size:26px;
+  color:#e0e0e0;margin-bottom:20px;
+}
+</style>
+<style>
+#mQuiz .sheet#quizSheet{
+  max-width:340px;
+  border-radius:20px;
+  border:0.7px solid rgba(0,0,0,.08);
+  box-shadow:0 20px 60px rgba(0,0,0,.14);
+  padding:22px 20px 18px;
+  box-sizing:border-box;
+  font-family:"Songti SC","STSong","SimSun","宋体",serif;
+}
+#mQuiz .sheet#quizSheet *{
+  font-family:"Songti SC","STSong","SimSun","宋体",serif;
+}
+#mQuizPick,
+#mQuizPick *{
+  font-family:"Songti SC","STSong","SimSun","宋体",serif !important;
+}
+#mQuiz .quiz-close{
+  position:absolute;top:12px;right:12px;
+  width:26px;height:26px;
+  border:none;background:transparent;
+  color:#c8c8c8;font-size:14px;
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;font-family:inherit;
+  transition:color .18s;
+}
+#mQuiz .quiz-close:active{color:#1a1a1a}
+#mQuiz .quiz-title{
+  text-align:center;
+  font-family:"Songti SC","STSong","SimSun","宋体",serif;
+  font-size:15px;font-weight:300;
+  letter-spacing:6px;color:#1a1a1a;
+  margin-bottom:4px;
+}
+#mQuiz .quiz-sub{
+  text-align:center;
+  font-family:"Songti SC","STSong","SimSun","宋体",serif;
+  font-size:8.5px;letter-spacing:5px;
+  color:#d0d0d0;font-weight:400;
+  margin-bottom:22px;
+}
+#mQuiz .quiz-field{margin-bottom:16px}
+#mQuiz .quiz-field label{
+  display:block;
+  font-family:"Songti SC","STSong","SimSun","宋体",serif;
+  font-size:10.5px;color:#bbb;
+  letter-spacing:1.5px;
+  margin-bottom:8px;font-weight:300;
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+}
+#mQuiz .quiz-input,
+#mQuiz .quiz-numrow{
+  width:100%;
+  border:none;
+  background:#fafafa;
+  border-radius:12px;
+  padding:14px 16px;
+  font-size:14px;
+  font-family:"Songti SC","STSong","SimSun","宋体",serif;
+  color:#1a1a1a;
+  outline:none;
+  resize:none;
+  line-height:1.7;
+  font-weight:300;
+  box-sizing:border-box;
+}
+#mQuiz .quiz-input{min-height:72px}
+#mQuiz .quiz-input::placeholder{color:#d0d0d0}
+#mQuiz .quiz-input:focus{background:#f5f5f5}
+#mQuiz .quiz-numrow{display:flex;align-items:center;gap:8px}
+#mQuiz .quiz-numrow .lbl{
+  font-family:"Songti SC","STSong","SimSun","宋体",serif;
+  font-size:12px;color:#999;
+  letter-spacing:.3px;flex:1;
+}
+#mQuiz .quiz-numrow input[type=number]{
+  width:46px;
+  border:none;
+  border-bottom:0.7px solid #d8d8d8;
+  background:transparent;
+  text-align:center;
+  font-size:14px;
+  font-family:"Songti SC","STSong","SimSun","宋体",serif;
+  color:#1a1a1a;
+  outline:none;
+  padding:2px 0;
+}
+#mQuiz .quiz-numrow input[type=number]:focus{border-bottom-color:#1a1a1a}
+#mQuiz .quiz-numrow .unit{font-family:"Songti SC","STSong","SimSun","宋体",serif;font-size:11px;color:#c8c8c8;flex:none}
+#mQuiz .quiz-numrow .to{font-family:"Songti SC","STSong","SimSun","宋体",serif;font-size:11px;color:#c8c8c8;flex:none;margin:0 2px}
+#mQuiz .quiz-btn{
+  width:100%;
+  padding:14px 0;
+  border-radius:22px;
+  border:none;
+  background:#1a1a1a;
+  color:#fff;
+  font-size:13.5px;
+  letter-spacing:6px;
+  text-indent:6px;
+  font-family:"Songti SC","STSong","SimSun","宋体",serif;
+  font-weight:300;
+  cursor:pointer;
+  margin-top:8px;
+  transition:opacity .2s, transform .1s;
+}
+#mQuiz .quiz-btn:active{opacity:.85;transform:scale(.99)}
+
+/* ===== 试卷卡（聊天里发出来的样子） ===== */
+#chatList .paper{
+  width:248px;background:#fff;
+  border:0.7px solid rgba(0,0,0,.14);
+  border-radius:14px;
+  box-shadow:0 1px 4px rgba(0,0,0,.04);
+  padding:14px 14px 12px;
+  display:flex;flex-direction:column;gap:10px;
+  box-sizing:border-box;position:relative;overflow:hidden;
+}
+#chatList .paper::after{
+  content:"";position:absolute;right:-28px;top:-28px;
+  width:70px;height:70px;border-radius:50%;
+  border:0.6px solid rgba(0,0,0,.05);pointer-events:none;
+}
+#chatList .paper-head{
+  display:flex;align-items:baseline;justify-content:space-between;
+  padding-bottom:9px;border-bottom:0.6px dashed rgba(0,0,0,.10);
+}
+#chatList .paper-head .pt{font-size:12px;letter-spacing:3px;color:#1a1a1a;font-weight:300}
+#chatList .paper-head .pe{font-size:7.5px;letter-spacing:3px;color:#d0d0d0;font-family:Georgia,serif}
+#chatList .paper-asker{display:flex;align-items:center;gap:7px;
+  font-size:10.5px;color:#999;letter-spacing:1px}
+#chatList .paper-asker .tag{flex:none;font-size:8.5px;letter-spacing:1.5px;
+  color:#bbb;font-family:Georgia,serif}
+#chatList .paper-asker .who{color:#1a1a1a;font-weight:400;font-size:11.5px;letter-spacing:.5px}
+#chatList .paper-asker .mini-av{width:22px;height:22px;border-radius:var(--avatar-radius,12%);
+  background:#f0f0f0;overflow:hidden;flex:none;
+  display:flex;align-items:center;justify-content:center;position:relative}
+#chatList .paper-asker .mini-av svg{position:absolute;inset:0;width:100%;height:100%}
+#chatList .paper-asker .mini-av img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+#chatList .paper-asker .mini-av .sil,
+#chatList .paper-asker .mini-av .silhouette{fill:#c8c8c8}
+#chatList .paper-q{font-size:13.5px;line-height:1.65;color:#1a1a1a;
+  letter-spacing:.3px;padding:2px 0 4px;word-break:break-word}
+#chatList .paper-ans{
+  border:0.7px dashed rgba(0,0,0,.14);
+  border-radius:10px;padding:10px 12px;
+  min-height:44px;display:flex;flex-direction:column;gap:5px;
+  position:relative;background:#fcfcfc;
+  transition:background .25s ease, border-color .25s ease;
+  box-sizing:border-box;
+}
+#chatList .paper-ans.done{
+  border-style:solid;border-color:rgba(0,0,0,.10);background:#fff;
+}
+#chatList .paper-ans .ans-label{font-size:8.5px;letter-spacing:2px;
+  color:#c8c8c8;font-family:Georgia,serif}
+#chatList .paper-ans .ans-empty{font-size:12.5px;color:#d0d0d0;
+  letter-spacing:1px;font-style:italic;padding:4px 0 2px}
+#chatList .paper-ans .ans-main{
+  font-size:14.5px;line-height:1.8;color:#1a1a1a;
+  letter-spacing:.4px;
+  word-break:break-word;
+  white-space:normal;
+  overflow-wrap:anywhere;
+  min-height:1.4em;
+}
+#chatList .paper-foot{
+  display:flex;align-items:baseline;justify-content:space-between;
+  font-size:8.5px;letter-spacing:2px;color:#d0d0d0;
+  font-family:Georgia,serif;padding-top:2px;
+}
+#chatList .paper-foot .status{color:#bbb}
+#chatList .paper-foot .status.ok{color:#1a1a1a}
+
+ 
+</style>
+
+<div class="modal" id="mQuiz">
+  <div class="overlay" data-close></div>
+  <div class="sheet" id="quizSheet">
+    <button class="quiz-close" id="quizCloseBtn" type="button">✕</button>
+    <div class="quiz-title">问 卷</div>
+    <div class="quiz-sub">QUESTIONNAIRE</div>
+
+    <div class="quiz-field">
+      <label>问 题</label>
+      <textarea class="quiz-input" id="quizQText" placeholder="比如：最近在想什么？"></textarea>
+    </div>
+
+    <div class="quiz-field">
+      <label>思 考 时 间</label>
+      <div class="quiz-numrow">
+        <span class="lbl">最短</span>
+        <input type="number" id="quizThinkMin" value="2" min="1" max="60">
+        <span class="unit">秒</span>
+        <span class="to">到</span>
+        <input type="number" id="quizThinkMax" value="5" min="1" max="60">
+        <span class="unit">秒</span>
+      </div>
+    </div>
+
+    <div class="quiz-field">
+      <label>抽 卡 张 数</label>
+      <div class="quiz-numrow">
+        <span class="lbl">随机</span>
+        <input type="number" id="quizCntMin" value="1" min="1" max="3">
+        <span class="unit">张</span>
+        <span class="to">到</span>
+        <input type="number" id="quizCntMax" value="1" min="1" max="3">
+        <span class="unit">张</span>
+      </div>
+    </div>
+
+    <!-- ★ 弹窗内的回答区：点发出后显示「正在填写 → 答案」 -->
+    <div id="quizResultWrap" style="display:none;margin-top:6px;margin-bottom:4px;">
+      <div id="quizResultBox" style="border:none;border-radius:12px;padding:14px 16px;background:#fff;transition:background .25s ease, border-color .25s ease;">
+        <div style="font-size:8.5px;letter-spacing:2px;color:#c8c8c8;font-family:'Songti SC','STSong','SimSun','宋体',serif;margin-bottom:8px;">ANSWER</div>
+        <div id="quizResultText" style="font-family:'Songti SC','STSong','SimSun','宋体',serif;font-size:14.5px;line-height:1.9;color:#1a1a1a;letter-spacing:.4px;word-break:break-word;overflow-wrap:anywhere;">正在填写…</div>
+      </div>
+    </div>
+
+    <button class="quiz-btn" id="btnQuizStart" type="button">发 出 问 卷</button>
+    <button class="quiz-btn" id="btnQuizResend" type="button" style="display:none;background:#fff;color:#1a1a1a;border:0.7px solid rgba(0,0,0,.15);margin-top:10px;">再 发 一 次</button>
+  </div>
+</div>
+
+<!-- ============ 问卷类型选择弹窗 ============ -->
+<div class="modal" id="mQuizPick">
+  <div class="overlay" data-close></div>
+  <div class="sheet" style="max-width:300px;border-radius:20px;padding:24px 20px 16px;box-shadow:0 20px 60px rgba(0,0,0,.14);border:0.7px solid rgba(0,0,0,.06);font-family:'Songti SC','STSong','SimSun','宋体',serif;">
+    <div class="sheet-head" style="display:block;padding:0;border-bottom:none;text-align:center;margin-bottom:22px;position:relative;">
+      <h3 style="font-family:'Songti SC','STSong','SimSun','宋体',serif;font-size:15px;font-weight:300;letter-spacing:6px;color:#1a1a1a;margin:0;">问 卷</h3>
+      <button class="x" id="quizPickCloseBtn2" type="button" onclick="document.getElementById('mQuizPick').classList.remove('show')" style="font-family:'Songti SC','STSong','SimSun','宋体',serif;position:absolute;top:-6px;right:-4px;width:28px;height:28px;border:none;background:transparent;color:#ccc;font-size:14px;display:flex;align-items:center;justify-content:center;cursor:pointer;">✕</button>
+    </div>
+    <div class="sheet-body" style="padding:0;">
+      <div class="chk-row" id="qpSingle" style="border-radius:12px;margin-bottom:10px;font-family:'Songti SC','STSong','SimSun','宋体',serif;border:0.7px solid #e8e8e8;background:#fff;">
+        <div class="nm" style="font-family:'Songti SC','STSong','SimSun','宋体',serif;font-size:14px;font-weight:300;letter-spacing:2px;color:#1a1a1a;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;">单 问</div>
+        <span class="chev" style="color:#ccc;font-weight:300;">›</span>
+      </div>
+      <div class="chk-row" id="qpMulti" style="border-radius:12px;font-family:'Songti SC','STSong','SimSun','宋体',serif;border:0.7px solid #e8e8e8;background:#fff;">
+        <div class="nm" style="font-family:'Songti SC','STSong','SimSun','宋体',serif;font-size:14px;font-weight:300;letter-spacing:2px;color:#1a1a1a;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;">多 问</div>
+        <span class="chev" style="color:#ccc;font-weight:300;">›</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 问卷 · 加号菜单 -->
+<div class="modal" id="mQuizMenu">
+  <div class="overlay" data-close></div>
+  <div class="sheet" style="max-width:320px;border-radius:20px;padding:22px 20px 16px;box-shadow:0 20px 60px rgba(0,0,0,.14);border:.7px solid rgba(0,0,0,.06);font-family:'Songti SC','STSong','SimSun','宋体',serif;">
+    <div class="sheet-head" style="display:block;padding:0;border-bottom:none;text-align:center;margin-bottom:18px;position:relative;">
+      <h3 style="font-family:inherit;font-size:15px;font-weight:300;letter-spacing:6px;color:#1a1a1a;margin:0;">问 卷</h3>
+      <button class="x" data-close type="button" style="position:absolute;top:-6px;right:-4px;width:28px;height:28px;border:none;background:transparent;color:#ccc;font-size:14px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-family:inherit;">✕</button>
+    </div>
+    <div class="sheet-body" style="padding:0;">
+      <div class="chk-row" id="qmAddTpl" style="border-radius:12px;margin-bottom:8px;">
+        <div class="nm" style="font-family:inherit;">添加问卷模板</div>
+        <span class="chev">›</span>
+      </div>
+      <div class="chk-row" id="qmMyList" style="border-radius:12px;margin-bottom:8px;">
+        <div class="nm" style="font-family:inherit;">我的问卷一览</div>
+        <span class="chev">›</span>
+      </div>
+      <div class="chk-row" id="qmFavList" style="border-radius:12px;margin-bottom:8px;">
+        <div class="nm" style="font-family:inherit;">我收藏的问卷</div>
+        <span class="chev">›</span>
+      </div>
+      <div class="chk-row" id="qmImport" style="border-radius:12px;margin-bottom:8px;">
+        <div class="nm" style="font-family:inherit;">导入问卷</div>
+        <span class="chev">›</span>
+      </div>
+      <div class="chk-row" id="qmExport" style="border-radius:12px;">
+        <div class="nm" style="font-family:inherit;">导出问卷</div>
+        <span class="chev">›</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<input type="file" id="quizImportFile" accept=".json,application/json" style="display:none">
+
+ 
+
+<!-- ============ 聊天信息面板（D 宫格方案） ============ -->
+<div class="chat-info-panel" id="chatInfoPanel">
+  <div class="cip-wrap">
+    <div class="cip-nav">
+      <button class="cip-back-btn" id="cipBack" type="button" aria-label="返回">‹</button>
+      <h1>聊天信息</h1>
+      <button class="cip-more" id="cipMore" type="button">⋯</button>
+    </div>
+
+    <div class="cip-hero-card">
+      <div class="cip-av" id="cipAvatar"></div>
+      <div class="cip-hero-info">
+        <div class="cip-hero-name" id="cipName" title="点击修改备注">梦角</div>
+        <div class="cip-hero-sig" id="cipSig">这个人很懒，什么都没有留下。</div>
+      </div>
+    </div>
+
+    <div class="cip-grid">
+      <!-- 消息免打扰（横条卡片） -->
+      <div class="cip-card wide" id="cipMuteRow">
+        <span class="cip-ic"><svg viewBox="0 0 24 24"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg></span>
+        <div class="cip-txt">
+          <div class="cip-tt">消息免打扰</div>
+          <div class="cip-sub">开启后不提示新消息</div>
+        </div>
+        <label class="switch"><input type="checkbox" id="cipMute"><span class="slider"></span></label>
+      </div>
+
+      <!-- 备忘 -->
+      <div class="cip-card" id="cipMemo">
+        <span class="cip-ic"><svg viewBox="0 0 24 24"><path d="M4 4h16v16H4z"/><path d="M8 9h8"/><path d="M8 13h5"/></svg></span>
+        <div class="cip-tt">备忘</div>
+        <div class="cip-sub">关于 Ta 的小记录</div>
+      </div>
+
+      <!-- 查找记录 -->
+      <div class="cip-card" id="cipSearch">
+        <span class="cip-ic"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg></span>
+        <div class="cip-tt">查找记录</div>
+        <div class="cip-sub">按关键词搜索</div>
+      </div>
+
+      <!-- 删除好友（横条卡片） -->
+      <div class="cip-card wide" id="cipDeleteFriend">
+        <span class="cip-ic"><svg viewBox="0 0 24 24"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></span>
+        <div class="cip-txt">
+          <div class="cip-tt">删除好友</div>
+          <div class="cip-sub">从好友列表里移除，可被加回</div>
+        </div>
+        <span class="cip-arr">›</span>
+      </div>
+
+      <!-- 加入黑名单（横条卡片） -->
+      <div class="cip-card wide" id="cipBlockFriend">
+        <span class="cip-ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><line x1="5.5" y1="5.5" x2="18.5" y2="18.5"/></svg></span>
+        <div class="cip-txt">
+          <div class="cip-tt">加入黑名单</div>
+          <div class="cip-sub">不再接收消息，不可被加回</div>
+        </div>
+        <span class="cip-arr">›</span>
+      </div>
+
+      <!-- 清空聊天记录（横条卡片） -->
+      <div class="cip-card wide" id="cipClear">
+        <span class="cip-ic"><svg viewBox="0 0 24 24"><path d="M4 7h16"/><path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/><path d="M6 7l1 12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-12"/></svg></span>
+        <div class="cip-txt">
+          <div class="cip-tt">清空聊天记录</div>
+          <div class="cip-sub">删除和该角色的全部聊天</div>
+        </div>
+        <span class="cip-arr">›</span>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- ============ 新的朋友（整页 · 方案 B） ============ -->
+<div class="screen" id="newFriendsScreen">
+  <div class="a-top">
+    <button class="a-back" id="nfBack" type="button">‹</button>
+    <div class="a-title">新 的 朋 友</div>
+    <button class="a-act" id="nfYouKnow" type="button" style="font-size:11px;width:auto;padding:0 4px;letter-spacing:1px;">你可能认识</button>
+  </div>
+  <div class="nf-search">
+    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#1a1a1a" stroke-width="1.6"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
+    <input type="text" id="nfSearchInput" placeholder="搜索 账号 / 名字">
+  </div>
+  <div class="nf-list" id="nfList"></div>
+</div>
+<!-- ============ 加好友 · 写留言 ============ -->
+<div class="modal" id="mAddFriendNote">
+  <div class="overlay" data-close></div>
+  <div class="sheet">
+    <div class="sheet-head"><h3>好友申请</h3><button class="x" data-close type="button">✕</button></div>
+    <div class="sheet-body">
+      <label>验证消息</label>
+      <textarea id="afNote" rows="3" placeholder="说点什么…" style="min-height:100px"></textarea>
+      <div class="btn-row">
+        <button class="ghost-btn" data-close type="button">取 消</button>
+        <button class="primary-btn" id="afOk" type="button" style="margin-top:0">发 送</button>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- ============ 你可能认识 ============ -->
+<div class="screen" id="youKnowScreen">
+  <div class="a-top">
+    <button class="a-back" id="ykBack" type="button">‹</button>
+    <div class="a-title">你可能认识</div>
+    <button class="a-act" id="ykRefresh" type="button" style="font-size:11px;width:auto;padding:0 4px;letter-spacing:1px;">换一批</button>
+  </div>
+  <div class="nf-list" id="ykList"></div>
+</div>
+
+<!-- ============ 内置角色一览 ============ -->
+<div class="screen" id="builtinListScreen">
+  <div class="a-top">
+    <button class="a-back" id="blBack" type="button">‹</button>
+    <div class="a-title">内 置 角 色</div>
+  </div>
+  <div class="nf-list" id="blList"></div>
+</div>
+
+<!-- ============ 内置角色小菜单（点头像弹出） ============ -->
+<div class="modal" id="mBuiltinMenu">
+  <div class="overlay" data-close></div>
+  <div class="sheet" style="max-width:300px">
+    <div class="sheet-head"><h3 id="blMenuTitle">角色</h3><button class="x" data-close type="button">✕</button></div>
+    <div class="sheet-body">
+      <div class="chk-row" id="blMenuEdit"><div class="nm">编辑</div><span class="chev">›</span></div>
+      <div class="chk-row" id="blMenuMoments"><div class="nm">动态</div><span class="chev">›</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 编辑内置角色 ============ -->
+<div class="modal" id="mEditBuiltin">
+  <div class="overlay" data-close></div>
+  <div class="sheet">
+    <div class="sheet-head"><h3>编辑内置角色</h3><button class="x" id="blEditClose" type="button">✕</button></div>
+    <div class="sheet-body">
+      <div class="nf-avatar-block">
+        <div class="nf-avatar-preview" id="blEditAvatarPreview"></div>
+        <div class="nf-avatar-actions">
+          <div class="nf-hint">点击上传或使用默认头像</div>
+          <div class="nf-mini-btns">
+            <button type="button" class="nf-mini-btn primary" id="blEditUploadAv">上传</button>
+            <button type="button" class="nf-mini-btn" id="blEditClearAv">默认</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="nf-form-row">
+        <label>名字</label>
+        <input type="text" id="blEditName" placeholder="角色的名字">
+      </div>
+
+      <div class="nf-form-row">
+        <label>个签</label>
+        <input type="text" id="blEditSign" placeholder="这个人很懒，什么都没有留下。">
+      </div>
+
+      <div class="nf-form-row">
+        <label>关系网</label>
+        <div class="hint" style="font-size:11px;color:#bbb;line-height:1.7;margin:4px 0 8px">勾选 = 默认已经是好友。</div>
+        <div id="blEditFriendList" style="max-height:240px;overflow-y:auto;scrollbar-width:none"></div>
+      </div>
+
+      <div class="nf-form-row" style="display:flex;align-items:center;gap:12px">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;color:#1a1a1a;letter-spacing:1px;font-weight:300">允许 Ta 发动态</div>
+          <div style="font-size:10.5px;color:#bbb;margin-top:3px;letter-spacing:.3px;font-weight:300">默认关闭</div>
+        </div>
+        <label class="switch"><input type="checkbox" id="blEditAllowMoment"><span class="slider"></span></label>
+      </div>
+
+      <button class="primary-btn" id="blEditSave" type="button" style="margin-top:18px">保 存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 内置角色动态（占位） ============ -->
+<div class="modal" id="mBuiltinMoments">
+  <div class="overlay" data-close></div>
+  <div class="sheet" style="max-width:320px">
+    <div class="sheet-head"><h3 id="blMomentsTitle">动态</h3><button class="x" data-close type="button">✕</button></div>
+    <div class="sheet-body">
+      <div style="text-align:center;color:#bbb;font-size:13px;padding:40px 20px;line-height:2;font-weight:300">
+        Ta 的动态功能还没做<br>敬请期待
+      </div>
+    </div>
+  </div>
+</div>
+<!-- ============ 聊天信息 · 更多弹窗 ============ -->
+<div class="cip-mask" id="cipMoreMask">
+  <div class="cip-sheet">
+    <div class="cip-sh-title">更多</div>
+    <div class="cip-sh-item" id="cipTag">
+      <span class="cip-sh-ic"><svg viewBox="0 0 24 24"><path d="M20 12l-8 8-9-9V4h7z"/><circle cx="7.5" cy="7.5" r="1"/></svg></span>
+      <span class="cip-sh-main">分组</span><span class="cip-sh-arr">›</span>
+    </div>
+    <div class="cip-sh-item" id="cipFriendPerm">
+      <span class="cip-sh-ic"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></span>
+      <span class="cip-sh-main">朋友权限</span><span class="cip-sh-arr">›</span>
+    </div>
+    <div class="cip-sh-item" id="cipAutoAdd">
+      <span class="cip-sh-ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-7 8-7s8 3 8 7"/></svg></span>
+      <span class="cip-sh-main">角色自主加好友</span>
+      <label class="switch"><input type="checkbox" id="cipAutoAddSw"><span class="slider"></span></label>
+    </div>
+    <div class="cip-sh-cancel" id="cipMoreCancel">取 消</div>
+  </div>
+</div>
+
+<!-- 删除 / 拉黑 二次确认弹窗 -->
+<div class="cip-confirm-mask" id="cipConfirmMask">
+  <div class="cip-confirm-sheet">
+    <div class="cip-confirm-av" id="cipConfirmAv"></div>
+    <div class="cip-confirm-title" id="cipConfirmTitle">删除好友？</div>
+    <div class="cip-confirm-desc" id="cipConfirmDesc">删除后对方还在你的好友列表里（消息保留，可被加回）。</div>
+    <div class="cip-confirm-acts">
+      <button class="cip-confirm-btn cancel" id="cipConfirmCancel" type="button">取 消</button>
+      <button class="cip-confirm-btn ok" id="cipConfirmOk" type="button">删 除</button>
+    </div>
+  </div>
+</div>
+<style>
+
+.tcon-mask.show{display:flex}
+.tcon-head{
+  flex:none;display:flex;align-items:center;justify-content:space-between;
+  padding:12px 14px;background:#111;border-bottom:1px solid rgba(255,255,255,.12);
+}
+.tcon-title{font-size:14px;font-weight:700;letter-spacing:1px;color:#fff}
+.tcon-hbtn{
+  background:transparent;border:1px solid rgba(255,255,255,.25);color:#fff;
+  border-radius:8px;padding:5px 11px;font-size:12px;font-family:inherit;
+  margin-left:6px;cursor:pointer;
+}
+.tcon-body{flex:1;overflow-y:auto;padding:12px 14px;-webkit-overflow-scrolling:touch}
+.tcon-foot{
+  flex:none;padding:10px 14px calc(10px + env(safe-area-inset-bottom));
+  border-top:1px solid rgba(255,255,255,.12);background:#111;text-align:center;
+}
+.tcon-tip{font-size:11px;color:#888}
+.tcon-group{
+  font-size:12px;color:#fff;letter-spacing:1.5px;font-weight:700;
+  margin:18px 0 8px;padding-bottom:6px;border-bottom:1px solid rgba(255,255,255,.15);
+}
+.tcon-group:first-child{margin-top:0}
+.tcon-row{
+  display:flex;align-items:center;gap:10px;padding:9px 0;
+  border-bottom:1px dashed rgba(255,255,255,.08);font-size:12.5px;
+}
+.tcon-row:last-child{border-bottom:none}
+.tcon-row .k{flex:1;color:#ccc;word-break:break-all}
+.tcon-row .v{flex:none;color:#fff;font-weight:700;min-width:54px;text-align:right}
+.tcon-row input[type=range]{
+  flex:1.4;-webkit-appearance:none;appearance:none;height:3px;
+  border-radius:2px;background:rgba(255,255,255,.18);outline:none;
+}
+.tcon-row input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;width:16px;height:16px;border-radius:50%;
+  background:#fff;cursor:pointer;
+}
+.tcon-row input[type=number]{
+  width:64px;background:#1a1a1a;border:1px solid rgba(255,255,255,.25);
+  color:#fff;border-radius:6px;padding:5px 8px;font-size:12px;
+  font-family:inherit;text-align:center;outline:none;
+}.cl-line.just-moved .txt{
+  color:#1a1a1a;
+  font-weight:600;
+  background:rgba(0,0,0,.04);
+  border-radius:4px;
+  padding:1px 6px;
+  animation:justMovedPulse 1.6s ease-out 2;
+}
+@keyframes justMovedPulse{
+  0%{background:rgba(0,0,0,.12)}
+  100%{background:rgba(0,0,0,.04)}
+}
+/* 已读 / 未读 / 已读不回 标记 */
+.read-tag{
+  font-size:10.5px;
+  color:#999;
+  letter-spacing:1px;
+  margin-top:4px;
+  padding:0 2px;
+  font-weight:300;
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+}
+.read-tag.unread{
+  color:#d0d0d0;
+  font-weight:300;
+}
+.read-tag.noreply{
+  color:#bbb;
+  font-style:italic;
+  letter-spacing:1.5px;
+}
+
+/* ===== 占卜 · 写占卜理解 · 居中弹窗 · 四角圆角 ===== */
+#mRead{
+  align-items:center !important;
+  justify-content:center !important;
+  padding:24px !important;
+}
+#mRead .read-sheet-a{
+  width:100%;
+  max-width:400px;
+  background:#ffffff;
+  border-radius:22px;
+  border:none;
+  box-shadow:0 20px 60px rgba(0,0,0,.18);
+  padding:22px 20px 20px;
+  animation:pop .28s cubic-bezier(.22,1,.36,1);
+  box-sizing:border-box;
+}
+#mRead .read-sheet-a.sheet{
+  padding:22px 20px 20px !important;
+  border:none !important;
+  border-radius:22px !important;
+  overflow:hidden !important;
+  max-height:none !important;
+}
+
+#mRead .read-a-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding-bottom:18px;
+}
+
+#mRead .read-a-title{
+  font-size:16px;
+  font-weight:300;
+  letter-spacing:3px;
+  color:#1a1a1a;
+  -webkit-text-stroke:0.15px #1a1a1a;
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+}
+
+#mRead .read-a-close{
+  width:30px;height:30px;border-radius:0;
+  border:none;
+  background:transparent;color:#999;font-size:14px;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;
+  font-family:inherit;padding:0;
+  transition:color .2s;
+}
+#mRead .read-a-close:active{color:#1a1a1a;border-color:#1a1a1a;}
+
+#mRead .read-a-q{
+  font-size:12px;
+  color:#999;
+  font-style:italic;
+  padding:10px 14px;
+  background:#fafafa;
+  border-radius:12px;
+  margin-bottom:14px;
+  line-height:1.7;
+  word-break:break-word;
+  font-weight:300;
+  -webkit-font-smoothing:antialiased;
+}
+#mRead .read-a-q b{
+  color:#1a1a1a;
+  font-style:normal;
+  margin-right:6px;
+  font-weight:400;
+}
+
+#mRead .read-a-textarea{
+  width:100%;
+  min-height:140px;
+  border:0.7px solid rgba(0,0,0,.12);
+  border-radius:14px;
+  padding:14px 16px;
+  font-size:14px;
+  font-family:inherit;
+  color:#1a1a1a;
+  outline:none;
+  background:#fdfdfd;
+  resize:vertical;
+  line-height:1.7;
+  box-sizing:border-box;
+  font-weight:300;
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+  transition:border-color .2s, background .2s;
+}
+#mRead .read-a-textarea:focus{
+  border-color:#1a1a1a;
+  background:#fff;
+}
+#mRead .read-a-textarea::placeholder{
+  color:#c8c8c8;
+  font-weight:300;
+}
+
+#mRead .read-a-acts{
+  display:flex;
+  gap:10px;
+  margin-top:18px;
+}
+#mRead .read-a-btn{
+  flex:1;
+  padding:13px 0;
+  border-radius:22px;
+  font-size:13.5px;
+  font-family:inherit;
+  letter-spacing:3px;
+  cursor:pointer;
+  font-weight:300;
+  border:none;
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+  transition:opacity .18s ease, background .18s ease, border-color .18s ease;
+}
+#mRead .read-a-btn.cancel{
+  background:transparent;
+  border:0.7px solid rgba(0,0,0,.15);
+  color:#999;
+}
+#mRead .read-a-btn.cancel:active{
+  background:#fafafa;
+}
+#mRead .read-a-btn.ok{
+  background:#1a1a1a;
+  color:#ffffff;
+}
+#mRead .read-a-btn.ok:active{
+  opacity:.85;
+}
+
+
+/* ===== 动态页 · 方案 2 细体极简 ===== */
+#momentsScreen{
+  background:#ffffff;
+}
+ 
+
+#momentsScreen .mm-tabs{
+  display:flex;
+  gap:22px;
+  padding:4px 22px 14px;
+  background:#ffffff;
+  border-bottom:0.6px dashed #e8e8e8;
+  overflow-x:auto;
+  scrollbar-width:none;
+}
+#momentsScreen .mm-tabs::-webkit-scrollbar{display:none}
+#momentsScreen .mm-tab{
+  flex:none;
+  padding:6px 0;
+  font-size:12.5px;
+  color:#bbb;
+  background:transparent;
+  border:none;
+  letter-spacing:2px;
+  position:relative;
+  font-family:inherit;
+  font-weight:300;
+  cursor:pointer;
+  white-space:nowrap;
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+}
+#momentsScreen .mm-tab.on{
+  color:#1a1a1a;
+  font-weight:300;
+  background:transparent;
+  border:none;
+}
+#momentsScreen .mm-tab.on::after{
+  content:"";
+  position:absolute;
+  left:50%;
+  bottom:-14px;
+  transform:translateX(-50%);
+  width:16px;height:1.5px;
+  background:#1a1a1a;
+  border-radius:2px;
+}
+
+#momentsScreen .mm-wrap{
+  flex:1;
+  overflow-y:auto;
+  padding:20px 22px 30px;
+  background:#ffffff;
+  scrollbar-width:none;
+}
+#momentsScreen .mm-wrap::-webkit-scrollbar{display:none}
+#momentsScreen .mm-body{padding:0}
+
+#momentsScreen .lb-post{
+  padding:22px 0;
+  border-bottom:none;
+  border-radius:0;
+  background:transparent;
+  margin-bottom:0;
+}
+#momentsScreen .lb-post:last-child{border-bottom:none}
+
+#momentsScreen .lb-top{
+  gap:10px;
+  margin-bottom:12px;
+  align-items:center;
+}
+#momentsScreen .mm-av{
+  width:32px;height:32px;
+  border-radius:var(--mm-av-radius, 50%);
+  background:#f5f5f5;
+  overflow:hidden;
+  position:relative;
+  flex:none;
+  transition:border-radius .2s ease;
+}
+#momentsScreen .mm-av svg{
+  position:absolute;inset:0;
+  width:100%;height:100%;
+}
+#momentsScreen .mm-av .silhouette{fill:#c8c8c8}
+#momentsScreen .mm-av img{
+  position:absolute;inset:0;
+  width:100%;height:100%;
+  object-fit:cover;display:block;
+}
+#momentsScreen .lb-info{
+  flex:1;min-width:0;
+  padding-top:0;
+}
+#momentsScreen .lb-name{
+  font-family:var(--app-font);
+  font-weight:300;
+  letter-spacing:2.5px;
+  -webkit-text-stroke:0.15px #1a1a1a;
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+  font-size:14px;
+  color:#1a1a1a;
+  line-height:1.2;
+}
+#momentsScreen .lb-time{
+  font-weight:300;
+  letter-spacing:1px;
+  color:#ccc;
+  font-size:10.5px;
+  margin-top:3px;
+  line-height:1.3;
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+}
+#momentsScreen .lb-text{
+  font-family:var(--app-font);
+  font-weight:300;
+  letter-spacing:1px;
+  -webkit-text-stroke:0.1px #1a1a1a;
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+  font-size:14.5px;
+  line-height:1.9;
+  padding-left:14px;
+  position:relative;
+  color:#1a1a1a;
+  white-space:pre-wrap;
+  word-break:break-word;
+}
+#momentsScreen .lb-text::before{
+  content:"";
+  position:absolute;
+  left:0;top:9px;
+  width:5px;height:5px;
+  border-radius:50%;
+  background:#1a1a1a;
+  opacity:.5;
+}
+#momentsScreen .lb-vis{
+  display:inline-flex;
+  align-items:center;
+  gap:4px;
+  margin-top:10px;
+  margin-left:14px;
+  font-size:10.5px;
+  color:#999;
+  background:transparent;
+  border:none;
+  padding:0;
+  letter-spacing:.5px;
+  font-weight:300;
+}
+#momentsScreen .lb-vis svg{
+  width:10px;height:10px;
+  stroke:#bbb;fill:none;
+  stroke-width:1.6;
+}
+#momentsScreen .lb-vis.shield{color:#bbb}
+#momentsScreen .lb-vis.shield svg{stroke:#bbb}
+
+#momentsScreen .lb-actions{
+  border-top:none;
+  margin-top:14px;
+  padding-top:0;
+  padding-left:14px;
+  gap:20px;
+  display:flex;
+  align-items:center;
+}
+#momentsScreen .lb-act-item{
+  font-weight:300;
+  letter-spacing:1px;
+  font-size:12px;
+  color:#999;
+  display:inline-flex;
+  align-items:center;
+  gap:5px;
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+}
+#momentsScreen .lb-act-item svg{
+  width:13px;height:13px;
+  stroke:currentColor;fill:none;
+  stroke-width:1.5;
+  stroke-linecap:round;stroke-linejoin:round;
+}
+#momentsScreen .lb-act-item.liked{
+  color:#1a1a1a;
+}
+#momentsScreen .lb-act-item.liked svg{
+  fill:#1a1a1a;stroke:#1a1a1a;
+}
+#momentsScreen .lb-reply-btn{
+  margin-left:auto;
+  border:none;
+  background:transparent;
+  padding:0;
+  font-weight:300;
+  letter-spacing:1px;
+  font-size:12px;
+  color:#1a1a1a;
+  display:inline-flex;
+  align-items:center;
+  gap:5px;
+  cursor:pointer;
+  font-family:inherit;
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+}
+#momentsScreen .lb-reply-btn svg{
+  width:13px;height:13px;
+  stroke:currentColor;fill:none;
+  stroke-width:1.5;
+  stroke-linecap:round;stroke-linejoin:round;
+}
+
+#momentsScreen .like-row{
+  background:transparent;
+  padding:8px 0 0 14px;
+  border-radius:0;
+  font-weight:300;
+  letter-spacing:.5px;
+  font-size:11.5px;
+  margin-top:0;
+  display:flex;
+  align-items:flex-start;
+  gap:8px;
+  line-height:1.7;
+  color:#999;
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+}
+#momentsScreen .like-row .heart{
+  flex:none;
+  font-size:11px;
+  color:#999;
+  margin-top:1px;
+}
+#momentsScreen .like-row .names{
+  flex:1;
+  color:#999;
+  word-break:break-word;
+}
+#momentsScreen .like-row .names b{
+  font-weight:400;
+  color:#1a1a1a;
+  margin:0 2px;
+}
+
+#momentsScreen .cmt{
+  border-top:0.6px dashed #f0f0f0;
+  padding-left:14px;
+  margin-top:12px;
+  padding-top:10px;
+}
+#momentsScreen .ci{
+  font-weight:300;
+  letter-spacing:.5px;
+  font-size:12px;
+  line-height:1.9;
+  padding:2px 0;
+  color:#1a1a1a;
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+}
+#momentsScreen .cn{
+  font-weight:400;
+  color:#1a1a1a;
+  margin-right:2px;
+}
+
+#momentsScreen .mm-empty,
+#momentsScreen .mm-closed{
+  text-align:center;
+  color:#bbb;
+  padding:60px 30px;
+  font-size:13px;
+  line-height:2;
+  letter-spacing:.5px;
+  font-weight:300;
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+}
+
+#momentsScreen .mm-post-btn{
+  position:fixed;
+  bottom:30px;
+  right:max(20px, calc((100vw - 780px)/2 + 20px));
+  z-index:40;
+  width:52px;height:52px;
+  border-radius:50%;
+  border:none;
+  background:#1a1a1a;
+  color:#ffffff;
+  font-size:24px;
+  line-height:1;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+  box-shadow:0 2px 12px rgba(0,0,0,.18);
+  font-family:inherit;
+}
+#momentsScreen .mm-post-btn.hide{display:none}
+
+/* ★ 方案 A · 角色动态页头部 */
+#momentsScreen .role-head{
+  display:flex;
+  align-items:center;
+  gap:14px;
+  padding:4px 22px 18px;
+  border-bottom:0.6px dashed #ececec;
+  margin-bottom:20px;
+}
+#momentsScreen .role-av{
+  width:52px;
+  height:52px;
+  flex:none;
+  background:#f0f0f0;
+  overflow:hidden;
+  position:relative;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  /* ★ 方圆跟随全站设置 */
+  border-radius:var(--avatar-radius, 12%);
+}
+#momentsScreen .role-av svg{position:absolute;inset:0;width:100%;height:100%}
+#momentsScreen .role-av .silhouette{fill:#c8c8c8}
+#momentsScreen .role-av img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;border-radius:inherit}
+#momentsScreen .role-info{flex:1;min-width:0}
+#momentsScreen .role-name{
+  font-size:16px;
+  font-weight:300;
+  letter-spacing:1.5px;
+  color:#1a1a1a;
+  line-height:1.2;
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+}
+#momentsScreen .role-meta{
+  font-size:10.5px;
+  color:#bbb;
+  letter-spacing:.5px;
+  margin-top:5px;
+  font-family:Georgia,serif;
+}
+
+/* ★ 动态列表项：头像方圆跟随全站设置 */
+#momentsScreen .mm-av{
+  border-radius:var(--mm-av-radius, 50%);
+}
+#momentsScreen .mm-av img{
+  border-radius:inherit;
+}
+/* ===== 聊天信息页 · 细体对齐个人主页 ===== */
+.chat-info-panel,
+.chat-info-panel .cip-hero-name,
+.chat-info-panel .cip-tt,
+.chat-info-panel .cip-sh-main{
+  font-family:var(--app-font);
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+}
+.chat-info-panel .cip-nav h1{
+  font-weight:300;
+  letter-spacing:3px;
+  -webkit-text-stroke:0.15px #1a1a1a;
+}
+.chat-info-panel .cip-hero-name{
+  font-weight:300;
+  letter-spacing:1.5px;
+  -webkit-text-stroke:0.15px #1a1a1a;
+}
+.chat-info-panel .cip-tt{
+  font-weight:300;
+  letter-spacing:1.5px;
+  -webkit-text-stroke:0.15px #1a1a1a;
+}
+.chat-info-panel .cip-sub{
+  font-weight:300;
+  letter-spacing:.5px;
+}
+.chat-info-panel .cip-sh-main{
+  font-weight:300;
+  letter-spacing:1px;
+  -webkit-text-stroke:0.15px #1a1a1a;
+}
+.chat-info-panel .cip-sh-title{
+  font-weight:300;
+  letter-spacing:3px;
+}
+/* 确认弹窗也统一细体 */
+.cip-confirm-av{
+  width:46px;height:46px;
+  border-radius:var(--avatar-radius,12%);
+  background:#f0f0f0;
+  display:none;
+  align-items:center;justify-content:center;
+  margin:0 auto 14px;
+  overflow:hidden;position:relative;
+  flex:none;
+}
+.cip-confirm-av svg{position:absolute;inset:0;width:100%;height:100%}
+.cip-confirm-av .silhouette{fill:#c8c8c8}
+.cip-confirm-av img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+.cip-confirm-title{
+  font-weight:300;
+  letter-spacing:2px;
+  -webkit-text-stroke:0.15px #1a1a1a;
+}
+.cip-confirm-desc{
+  font-weight:300;
+  letter-spacing:.5px;
+}
+.cip-confirm-btn{
+  font-weight:300;
+  letter-spacing:1.5px;
+}
+
+/* ============================================================
+   全屏二级页 · 统一顶部栏 / 背景 / 内边距
+   只覆盖，不动原有结构
+   ============================================================ */
+
+/* 1. 所有二级页：统一白底 */
+#divineRecordScreen,
+#relationScreen,
+#behaviorScreen,
+#moodScreen,
+#cardLibScreen,
+#cardDetailScreen,
+#chatSearchScreen,
+#memoScreen,
+#momentsScreen,
+#videoPoolScreen,
+#newFriendsScreen,
+#youKnowScreen{
+  background:#ffffff;
+}
+
+/* 2. 统一顶部栏容器（把各页面自己的那一套吃掉） */
+#cardDetailScreen .cl-top{display:block !important}
+
+#divineRecordScreen .dr-top,
+#relationScreen .rel-top,
+#behaviorScreen .bh-top,
+#moodScreen .cl-top,
+#cardLibScreen .cl-top,
+#cardDetailScreen .cl-top,
+#chatSearchScreen .cs-top,
+#memoScreen .memo-top,
+#momentsScreen .mm-topbar,
+#videoPoolScreen .vp-top,
+#newFriendsScreen .nf-top,
+#youKnowScreen .nf-top{
+  flex:none;
+  display:flex;
+  align-items:center;
+  gap:12px;
+  padding:20px 22px 12px;
+  background:transparent;
+  border-bottom:none;
+}
+
+/* 3. 统一标题：细体 + 字距 6 + 15px */
+#divineRecordScreen .dr-title,
+#relationScreen .rel-title,
+#behaviorScreen .bh-title,
+#moodScreen .cl-title,
+#cardLibScreen .cl-title,
+#cardDetailScreen .cl-title,
+#memoScreen .memo-title,
+#momentsScreen .mm-title,
+#videoPoolScreen .vp-title,
+#newFriendsScreen .nf-title,
+#youKnowScreen .nf-title{
+  flex:1;
+  font-size:15px;
+  font-weight:300;
+  letter-spacing:6px;
+  text-align:center;
+  color:#1a1a1a;
+  -webkit-text-stroke:0.15px #1a1a1a;
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+  margin:0;
+}
+
+/* 4. 统一返回箭头：纯 ‹ + opacity .55 */
+#divineRecordScreen .dr-back,
+#relationScreen .rel-back,
+#behaviorScreen .bh-back,
+#moodScreen .cl-back,
+#cardLibScreen .cl-back,
+#cardDetailScreen .cl-back,
+#chatSearchScreen .cip-back,
+#memoScreen .memo-back,
+#momentsScreen .mm-back,
+#videoPoolScreen .vp-back,
+#newFriendsScreen .nf-back,
+#youKnowScreen .nf-back{
+  width:38px;
+  height:38px;
+  flex:none;
+  border:none;
+  background:transparent;
+  color:#1a1a1a;
+  font-size:22px;
+  line-height:1;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:0 0 4px;
+  font-family:inherit;
+  cursor:pointer;
+  box-shadow:none;
+  opacity:.55;
+  transition:opacity .18s ease;
+  border-radius:0;
+}
+#divineRecordScreen .dr-back:active,
+#relationScreen .rel-back:active,
+#behaviorScreen .bh-back:active,
+#moodScreen .cl-back:active,
+#cardLibScreen .cl-back:active,
+#cardDetailScreen .cl-back:active,
+#chatSearchScreen .cip-back:active,
+#memoScreen .memo-back:active,
+#momentsScreen .mm-back:active,
+#videoPoolScreen .vp-back:active,
+#newFriendsScreen .nf-back:active,
+#youKnowScreen .nf-back:active{
+  opacity:1;
+}
+
+/* 5. 右上角「更多 / 设置」按钮：去掉边框，只留字符 */
+#relationScreen .rel-set,
+#behaviorScreen .bh-set,
+#moodScreen .cd-more,
+#cardDetailScreen .cd-more,
+#momentsScreen .mm-set-btn{
+  width:38px;
+  height:38px;
+  flex:none;
+  border:none;
+  background:transparent;
+  color:#1a1a1a;
+  font-size:20px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-family:inherit;
+  cursor:pointer;
+  padding:0;
+  opacity:.55;
+  transition:opacity .18s ease;
+  border-radius:0;
+}
+#relationScreen .rel-set:active,
+#behaviorScreen .bh-set:active,
+#moodScreen .cd-more:active,
+#cardDetailScreen .cd-more:active,
+#momentsScreen .mm-set-btn:active{
+  opacity:1;
+}
+
+/* 6. 统一左右内边距：二级页主内容区 */
+#divineRecordScreen .dr-wrap,
+#relationScreen .rel-wrap,
+#behaviorScreen .behavior-wrap,
+#moodScreen .mood-list,
+#cardLibScreen .group-list,
+#memoScreen .memo-wrap{
+  padding-left:22px;
+  padding-right:22px;
+}
+
+/* 7. 右上角那个「＋ / 上传」按钮：无边框，纯文字 */
+#videoPoolScreen .vp-add,
+#newFriendsScreen .nf-add,
+#youKnowScreen .nf-add{
+  flex:none;
+  padding:6px 8px;
+  border:none;
+  background:transparent;
+  color:#1a1a1a;
+  font-size:12px;
+  font-family:inherit;
+  letter-spacing:1px;
+  cursor:pointer;
+  transition:opacity .18s ease;
+}
+#videoPoolScreen .vp-add:active,
+#newFriendsScreen .nf-add:active,
+#youKnowScreen .nf-add:active{
+  opacity:.55;
+}
+</style>
+
+<style>
+/* ============ 设置 / 通知 / 关于 三页共用样式 ============ */
+.set-wrap{
+  max-width:420px;margin:0 auto;width:100%;
+  height:100%;overflow-y:auto;padding:0 22px 60px;
+  box-sizing:border-box;scrollbar-width:none;
+}
+.set-wrap::-webkit-scrollbar{display:none}
+ 
+
+.set-list{padding:6px 0 0}
+.set-row{
+  display:flex;align-items:center;gap:14px;
+  padding:20px 4px;
+  border-bottom:0.6px dashed rgba(0,0,0,.06);
+  cursor:pointer;border-radius:8px;
+  transition:background .18s ease;
+}
+.set-row:last-child{border-bottom:none}
+.set-row:active{background:rgba(0,0,0,.025)}
+.set-row .num{
+  font-size:9.5px;color:#d8d8d8;font-family:Georgia,serif;
+  letter-spacing:1.5px;width:24px;flex:none;font-weight:400;
+}
+.set-row .name{
+  flex:1;font-size:16px;font-weight:300;letter-spacing:2.5px;
+  color:#1a1a1a;-webkit-text-stroke:.15px #1a1a1a;
+  -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;
+}
+.set-row .val{
+  font-size:11.5px;color:#bbb;letter-spacing:.5px;
+  flex:none;font-weight:300;margin-right:6px;
+}
+.set-row .en{
+  font-size:9px;letter-spacing:3.5px;color:#d0d0d0;
+  font-family:Georgia,serif;flex:none;font-weight:300;
+}
+.set-row .arr{
+  font-size:12px;color:#e0e0e0;flex:none;margin-left:10px;
+  transition:transform .18s ease;
+}
+.set-row:active .arr{transform:translateX(2px)}
+
+.sw-row{
+  display:flex;align-items:center;gap:14px;
+  padding:20px 4px;
+  border-bottom:0.6px dashed rgba(0,0,0,.06);
+}
+.sw-row:last-child{border-bottom:none}
+.sw-row .sw-main{flex:1;min-width:0}
+.sw-row .sw-main .t1{
+  font-size:15px;font-weight:300;letter-spacing:2px;color:#1a1a1a;
+  -webkit-text-stroke:.15px #1a1a1a;
+  -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;
+}
+.sw-row .sw-main .t2{
+  font-size:11.5px;color:#bbb;letter-spacing:.5px;
+  margin-top:5px;line-height:1.6;font-weight:300;
+}
+
+.about-version{
+  font-size:11px;letter-spacing:4px;color:#bbb;font-family:Georgia,serif;
+  text-align:center;padding:20px 0 26px;
+  border-bottom:0.6px dashed #ececec;margin-bottom:26px;
+}
+.sec-title{
+  font-size:10.5px;letter-spacing:5px;color:#ccc;font-family:Georgia,serif;
+  text-align:center;padding:0 0 12px;
+}
+.sec-title-cn{
+  font-size:11px;letter-spacing:6px;color:#1a1a1a;
+  text-align:center;padding:0 0 16px;font-weight:300;
+  -webkit-text-stroke:.15px #1a1a1a;
+  -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;
+}
+.notice{
+  font-size:13.5px;line-height:2.05;color:#333;letter-spacing:.5px;
+  padding:0 4px 30px;font-weight:300;text-align:center;
+  -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;
+}
+.notice p{margin-bottom:14px}
+.notice p:last-child{margin-bottom:0}
+.thanks{
+  font-size:12.5px;line-height:2;color:#888;letter-spacing:.5px;
+  padding:0 4px 24px;font-weight:300;text-align:center;
+  -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;
+}
+.thanks b{color:#1a1a1a;font-weight:400}
+.thanks .id{font-size:11px;color:#bbb}
+.end{
+  text-align:center;font-size:11px;color:#bbb;letter-spacing:3px;
+  padding-top:14px;border-top:0.6px dashed #ececec;font-weight:300;
+  -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;
+}
+
+/* ============ 共享池 + 视频卡片 ============ */
+.video-card{
+  background:#fff;
+  border:0.7px solid #d0d0d0;
+  border-radius:10px;
+  box-shadow:0 1px 4px rgba(0,0,0,.06);
+  padding:14px 16px;
+  max-width:240px;
+  display:flex;flex-direction:column;gap:8px;
+  cursor:pointer;
+  transition:all .18s ease;
+}
+.video-card:active{background:#fafafa}
+.video-card .vc-head{
+  display:flex;align-items:center;gap:8px;
+  font-size:11px;color:#999;letter-spacing:1px;
+}
+.video-card .vc-platform{
+  display:inline-flex;align-items:center;gap:4px;
+  padding:2px 8px;border-radius:20px;
+  font-size:10px;letter-spacing:1px;
+  background:#f5f5f5;color:#1a1a1a;
+}
+.video-card .vc-platform.douyin{background:#1a1a1a;color:#fff}
+.video-card .vc-platform.xhs{background:#DD1440;color:#fff}
+.video-card .vc-platform.kuaishou{background:#FF5000;color:#fff}
+.video-card .vc-platform.youtube{background:#FF0000;color:#fff}
+.video-card .vc-title{
+  font-size:14px;line-height:1.5;color:#1a1a1a;
+  font-weight:500;
+}
+.video-card .vc-desc{
+  font-size:12px;line-height:1.5;color:#666;
+}
+.video-card .vc-foot{
+  display:flex;align-items:center;justify-content:space-between;
+  font-size:10.5px;color:#bbb;letter-spacing:.5px;
+  margin-top:2px;
+}
+
+#videoPoolScreen{
+  background:#f5f5f5;
+  flex-direction:column;
+  z-index:100;
+}
+#videoPoolScreen.on{display:flex}
+
+ 
+
+.vp-body{
+  flex:1;overflow-y:auto;
+  padding:14px 18px 40px;
+  scrollbar-width:none;
+}
+.vp-body::-webkit-scrollbar{width:0}
+
+.vp-section-title{
+  font-size:11px;letter-spacing:3px;color:#bbb;
+  font-family:Georgia,serif;
+  margin:8px 0 10px;
+}
+.vp-empty{
+  text-align:center;color:#bbb;font-size:13px;
+  padding:60px 30px;line-height:2;
+  font-weight:300;
+  letter-spacing:.5px;
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+}
+
+.vp-item{
+  display:flex;align-items:flex-start;gap:12px;
+  padding:14px 4px;
+  border-bottom:0.7px dashed rgba(0,0,0,.1);
+}
+.vp-item:last-child{border-bottom:none}
+.vp-item .vp-ic{
+  width:36px;height:36px;border-radius:10px;flex:none;
+  border:0.7px solid #d0d0d0;
+  display:flex;align-items:center;justify-content:center;
+  font-size:16px;
+  background:#fff;
+}
+.vp-item .vp-main{flex:1;min-width:0}
+.vp-item .vp-name{
+  font-size:13.5px;color:#1a1a1a;font-weight:500;
+  line-height:1.5;word-break:break-word;
+}
+.vp-item .vp-url{
+  font-size:11px;color:#999;
+  margin-top:4px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.vp-item .vp-time{
+  font-size:10px;color:#ccc;
+  font-family:Georgia,serif;
+  margin-top:4px;letter-spacing:.5px;
+}
+.vp-item .vp-del{
+  width:26px;height:26px;flex:none;
+  border:none;background:transparent;
+  color:#999;font-size:13px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  padding:0;
+  transition:opacity .18s ease;
+}
+.vp-item .vp-del:active{opacity:.45}
+
+.vp-desc-count{
+  display:flex;justify-content:space-between;
+  font-size:10.5px;color:#bbb;
+  margin-top:4px;
+}
+.vp-desc-count b{color:#1a1a1a;font-family:Georgia,serif}
+
+/* ===== 回复设置 · 整页 ===== */
+.screen#mReply{
+  background:#fff;
+  flex-direction:column;
+  align-items:stretch;
+  justify-content:flex-start;
+  padding:0;
+}
+.screen#mReply.show{display:flex}
+
+
+.screen#mReply .reply-back:active{opacity:1}
+.screen#mReply .reply-title{
+  flex:1;
+  font-size:15px;font-weight:300;
+  letter-spacing:6px;
+  text-align:center;
+  color:#1a1a1a;
+  -webkit-text-stroke:.15px #1a1a1a;
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+}
+.screen#mReply .reply-top-right{width:38px;flex:none}
+.screen#mReply .sheet-body{
+  flex:1 1 auto;
+  min-height:0;
+  overflow-y:auto;
+  -webkit-overflow-scrolling:touch;
+  scrollbar-width:none;
+  padding:0;
+}
+.screen#mReply .sheet-body::-webkit-scrollbar{display:none}
+
+/* ===== 回复设置 · 数字输入（方案 A · 下划线） ===== */
+.rs-line{
+  display:flex;
+  align-items:center;
+  flex-wrap:wrap;
+  gap:16px 26px;
+  padding:6px 0;
+  width:100%;
+}
+.rs-item{
+  display:flex;
+  align-items:baseline;
+  gap:6px;
+  flex:none;
+}
+.rs-item .lbl{
+  font-size:11.5px;
+  color:#aaa;
+  letter-spacing:.5px;
+  font-weight:300;
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+}
+.rs-item .unit{
+  font-size:11.5px;
+  color:#c8c8c8;
+  letter-spacing:.5px;
+  flex:none;
+  font-weight:300;
+}
+.rs-item .rs-num{
+  width:46px;
+  border:none;
+  border-bottom:0.8px solid rgba(0,0,0,.15);
+  background:transparent;
+  padding:2px 0 4px;
+  font-size:15px;
+  font-family:Georgia,serif;
+  color:#1a1a1a;
+  text-align:center;
+  outline:none;
+  letter-spacing:.5px;
+  transition:border-color .18s ease;
+  -webkit-appearance:none;
+  border-radius:0;
+}
+.rs-item .rs-num:focus{border-bottom-color:#1a1a1a}
+/* 去掉数字输入框的上下箭头 */
+.rs-item .rs-num::-webkit-outer-spin-button,
+.rs-item .rs-num::-webkit-inner-spin-button{
+  -webkit-appearance:none;
+  margin:0;
+}
+.rs-item .rs-num[type=number]{-moz-appearance:textfield}
+
+/* ============================================================
+   回复设置 · 数字输入 & 滑杆 & 标签（重构版 · 单套规则）
+   ============================================================ */
+
+/* 数字输入框：统一 64px 下划线风格 */
+#mReply #replyBody input[type=number]{
+  width:64px;
+  max-width:64px;
+  min-width:64px;
+  height:auto;
+  flex:none;
+  padding:4px 0 5px;
+  margin:0;
+  border:none;
+  border-bottom:0.8px solid rgba(0,0,0,.15);
+  border-radius:0;
+  background:transparent;
+  font-size:15px;
+  font-family:Georgia,serif;
+  color:#1a1a1a;
+  text-align:center;
+  letter-spacing:.5px;
+  outline:none;
+  box-shadow:none;
+  line-height:1.3;
+  -webkit-appearance:none;
+  appearance:none;
+  -moz-appearance:textfield;
+}
+#mReply #replyBody input[type=number]:focus{
+  border-bottom-color:#1a1a1a;
+}
+#mReply #replyBody input[type=number]::-webkit-outer-spin-button,
+#mReply #replyBody input[type=number]::-webkit-inner-spin-button{
+  -webkit-appearance:none;
+  margin:0;
+}
+
+/* 滑杆：统一隐藏 */
+#mReply #replyBody input[type=range]{
+  display:none;
+}
+
+/* 标签 / 单位 / to 字 */
+#mReply #replyBody .n-row .lbl,
+#mReply #replyBody .n-row .unit,
+#mReply #replyBody .n-row .to,
+#mReply #replyBody .s-row .tag,
+#mReply #replyBody .rs-row .lbl,
+#mReply #replyBody .rs-row .unit,
+#mReply #replyBody .rs-row .to,
+#mReply #replyBody .rs-row-main .lbl,
+#mReply #replyBody .rs-row-main .unit,
+#mReply #replyBody .rs-item .lbl,
+#mReply #replyBody .rs-item .unit{
+  font-size:11.5px;
+  color:#aaa;
+  letter-spacing:.5px;
+  font-weight:300;
+  flex:none;
+  width:auto;
+  min-width:0;
+  max-width:none;
+  white-space:nowrap;
+  padding:0;
+  margin:0;
+  background:transparent;
+  border:none;
+  -webkit-font-smoothing:antialiased;
+}
+#mReply #replyBody .n-row .to,
+#mReply #replyBody .n-row .unit,
+#mReply #replyBody .rs-row .unit,
+#mReply #replyBody .rs-row .to,
+#mReply #replyBody .rs-row-main .unit,
+#mReply #replyBody .rs-item .unit{
+  color:#c8c8c8;
+}
+
+/* 数字行容器：统一横排 */
+#mReply #replyBody .n-row,
+#mReply #replyBody .s-row,
+#mReply #replyBody .rs-row,
+#mReply #replyBody .rs-row-main,
+#mReply #replyBody .rs-line{
+  display:flex;
+  align-items:baseline;
+  flex-wrap:wrap;
+  gap:14px 22px;
+  padding:4px 0;
+  width:100%;
+  border:none;
+  background:transparent;
+}
+
+/* 旧的 .num 数字，不再展示 */
+#mReply #replyBody .s-row .num,
+#mReply #replyBody .rs-row-main .num{
+  display:none;
+}
+
+  
+
+/* 旧的弹窗专用外壳在整页模式下不再生效 */
+.screen#mReply .sheet,
+.screen#mReply .rp-sheet-head,
+.screen#mReply .rp-handle,
+.screen#mReply .rp-titlerow,
+.screen#mReply .rp-title,
+.screen#mReply .rp-x{
+  display:none !important;
+}
+
+/* ===== 角色自己设定回复设置 · 锁按钮 ===== */
+#mRoleSelfSet .rss-check-item{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+}
+#mRoleSelfSet .rss-check-label{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  flex:1;
+  min-width:0;
+  cursor:pointer;
+}
+
+
+/* ===== 时间字卡开关弹窗 · 方案 B 紧凑单行 ===== */
+/* ★ 个签切换弹窗 · 极简样式 */
+#mSignSwitch .sheet{
+  max-width:400px !important;
+  padding:22px 20px 20px !important;
+  border-radius:22px !important;
+}
+#mSignSwitch .sheet-head{
+  display:flex !important;
+  align-items:center !important;
+  justify-content:space-between !important;
+  padding:0 0 16px !important;
+  border-bottom:0.6px dashed #ececec !important;
+  margin-bottom:8px !important;
+}
+#mSignSwitch .sheet-head h3{
+  font-size:15px !important;
+  font-weight:300 !important;
+  letter-spacing:4px !important;
+  color:#1a1a1a !important;
+  -webkit-text-stroke:0.15px #1a1a1a;
+}
+#mSignSwitch .sheet-head .x{
+  width:26px !important;
+  height:26px !important;
+  border:none !important;
+  background:transparent !important;
+  color:#c8c8c8 !important;
+  font-size:14px !important;
+  cursor:pointer !important;
+  font-family:inherit !important;
+  display:flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+  padding:0 !important;
+}
+#mSignSwitch .sheet-head .x:active{color:#1a1a1a !important}
+
+#mSignSwitch .section{
+  padding:16px 2px !important;
+  border-bottom:0.6px dashed #ececec !important;
+  background:transparent !important;
+  margin-bottom:0 !important;
+  border-radius:0 !important;
+}
+#mSignSwitch .section:first-of-type{padding-top:10px !important}
+#mSignSwitch .section:last-of-type{border-bottom:none !important}
+
+#mSignSwitch .sw-row{
+  display:flex !important;
+  align-items:center !important;
+  gap:14px !important;
+  padding:0 !important;
+}
+#mSignSwitch .sw-main{flex:1 !important;min-width:0 !important}
+#mSignSwitch .t1{
+  font-size:14px !important;
+  font-weight:300 !important;
+  letter-spacing:1.5px !important;
+  color:#1a1a1a !important;
+  line-height:1.4 !important;
+}
+#mSignSwitch .t2{
+  font-size:10.5px !important;
+  color:#bbb !important;
+  margin-top:5px !important;
+  letter-spacing:.5px !important;
+  font-weight:300 !important;
+  line-height:1.6 !important;
+}
+
+/* 开关：极细版 */
+#mSignSwitch .switch{
+  position:relative !important;
+  width:38px !important;
+  height:22px !important;
+  flex:none !important;
+}
+#mSignSwitch .switch input{display:none !important}
+#mSignSwitch .switch .slider{
+  position:absolute !important;
+  inset:0 !important;
+  border-radius:20px !important;
+  background:#e5e5e5 !important;
+  transition:.22s !important;
+  display:block !important;
+}
+#mSignSwitch .switch .slider:before{
+  content:"" !important;
+  position:absolute !important;
+  width:16px !important;
+  height:16px !important;
+  border-radius:50% !important;
+  background:#fff !important;
+  top:3px !important;
+  left:3px !important;
+  transition:.22s !important;
+  box-shadow:0 1px 3px rgba(0,0,0,.15) !important;
+}
+#mSignSwitch .switch input:checked + .slider{background:#1a1a1a !important}
+#mSignSwitch .switch input:checked + .slider:before{transform:translateX(16px) !important}
+
+/* 邀请按钮 */
+#mSignSwitch #signInviteRoleBtn,
+#mSignSwitch #signInviteUserBtn{
+  padding:7px 14px !important;
+  border-radius:12px !important;
+  border:0.7px solid rgba(0,0,0,.14) !important;
+  background:transparent !important;
+  color:#1a1a1a !important;
+  font-size:12.5px !important;
+  font-family:inherit !important;
+  letter-spacing:1.5px !important;
+  cursor:pointer !important;
+  flex:none !important;
+  transition:all .18s ease !important;
+}
+#mSignSwitch #signInviteRoleBtn:active,
+#mSignSwitch #signInviteUserBtn:active{
+  background:#f7f7f7 !important;
+  border-color:#1a1a1a !important;
+}
+
+/* 关闭按钮：无边框、无圆角 */
+#mSignSwitch #signSwCloseBtn{
+  padding:10px 30px !important;
+  border-radius:0 !important;
+  border:none !important;
+  background:transparent !important;
+  color:#999 !important;
+  font-size:13px !important;
+  font-family:inherit !important;
+  letter-spacing:2px !important;
+  cursor:pointer !important;
+  transition:color .18s ease !important;
+}
+#mSignSwitch #signSwCloseBtn:active{color:#1a1a1a !important}
+
+/* ★ 强制压缩弹窗高度：干掉所有大间距 */
+#mSignSwitch .sheet-body,
+#mSignSwitch #signSwitchBody{
+  padding:0 !important;
+  max-height:none !important;
+  overflow:visible !important;
+}
+#mSignSwitch .section{
+  padding:10px 2px !important;
+  margin:0 !important;
+  min-height:0 !important;
+}
+#mSignSwitch .section:first-of-type{padding-top:4px !important}
+#mSignSwitch .section:last-of-type{padding-bottom:10px !important}
+#mSignSwitch .sw-row{
+  padding:0 !important;
+  margin:0 !important;
+  min-height:0 !important;
+  gap:12px !important;
+}
+#mSignSwitch .sw-main{
+  padding:0 !important;
+  margin:0 !important;
+}
+#mSignSwitch .t1{
+  font-size:13.5px !important;
+  line-height:1.35 !important;
+  margin:0 !important;
+  font-weight:300 !important;
+  letter-spacing:1px !important;
+}
+#mSignSwitch .t2{
+  font-size:10.5px !important;
+  line-height:1.5 !important;
+  margin-top:4px !important;
+  margin-bottom:0 !important;
+  color:#bbb !important;
+  font-weight:300 !important;
+  letter-spacing:.3px !important;
+}
+#mSignSwitch .sheet{
+  padding:18px 18px 16px !important;
+  border-radius:20px !important;
+  max-height:none !important;
+}
+#mSignSwitch .sheet-head{
+  padding-bottom:12px !important;
+  margin-bottom:0 !important;
+}
+#mSignSwitch .sheet-head h3{
+  font-size:14.5px !important;
+  letter-spacing:3.5px !important;
+}
+/* 邀请按钮缩一点 */
+#mSignSwitch #signInviteRoleBtn,
+#mSignSwitch #signInviteUserBtn{
+  padding:6px 12px !important;
+  font-size:12px !important;
+  letter-spacing:1px !important;
+}
+/* 关闭按钮：再压一下 */
+#mSignSwitch #signSwCloseBtn{
+  padding:8px 24px !important;
+  font-size:12.5px !important;
+}
+
+#mTimedRate .sheet{
+  max-width:320px !important;
+  padding:20px 20px 8px !important;
+  border-radius:20px !important;
+}
+#mTimedRate .sheet-head{
+  padding:0 0 14px !important;
+  border-bottom:0.6px dashed #ececec !important;
+  margin-bottom:0 !important;
+}
+#mTimedRate .sheet-head h3{
+  font-size:15px !important;
+  font-weight:300 !important;
+  letter-spacing:3px !important;
+  color:#1a1a1a !important;
+}
+#mTimedRate .sheet-head .x{
+  width:26px !important;
+  height:26px !important;
+  color:#c8c8c8 !important;
+  font-size:13px !important;
+}
+#mTimedRate .sheet-body{
+  padding:0 !important;
+}
+#mTimedRate .tmr-row{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:14px 2px;
+  border-bottom:0.6px dashed #f2f2f2;
+}
+#mTimedRate .tmr-row:last-child{
+  border-bottom:none;
+}
+#mTimedRate .tmr-name{
+  font-size:13.5px;
+  color:#1a1a1a;
+  letter-spacing:1px;
+  font-weight:300;
+  flex:none;
+}
+#mTimedRate .tmr-time{
+  font-size:10.5px;
+  color:#bbb;
+  letter-spacing:.3px;
+  font-family:Georgia,serif;
+  flex:1;
+  min-width:0;
+}
+#mTimedRate .switch{
+  position:relative !important;
+  width:38px !important;
+  height:22px !important;
+  flex:none !important;
+  margin:0 !important;
+}
+#mTimedRate .switch .slider{
+  position:absolute !important;
+  inset:0 !important;
+  border-radius:20px !important;
+  background:#e5e5e5 !important;
+  transition:.22s !important;
+  display:block !important;
+}
+#mTimedRate .switch .slider:before{
+  content:"" !important;
+  position:absolute !important;
+  width:16px !important;
+  height:16px !important;
+  border-radius:50% !important;
+  background:#fff !important;
+  top:3px !important;
+  left:3px !important;
+  transition:.22s !important;
+  box-shadow:0 1px 3px rgba(0,0,0,.15) !important;
+}
+#mTimedRate .switch input:checked + .slider{
+  background:#1a1a1a !important;
+}
+#mTimedRate .switch .slider:before{
+  left:3px !important;
+  transform:translateX(0) !important;
+}
+#mTimedRate .switch input:checked + .slider:before{
+  left:3px !important;
+  transform:translateX(16px) !important;
+}
+/* ===== 聊天图片：无气泡 + 褪潮加载效果 ===== */
+.msg-image-bubble{
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+  box-shadow: none !important;
+}
+.img-wrapper{
+  width: 140px;
+  height: 140px;
+  border-radius: 10px;
+  overflow: hidden;
+  position: relative;
+  background: #f0f0f0;
+  transition: background 0.3s;
+}
+.img-wrapper.loading::before{
+  content: ""; position: absolute; inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.8), transparent);
+  transform: translateX(-100%); animation: imgShimmer 1.5s infinite;
+}
+@keyframes imgShimmer{ 100%{ transform: translateX(100%); } }
+.img-wrapper.loading::after{
+  content: "加载中"; position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; color: #bbb; letter-spacing: 1px;
+}
+.img-wrapper .img-real{
+  width: 100%; height: 100%; object-fit: cover; display: block;
+  opacity: 0; transform: translateY(8px);
+  transition: opacity 0.6s ease, transform 0.6s cubic-bezier(0.22,1,0.36,1);
+}
+.img-wrapper.loaded .img-real{ opacity: 1; transform: translateY(0); }
+.img-wrapper.loaded::before, .img-wrapper.loaded::after{ display: none; }
+.img-wrapper.loaded{ background: transparent; }
+
+/* ===== 极简纯文字版确认弹窗 ===== */
+.mj-confirm-mask{
+  position:fixed;inset:0;z-index:2147483647;
+  background:rgba(0,0,0,.4);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);
+  display:none;align-items:center;justify-content:center;padding:24px;
+}
+.mj-confirm-mask.show{display:flex}
+.mj-confirm-sheet{
+  width:100%;max-width:280px;background:#fff;border-radius:20px;
+  padding:28px 22px 20px;text-align:center;
+  animation:pop .24s cubic-bezier(.22,1,.36,1);
+}
+.mj-confirm-title{
+  font-size:14px;font-weight:300;letter-spacing:2px;color:#1a1a1a;
+}
+.mj-confirm-desc{
+  font-size:13px;color:#999;margin-top:10px;letter-spacing:.5px;
+}
+.mj-confirm-acts{display:flex;gap:10px;margin-top:28px}
+.mj-confirm-acts button{
+  flex:1;padding:12px 0;border-radius:22px;font-size:13px;
+  font-family:inherit;letter-spacing:1px;cursor:pointer;border:none;font-weight:400;
+}
+.mj-confirm-cancel{background:#f5f5f5;color:#666}
+.mj-confirm-ok{background:#1a1a1a;color:#fff}
+
+/* ============================================================
+   统一顶部栏 · 全站唯一样式
+   - 左边 38px 返回箭头
+   - 中间 15px 细体标题，字距 6px
+   - 右边 38px 空位（有按钮放按钮，没按钮留空）
+   - 底部 0.6px 虚线 #ececec
+   以后新页面只要写：
+     <div class="utop" data-title="页面名"></div>
+     或者
+     <div class="utop" data-title="页面名" data-act="⋯"></div>
+   就会自动长出顶部栏
+   ============================================================ */
+.utop{
+  flex:none;
+  display:flex;
+  align-items:center;
+  gap:12px;
+  padding:20px 22px 12px;
+  background:#ffffff;
+  border-bottom:0.6px dashed #ececec;
+  box-sizing:border-box;
+  width:100%;
+}
+.utop-back{
+  width:38px;height:38px;flex:none;
+  border:none;background:transparent;
+  color:#1a1a1a;font-size:22px;line-height:1;
+  display:flex;align-items:center;justify-content:center;
+  padding:0 0 4px;font-family:inherit;cursor:pointer;
+  opacity:.55;transition:opacity .18s ease;
+  border-radius:0;
+}
+.utop-back:active{opacity:1}
+.utop-title{
+  flex:1;
+  font-size:15px;
+  font-weight:300;
+  letter-spacing:6px;
+  text-indent:6px;
+  text-align:center;
+  color:#1a1a1a;
+  -webkit-text-stroke:0.15px #1a1a1a;
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.utop-right{
+  width:38px;flex:none;
+  display:flex;align-items:center;justify-content:flex-end;
+}
+.utop-act{
+  width:38px;height:38px;flex:none;
+  border:none;background:transparent;
+  color:#1a1a1a;font-size:20px;line-height:1;
+  display:flex;align-items:center;justify-content:center;
+  padding:0;font-family:inherit;cursor:pointer;
+  opacity:.55;transition:opacity .18s ease;
+  border-radius:0;
+}
+.utop-act:active{opacity:1}
+
+/* ===== 统一顶部栏 · 新版 ===== */
+.utop{
+  flex:none;display:flex;align-items:center;gap:12px;
+  padding:20px 22px 12px;background:#ffffff;
+  border-bottom:0.6px dashed #ececec;
+  box-sizing:border-box;width:100%;
+}
+.utop-back{
+  width:38px;height:38px;flex:none;border:none;
+  background:transparent;color:#1a1a1a;font-size:22px;
+  line-height:1;display:flex;align-items:center;justify-content:center;
+  padding:0 0 4px;font-family:inherit;cursor:pointer;
+  opacity:.55;transition:opacity .18s ease;border-radius:0;
+}
+.utop-back:active{opacity:1}
+.utop-title{
+  flex:1;font-size:15px;font-weight:300;letter-spacing:6px;
+  text-indent:6px;text-align:center;color:#1a1a1a;
+  -webkit-text-stroke:0.15px #1a1a1a;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.utop-right{
+  width:38px;flex:none;display:flex;
+  align-items:center;justify-content:flex-end;
+}
+.utop-act{
+  width:38px;height:38px;flex:none;border:none;
+  background:transparent;color:#1a1a1a;font-size:20px;
+  line-height:1;display:flex;align-items:center;justify-content:center;
+  padding:0;font-family:inherit;cursor:pointer;
+  opacity:.55;transition:opacity .18s ease;border-radius:0;
+}
+.utop-act:active{opacity:1}
+.utop-act.txt{
+  width:auto;padding:0 6px;font-size:12px;
+  letter-spacing:1px;
+}
+.utop-act.edit{
+  width:auto;padding:0 6px;font-size:11px;
+  letter-spacing:4px;text-indent:4px;font-family:Georgia,serif;
+}
+.utop-av{
+  width:34px;height:34px;flex:none;
+  background:#f2f2f2;position:relative;overflow:hidden;
+  border-radius:var(--avatar-radius,50%);
+}
+.utop-av svg{position:absolute;inset:0;width:100%;height:100%}
+.utop-av .silhouette{fill:#c8c8c8}
+.utop-av img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+</style>
+
+<!-- ===== 启动页 ===== -->
+<script src="js/boot.js"></script>
+<!-- ===== 版本号 ===== -->
+<script src="js/version.js"></script>
+<!-- ===== IndexedDB 数据底座 ===== -->
+<script src="js/indexeddb.js"></script>
+<!-- ===== 聊天 / 群聊 · 上传图片 ===== -->
+<script src="js/chat-image.js"></script>
+<!-- ===== 气泡通用别名补丁 ===== -->
+<script src="js/bubble-alias.js"></script>
+<!-- ===== 主应用逻辑（聊天/字卡/朋友/我的等） ===== -->
+<script src="js/app.js"></script>
+<!-- ===== 共享池 + 角色刷视频 ===== -->
+<script src="js/video-pool.js"></script>
+<!-- ===== 日历页 + 编辑桌面 ===== -->
+<script src="js/calendar.js"></script>
+<!-- ===== 节日 / 特殊日期 · 自动祝福 ===== -->
+<script src="js/festival.js"></script>
+<!-- ===== IndexedDB 底座（大文件存储） ===== -->
+<script src="js/indexeddb.js"></script>
+<!-- ===== 后台强力保活增强层 ===== -->
+<script src="js/keepalive.js"></script>
+</body>
+</html>
