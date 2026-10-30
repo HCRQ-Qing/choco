@@ -1,0 +1,94 @@
+@font-face{font-family:'LikeJian';src:url('https://cdn.jsdelivr.net/gh/maoken-fonts/MaokenYingBiKaiShuJ@main/MaokenYingBiKaiShuJ_0.20.ttf') format('truetype');font-display:swap}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:rgba(0,0,0,0) !important;-webkit-touch-callout:none;user-select:none}
+/* ★ 开屏启动页样式 */
+#bootLoader {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483647;
+  background: #ffffff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--app-font);
+  transition: opacity 0.5s ease;
+  cursor: pointer;
+}
+#bootLoader.fade-out {
+  opacity: 0;
+  pointer-events: none;
+}
+#bootLoader .boot-icon {
+  width: 80px; height: 80px;
+  margin-bottom: 24px;
+  animation: bootFloat 3s ease-in-out infinite;
+}
+@keyframes bootFloat {
+  0%,100%{transform:translateY(0)}
+  50%{transform:translateY(-6px)}
+}
+#bootLoader .boot-name {
+  font-size: 22px;
+  font-weight: 300;
+  letter-spacing: 4px;
+  color: #1a1a1a;
+  margin-bottom: 8px;
+}
+#bootLoader .boot-sub {
+  font-size: 9px;
+  letter-spacing: 6px;
+  color: #bde8f5;
+  font-family: Georgia, serif;
+  font-weight: bold;
+}
+#bootLoader .boot-line {
+  width: 20px;
+  height: 1px;
+  background: #bde8f5;
+  margin-top: 20px;
+  animation: bootExpand 2s ease-in-out infinite;
+}
+@keyframes bootExpand {
+  0%,100%{width:20px; opacity:0.5}
+  50%{width:60px; opacity:1}
+}
+/* ★ 输入框放开选中和呼出键盘 */
+input,textarea,select,[contenteditable="true"]{
+  -webkit-user-select:text !important;
+  user-select:text !important;
+  -webkit-touch-callout:default !important;
+}
+/* ★ 修复：部分安卓内核（雨见/夸克等）会在输入框旁画一根黑线
+   根因是 caret-color 跟随主题时，细体字下的光标位置异常。
+   这里只针对聊天输入框处理，其余输入框不动。 */
+.d-bar textarea{
+  caret-color: #1a1a1a;
+}
+#page-chat.minimal-mode .d-bar textarea{
+  caret-color: #1a1a1a;
+}
+.gch-bar textarea{
+  caret-color: #1a1a1a;
+}
+/* 兜底：如果还是画黑线，让内核强制重绘输入框 */
+.d-bar, .gch-bar{
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+}
+html,body{height:100%;overflow:hidden}
+body{font-family:var(--app-font);background:var(--th-bg0,#0a0a0a);color:var(--th-text,#fff0f5)}
+
+#app{position:fixed;inset:0;top:0 !important;left:0;right:0;bottom:0;max-width:780px;margin:0 auto;overflow:hidden;touch-action:pan-y;z-index:1;background:#ffffff}
+#app.kb-open-real{top:0 !important}
+.tabbar{position:absolute;bottom:0;left:0;right:0;height:72px;background:#ffffff;border-top:0.7px solid #1a1a1a;display:flex;align-items:stretch;justify-content:space-around;padding:0 6px;z-index:50;transition:transform .2s ease}
+#app.kb-open .tabbar{transform:translateY(100%)}
+#app.kb-open .page-stack{inset:0}
+#app.kb-open{overflow:hidden}
+/* ★ 键盘弹起时输入栏不需要任何位移，浏览器会自动压缩 #app，
+   输入栏自然贴在键盘上方。这里只保证它不被聊天列表盖住。 */
+#app.kb-open-real .d-bar{position:relative;z-index:20;margin-bottom:0}
+#app.kb-open-real .gch-bar{position:relative;z-index:20;margin-bottom:0}
+/* 键盘弹起时，聊天区底部留出输入栏的空间，避免被盖住 */
+#app.kb-open-real #chatList{padding-bottom:80px}
+#app.kb-open-real .gch-list{padding-bottom:80px}
+
