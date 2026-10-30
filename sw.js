@@ -1,24 +1,134 @@
 /* ============================================================
    Service Worker（sw.js）
    ------------------------------------------------------------
-   app.js 会 register('./sw.js')，并通过 postMessage 塞进来
-   「接下来几小时内该弹的通知」：
+   两件事：
+   ① 离线可用：把 index.html / css / js 全部预缓存，断网也能打开
+   ② 后台通知：页面切后台时把未来几小时该弹的通知塞进来，到点由
+      SW 弹系统通知（页面被冻结也还有机会弹出来）
 
+   页面 ↔ SW 约定：
      page → SW : { type:'schedule-batch', items:[{at,title,body,tag,roleId}] }
      SW   → page: { type:'MOCHI_NOTIFY_CLICK', tag }
      SW   → IDB : key 'xy-home-v2:__notify-click'  { tag, ts }
 
-   说明：
-   - SW 空闲约 30 秒会被浏览器回收，setTimeout 随之丢失；
-     所以每个事件进来都先从 IndexedDB 读回排期再重新 arm 一次。
-   - 支持 periodicSync（Chromium 系已安装 PWA）时顺便重排。
+   注意：SW 空闲约 30 秒会被回收，setTimeout 随之丢失；
+   所以每个事件进来都先从 IndexedDB 读回排期再重新 arm 一次。
    ============================================================ */
 
+const CACHE_NAME = 'choco-v3';          /* ★ 改了 css/js 就把它 +1，用户下次刷新即更新 */
 const DB_NAME = 'mj_big_files';
 const STORE = 'files';
 const SCHED_KEY = 'sw_ka_schedule_v1';
 const CLICK_KEY = 'xy-home-v2:__notify-click';
 const MAX_ITEMS = 300;
+
+/* ★ 离线预缓存清单（新增文件记得加进来） */
+const PRECACHE = [
+  './',
+  './index.html',
+  './manifest.json',
+  './icon.svg',
+  './css/tokens.css',
+  './css/base.css',
+  './css/components.css',
+  './css/calendar.css',
+  './css/chat.css',
+  './css/me.css',
+  './css/friends.css',
+  './css/card.css',
+  './css/divine.css',
+  './css/role.css',
+  './css/chat-info.css',
+  './css/search.css',
+  './css/beauty.css',
+  './css/relationship.css',
+  './css/settings.css',
+  './css/moments.css',
+  './css/memo.css',
+  './css/favorites.css',
+  './css/extra.css',
+  './css/groupchat.css',
+  './css/media.css',
+  './js/boot.js',
+  './js/version.js',
+  './js/indexeddb.js',
+  './js/chat-image.js',
+  './js/bubble-alias.js',
+  './js/app.js',
+  './js/keepalive.js',
+  './js/backup.js',
+  './js/video-pool.js',
+  './js/calendar.js',
+  './js/festival.js'
+  /* ★ 不再预缓存 fonts/LikeJian.ttf（6MB）：这个字体现在没有任何元素使用，
+     放进预缓存只会让首次加载白等 6MB。真要用了会由下面的「静态资源按需缓存」兜住。 */
+];
+
+/* ---------- 离线缓存 ---------- */
+self.addEventListener('install', function(e){
+  e.waitUntil(
+    caches.open(CACHE_NAME).then(function(cache){
+      /* 逐个 add，任何一个失败都不影响整体安装 */
+      return Promise.all(PRECACHE.map(function(url){
+        return cache.add(url).catch(function(){});
+      }));
+    }).then(function(){ return self.skipWaiting(); })
+  );
+});
+
+self.addEventListener('activate', function(e){
+  e.waitUntil(
+    caches.keys().then(function(keys){
+      return Promise.all(keys.map(function(k){
+        if(k !== CACHE_NAME) return caches.delete(k);
+      }));
+    }).then(function(){ return self.clients.claim(); }).then(function(){
+      /* 激活后立即重排一次通知 */
+      return loadSchedule().then(function(){ arm(); }).catch(function(){});
+    })
+  );
+});
+
+self.addEventListener('fetch', function(e){
+  const req = e.request;
+  if(!req || req.method !== 'GET') return;
+
+  const url = new URL(req.url);
+  /* 跨域（字体 CDN 等）不拦，直接走网络 */
+  if(url.origin !== self.location.origin) return;
+
+  /* 页面导航：先网络，断网才用缓存 */
+  if(req.mode === 'navigate'){
+    e.respondWith(
+      fetch(req).then(function(res){
+        if(res && res.ok){
+          const copy = res.clone();
+          caches.open(CACHE_NAME).then(function(c){ c.put('./index.html', copy); });
+        }
+        return res;
+      }).catch(function(){
+        return caches.match('./index.html').then(function(r){
+          return r || caches.match('./');
+        });
+      })
+    );
+    return;
+  }
+
+  /* 静态资源：先用缓存（秒开），后台顺手更新 */
+  e.respondWith(
+    caches.match(req).then(function(cached){
+      const network = fetch(req).then(function(res){
+        if(res && res.ok){
+          const copy = res.clone();
+          caches.open(CACHE_NAME).then(function(c){ c.put(req, copy); });
+        }
+        return res;
+      }).catch(function(){ return cached; });
+      return cached || network;
+    })
+  );
+});
 
 /* ---------- IndexedDB 小工具 ---------- */
 function openDb(){
@@ -58,8 +168,8 @@ function dbGet(key){
   });
 }
 
-/* ---------- 排期缓存 ---------- */
-let items = [];           /* [{at,title,body,tag,roleId}] */
+/* ---------- 通知排期缓存 ---------- */
+let items = [];
 let timerIds = [];
 let loaded = false;
 
@@ -137,19 +247,7 @@ function mergeBatch(batch){
   return arm();
 }
 
-/* ---------- 生命周期 ---------- */
-self.addEventListener('install', function(){
-  self.skipWaiting();
-});
-
-self.addEventListener('activate', function(e){
-  e.waitUntil(self.clients.claim());
-  /* 激活后立即重排一次 */
-  e.waitUntil(loadSchedule().then(function(){
-    arm();
-  }).catch(function(){}));
-});
-
+/* ---------- 消息 / 生命周期 ---------- */
 self.addEventListener('message', function(e){
   const d = e.data || {};
   if(d.type === 'schedule-batch'){
@@ -168,7 +266,6 @@ self.addEventListener('periodicsync', function(e){
   if(e.tag !== 'ka-rearm') return;
   e.waitUntil(loadSchedule().then(function(){
     const now = Date.now();
-    /* 过期 5 分钟内、还没发过的补发一次 */
     items.slice().forEach(function(it){
       if(it.at <= now && now - it.at <= 5 * 60 * 1000) fire(it);
     });
