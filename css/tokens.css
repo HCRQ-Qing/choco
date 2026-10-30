@@ -1,0 +1,147 @@
+:root {
+  --font-cn: "Songti SC", "STSong", "SimSun", "宋体", serif;
+  --font-en: Georgia, "Times New Roman", serif;
+
+  --fs-display: 31px;
+  --fs-h1: 25px;
+  --fs-h2: 20px;
+  --fs-h3: 16px;
+  --fs-body: 13px;
+  --fs-sm: 12px;
+  --fs-xs: 10px;
+
+  --fw-light: 300;
+  --fw-normal: 400;
+  --fw-medium: 500;
+  --fw-semi: 600;
+  --fw-bold: 700;
+
+  --lh-body: 1.7;
+  --lh-tight: 1.4;
+  --lh-loose: 2.0;
+
+  --r-xs: 4px;
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 16px;
+  --r-full: 999px;
+  --avatar-radius: 12%;
+
+  --avatar-sm: 32px;
+  --avatar-md: 48px;
+  --avatar-lg: 64px;
+
+  --app-max-width: 780px;
+
+  --dur-fast: 150ms;
+  --dur-base: 250ms;
+  --dur-slow: 380ms;
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-spring: cubic-bezier(0.32, 0.72, 0, 1);
+
+  --r-inner: calc(var(--r-lg) - 8px);
+
+  --ls-tight: 1px;
+  --ls-normal: 2px;
+  --ls-wide: 3px;
+  --ls-wider: 6px;
+
+  --shadow-l1: 0 1px 2px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.06);
+  --shadow-l2: 0 1px 2px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.06), 0 12px 32px rgba(0, 0, 0, 0.08);
+  --shadow-l3: 0 1px 2px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.06), 0 12px 32px rgba(0, 0, 0, 0.08), 0 24px 48px rgba(0, 0, 0, 0.10);
+
+  --icon-sm: 16px;
+  --icon-md: 20px;
+  --icon-lg: 24px;
+  --icon-stroke: 1.5px;
+
+  --control-h-lg: 40px;
+  --control-h-md: 32px;
+  --control-h-sm: 24px;
+  --control-radius: 8px;
+
+  --sp-base: 4px;
+  --sp-xs: 4px;
+  --sp-sm: 8px;
+  --sp-md: 12px;
+  --sp-lg: 16px;
+  --sp-xl: 24px;
+  --sp-xxl: 32px;
+
+  --nav-h-top: 64px;
+  --nav-h-sub: 48px;
+  --nav-w-side: 200px;
+
+  --tree-line-height: 40px;
+
+  --z-page: 1;
+  --z-screen: 100;
+  --z-quote: 200;
+  --z-menu: 300;
+  --z-overlay: 400;
+  --z-drawer: 500;
+  --z-modal: 600;
+  --z-toast: 700;
+
+  /* ===== 颜色变量（照预览取值） ===== */
+  --c-bg: #ececec;
+  --c-page: #ffffff;
+  --c-ink: #1a1a1a;
+  --c-ink-2: #888;
+  --c-muted: #bbb;
+  --c-faint: #d0d0d0;
+  --c-line: rgba(0, 0, 0, 0.08);
+  --c-border: #d8d8d8;
+  --c-bubble: rgba(0, 0, 0, 0.04);
+  --c-bubble-me: rgba(0, 0, 0, 0.06);
+  --c-avatar: #f2f2f2;
+  --c-silhouette: #c8c8c8;
+  --c-badge: #1a1a1a;
+  --c-badge-ink: #ffffff;
+  --c-shadow: rgba(0, 0, 0, 0.07);
+
+  /* ===== 旧 --th-* 变量别名（统一指向常量表，保持兼容） ===== */
+  --app-font: var(--font-cn);
+  --avatar-radius: 14%;
+
+  --th-bg0: var(--c-page);
+  --th-bg1: var(--c-page);
+  --th-card: var(--c-page);
+  --th-text: var(--c-ink);
+  --th-text-soft: var(--c-ink-2);
+  --th-text-mute: var(--c-muted);
+  --th-accent: var(--c-ink);
+  --th-accent-deep: #000000;
+  --th-accent-soft: var(--c-bubble);
+  --th-accent-soft-2: var(--c-line);
+  --th-accent-line: rgba(0,0,0,.15);
+  --th-danger: var(--c-ink);
+  --th-av-bg: var(--c-avatar);
+  --th-av-sil: var(--c-silhouette);
+  --mb-bg: var(--c-ink);
+  --mb-text: var(--c-page);
+  --topbar-a: var(--c-bubble);
+  --topbar-b: var(--c-page);
+  --topbar-c: var(--c-page);
+  --topbar-line: rgba(0,0,0,.12);
+
+  /* ===== 遮罩 ===== */
+  --mask-bg: rgba(0,0,0,.15);
+  --mask-blur: blur(2px);
+}
+[data-theme="bw"]{
+  --th-av-bg: var(--c-avatar);
+  --th-av-sil: var(--c-silhouette);
+  --topbar-a: var(--c-bubble);
+  --topbar-b: var(--c-page);
+  --topbar-c: var(--c-page);
+  --topbar-line: rgba(0,0,0,.12);
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
