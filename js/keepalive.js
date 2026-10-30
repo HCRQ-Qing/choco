@@ -27,6 +27,62 @@
   var CATCHUP_GAP = 60000;    /* 回前台时，冻结超过 1 分钟才补跑 */
   var CATCHUP_KEY = 'mj_ka_catchup_v1';
 
+  /* ---------- 多标签页 leader 选举 ----------
+     同一域名开多个标签时，只让一个标签跑后台调度 / 定时任务，
+     避免重复发消息、重复发通知。租约写 localStorage，12 秒过期。 */
+  var LEADER_KEY = 'mj_ka_leader_v1';
+  var LEADER_TTL = 12000;
+  var LEADER_BEAT = 3000;
+  var tabId = 'ka_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  var isLeaderTab = false;
+  var lastLeaderBeat = 0;
+
+  function readLeader(){
+    try{
+      var raw = localStorage.getItem(LEADER_KEY);
+      if(!raw) return null;
+      var o = JSON.parse(raw);
+      return (o && o.id) ? o : null;
+    }catch(e){ return null; }
+  }
+  function writeLeader(){
+    try{
+      localStorage.setItem(LEADER_KEY, JSON.stringify({ id: tabId, ts: Date.now() }));
+      return true;
+    }catch(e){ return false; }
+  }
+  function takeLeadership(reason){
+    isLeaderTab = true;
+    lastLeaderBeat = Date.now();
+    if(writeLeader()){ /* 租约写成功 */ }
+    console.log('[KA] 成为主标签（' + tabId + '）' + (reason ? '：' + reason : ''));
+  }
+  function leaderTick(now){
+    var cur = readLeader();
+    var beat = cur ? (Number(cur.ts) || 0) : 0;
+    var fresh = cur && (now - beat < LEADER_TTL);
+
+    if(isLeaderTab){
+      /* 别的标签写了比我更新的租约 → 说明我休眠太久被接管了，让位 */
+      if(cur && cur.id !== tabId && fresh){
+        isLeaderTab = false;
+        console.log('[KA] 让出主标签（被 ' + cur.id + ' 接管）');
+        return;
+      }
+      if(now - lastLeaderBeat >= LEADER_BEAT){
+        lastLeaderBeat = now;
+        writeLeader();
+      }
+      return;
+    }
+
+    /* 跟随者：租约过期（或本标签在前台且租约已明显变旧）才抢 */
+    var ttl = isHidden() ? LEADER_TTL : 6000;
+    if(!fresh || (now - beat) >= ttl){
+      takeLeadership('租约过期');
+    }
+  }
+
   var tasks = [];
   var lastTick = Date.now();
   var lastRevive = 0;
@@ -66,6 +122,9 @@
   /* ---------- 2. 冻结后补跑：把漏掉的定时任务补一次 ---------- */
   function catchUp(gapMs){
     if(isHidden()) return;
+    /* 只有主标签才补跑，否则多开会重复发消息 */
+    leaderTick(Date.now());
+    if(!isLeaderTab) return;
     /* 多标签 / 频繁切换防重：1 分钟内只补一次 */
     var last = 0;
     try{ last = Number(localStorage.getItem(CATCHUP_KEY) || 0) || 0; }catch(e){}
@@ -96,6 +155,9 @@
     lastTick = now;
     stats.ticks++;
 
+    /* 先决定本标签是不是主标签，再决定要不要跑后台任务 */
+    leaderTick(now);
+
     /* 主线程被冻结过（定时器停摆）→ 先顶保活，再补跑
        刚启动 15 秒内不算（页面解析大文件时首个 tick 本来就会迟） */
     if(gap > WAKE_GAP && now - bornAt > 15000){
@@ -105,12 +167,15 @@
       catchUp(gap);
     }
 
-    for(var i = 0; i < tasks.length; i++){
-      var t = tasks[i];
-      if(now - t.last >= t.every){
-        var late = now - t.last;
-        t.last = now;
-        try{ t.fn(late); }catch(e){ console.error('[KA] 任务 ' + t.name + ' 出错', e); }
+    /* 后台调度任务只在主标签执行（多开标签不会重复发消息） */
+    if(isLeaderTab){
+      for(var i = 0; i < tasks.length; i++){
+        var t = tasks[i];
+        if(now - t.last >= t.every){
+          var late = now - t.last;
+          t.last = now;
+          try{ t.fn(late); }catch(e){ console.error('[KA] 任务 ' + t.name + ' 出错', e); }
+        }
       }
     }
 
@@ -122,6 +187,15 @@
   }
 
   setInterval(tick, TICK_MS);
+
+  /* 启动就立刻决定主标签，后面的定时任务才有归属 */
+  leaderTick(Date.now());
+
+  /* 其它标签写了租约 → 立刻同步（被接管就退位） */
+  window.addEventListener('storage', function(e){
+    if(e.key !== LEADER_KEY) return;
+    leaderTick(Date.now());
+  });
 
   /* ---------- 4. Worker 心跳：主线程 timer 被节流时救场 ---------- */
   var WORKER_SRC =
@@ -226,6 +300,8 @@
       var gap = Date.now() - lastTick;
       lastTick = Date.now();
       revive('回前台');
+      /* 回前台时如果主标签已经停摆，抢过来 */
+      leaderTick(Date.now());
       if(gap > CATCHUP_GAP) catchUp(gap);
     }
   });
@@ -269,6 +345,9 @@
     catchUp: catchUp,
     startWorker: startWorker,
     stopWorker: stopWorker,
+    /* 当前标签是不是主标签（后台调度只在主标签跑） */
+    isLeader: function(){ return isLeaderTab; },
+    tabId: tabId,
     status: function(){
       return {
         kaOn: kaOn(),
@@ -284,7 +363,8 @@
         revives: stats.revives,
         lastWakeGapMs: stats.lastWake,
         lastCatchUp: stats.lastCatchUp,
-        worker: !!worker
+        worker: !!worker,
+        leader: isLeaderTab
       };
     }
   };

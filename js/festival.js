@@ -208,11 +208,21 @@ function runFestTick(){
 
 function scheduleFestTick(){
   if(_festTickTimer) clearInterval(_festTickTimer);
-  _festTickTimer = setInterval(function(){
+  _festTickTimer = null;
+  function guarded(){
     try{ runFestTick(); }catch(e){ console.error('节日 tick 出错', e); }
-  }, 60 * 1000);
+  }
+  /* 统一走 keepalive 调度器：只在主标签跑 */
+  if(window.KA && typeof window.KA.on === 'function'){
+    window.KA.on('fest-tick', guarded, 60 * 1000);
+    setTimeout(function(){
+      try{ if(window.KA.isLeader && window.KA.isLeader()) guarded(); }catch(e){}
+    }, 5000);
+    return;
+  }
+  _festTickTimer = setInterval(guarded, 60 * 1000);
   /* 启动后 5 秒先跑一次 */
-  setTimeout(function(){ try{ runFestTick(); }catch(e){} }, 5000);
+  setTimeout(guarded, 5000);
 }
 
 try{ scheduleFestTick(); }catch(e){ console.error('节日调度启动失败', e); }

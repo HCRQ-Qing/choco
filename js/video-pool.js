@@ -297,11 +297,22 @@ function runVideoScheduleTick(){
     const sched = getOrBuildSchedule(f.id);
     if(sched.rest) return;
     if(!sched.fired) sched.fired = [];
+    /* ★ 冻结补跑：keepalive 判定页面被系统冻结过时，会把 __kaCatchUpActive 置真。
+       此时放宽时间窗到 6 小时，但每个角色最多只补 1 条，避免一次刷出一堆消息。 */
+    const catching = !!window.__kaCatchUpActive;
+    let caughtSent = 0;
     sched.slots.forEach((slot, si) => {
       slot.times.forEach((t, ti) => {
         const key = si + '-' + ti;
         if(sched.fired.includes(key)) return;
-        if(now >= t && now - t < 5*60*1000){
+        const freshWin = catching ? 6 * 3600 * 1000 : 5 * 60 * 1000;
+        if(now >= t && now - t < freshWin){
+          /* 补跑阶段已经补过一条 → 只标记不再发 */
+          if(catching && caughtSent >= 1){
+            sched.fired.push(key);
+            saveSchedule(f.id, sched);
+            return;
+          }
           // 到点了：无论有没有视频可发，都先闪一下「刷视频中」
           flashVideoStatus(f.id, 15000);
 
@@ -310,6 +321,7 @@ function runVideoScheduleTick(){
             sched.fired.push(key);
             saveSchedule(f.id, sched);
             sendVideoMessage(f.id, video);
+            caughtSent++;
           } else {
             sched.fired.push(key);
             saveSchedule(f.id, sched);
@@ -322,12 +334,21 @@ function runVideoScheduleTick(){
     });
   });
 }
-setInterval(() => {
-  try{ runVideoScheduleTick(); }catch(e){ console.error('视频调度出错', e); }
-}, 60 * 1000);
-setTimeout(() => {
-  try{ runVideoScheduleTick(); }catch(e){}
-}, 3000);
+/* 定时调度统一交给 keepalive 的 KA 调度器（只在主标签执行，多开不会重复发消息） */
+(function scheduleVideoTicks(){
+  function guarded(){
+    try{ runVideoScheduleTick(); }catch(e){ console.error('视频调度出错', e); }
+  }
+  if(window.KA && typeof window.KA.on === 'function'){
+    window.KA.on('video-schedule', guarded, 60 * 1000);
+    setTimeout(function(){
+      try{ if(window.KA.isLeader && window.KA.isLeader()) guarded(); }catch(e){}
+    }, 3000);
+  } else {
+    setInterval(guarded, 60 * 1000);
+    setTimeout(guarded, 3000);
+  }
+})();
 
 function openVideoPool(){
   showScreen('videoPoolScreen');
@@ -730,19 +751,25 @@ function renderTopBar(cfg){
     var cls = 'utop-act';
     if(actCls === 'txt') cls += ' txt';
     if(actCls === 'edit') cls += ' edit';
-    var btnId = cfg.actId || 'utopActBtn';
+    /* ★ 修复：以前全站按钮都用同一个 id，几十个页面里 id 重复，
+       getElementById 会拿到别的页面上的按钮。改成按 host 生成唯一 id。 */
+    var btnId = cfg.actId || ('utopAct_' + hostId);
     actHTML = '<button class="' + cls + '" id="' + btnId + '" type="button"></button>';
   }
 
+  var backId = 'utopBack_' + hostId;
   host.innerHTML =
     '<div class="utop">' +
-      '<button class="utop-back" id="utopBackBtn" type="button">‹</button>' +
+      '<button class="utop-back" id="' + backId + '" type="button">‹</button>' +
       avHTML +
       '<div class="utop-title">' + escapeHTML(title) + '</div>' +
       '<div class="utop-right">' + actHTML + '</div>' +
     '</div>';
 
-  var back = document.getElementById('utopBackBtn');
+  /* ★ 关键修复：只在当前 host 内部找返回按钮。
+     以前用 document.getElementById('utopBackBtn')，页面一多就会绑到
+     别的（隐藏的）页面上的 ‹ 上，当前页的 ‹ 看起来就"点了没反应"。 */
+  var back = host.querySelector('.utop-back');
   if(back){
     back.onclick = function(e){
       e.preventDefault();
@@ -756,18 +783,16 @@ function renderTopBar(cfg){
     };
   }
 
-  if(act){
-    var actBtn2 = document.getElementById(cfg.actId || 'utopActBtn');
-    if(actBtn2) actBtn2.innerHTML = act;
-  }
-
-  var actBtn = document.getElementById(cfg.actId || 'utopActBtn');
-  if(actBtn && typeof cfg.onAct === 'function'){
-    actBtn.onclick = function(e){
-      e.preventDefault();
-      e.stopPropagation();
-      cfg.onAct();
-    };
+  var actBtn = host.querySelector('.utop-act');
+  if(actBtn){
+    if(act) actBtn.innerHTML = act;
+    if(typeof cfg.onAct === 'function'){
+      actBtn.onclick = function(e){
+        e.preventDefault();
+        e.stopPropagation();
+        cfg.onAct();
+      };
+    }
   }
 }
 

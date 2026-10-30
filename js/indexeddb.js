@@ -178,4 +178,11 @@
     revokeURL: idbRevokeURL,
     dataURLToBlob: dataURLToBlob
   };
+
+  /* 兼容旧代码：app.js 里用的是 window.idbGet / window.idbSet / window.idbDelete
+     （通知点击回执 'xy-home-v2:__notify-click' 就靠这套读写） */
+  window.idbGet = idbGet;
+  window.idbSet = idbSet;
+  window.idbDelete = idbDel;
+  window.idbDel = idbDel;
 })();
