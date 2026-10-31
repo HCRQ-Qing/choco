@@ -4,17 +4,169 @@
 
 const FEST_SCHED_KEY = 'mj_fest_sched_v1';
 
-/* 拿某个节日分类的候选祝福语 */
+/* ============================================================
+   节日名 → g-festival 下的专属分类（分类缺失时自动创建并预置字卡）
+   - 只补缺失的分类，已存在（即用户改过 / 清空过）的一律不动
+   ============================================================ */
+const FEST_CAT_MAP = {
+  '元旦':      { id:'cf-newyear',      name:'元旦',      list:[
+    '元旦快乐，新的一年也要好好的',
+    '新年第一天，想和你一起过',
+    '新的一年，请多指教'
+  ]},
+  '春节':      { id:'cf-spring',       name:'春节',      list:[
+    '春节快乐！新年吉祥',
+    '过年啦，记得吃饺子',
+    '新年好，想和你一起守岁',
+    '新的一年也要在一起'
+  ]},
+  '元宵节':    { id:'cf-lantern',      name:'元宵节',    list:[
+    '元宵节快乐，记得吃汤圆',
+    '今晚的灯很好看，想和你一起看',
+    '元宵甜甜的，像你一样'
+  ]},
+  '情人节':    { id:'cf-valentine',    name:'情人节',    list:[
+    '情人节快乐，今天特别想你',
+    '今天是情人节，只想和你过',
+    '情话不多说，就想抱抱你'
+  ]},
+  '妇女节':    { id:'cf-women',        name:'妇女节',    list:[
+    '妇女节快乐，今天你最大',
+    '女神节快乐，今天好好休息',
+    '今天不用辛苦啦，我心疼你'
+  ]},
+  '愚人节':    { id:'cf-aprilfool',    name:'愚人节',    list:[
+    '愚人节快乐，刚才的话是骗你的',
+    '今天可以骗人，但喜欢你是真的',
+    '愚人节，我只骗你一句：我不喜欢你'
+  ]},
+  '劳动节':    { id:'cf-labor',        name:'劳动节',    list:[
+    '劳动节快乐，好好休息一下',
+    '放假了，想和你一起出去走走',
+    '今天不用干活，就躺着吧'
+  ]},
+  '母亲节':    { id:'cf-mothersday',   name:'母亲节',    list:[
+    '母亲节快乐，今天好好休息',
+    '谢谢你的温柔，节日快乐',
+    '今天想对你说一句辛苦了'
+  ]},
+  '儿童节':    { id:'cf-children',     name:'儿童节',    list:[
+    '儿童节快乐，你也是我的小朋友',
+    '今天可以幼稚一点',
+    '给你买糖吃，节日快乐'
+  ]},
+  '父亲节':    { id:'cf-fathersday',   name:'父亲节',    list:[
+    '父亲节快乐，今天你休息',
+    '今天是你的节日，少操心一点',
+    '父亲节，想抱抱你'
+  ]},
+  '七夕':      { id:'cf-qixi',         name:'七夕',      list:[
+    '七夕快乐，今天想你了',
+    '今晚的星星很好看，像你',
+    '七夕，愿我们年年相见'
+  ]},
+  '教师节':    { id:'cf-teachers',     name:'教师节',    list:[
+    '教师节快乐，今天辛苦了',
+    '谢谢你的耐心，节日快乐',
+    '今天换我给你上课'
+  ]},
+  '中秋节':    { id:'cf-midautumn',    name:'中秋节',    list:[
+    '中秋节快乐，月亮好圆',
+    '今晚一起吃月饼吧',
+    '月亮很圆，想和你一起看'
+  ]},
+  '国庆节':    { id:'cf-national',     name:'国庆节',    list:[
+    '国庆快乐，放假好好玩',
+    '国庆假期，想和你一起去看海',
+    '假期快乐，好好放松一下'
+  ]},
+  '万圣节':    { id:'cf-halloween',    name:'万圣节',    list:[
+    '万圣节快乐，不给糖就捣蛋',
+    '万圣节，我是来讨糖的',
+    '今晚扮鬼也吓不到我对你的喜欢',
+    '万圣节快乐，想要糖还是想要我'
+  ]},
+  '平安夜':    { id:'cf-xmas-eve',     name:'平安夜',    list:[
+    '平安夜快乐，记得吃苹果',
+    '平安夜，愿你平平安安',
+    '平安夜快乐，想和你一起过'
+  ]},
+  '圣诞节':    { id:'cf-christmas',    name:'圣诞节',    list:[
+    '圣诞快乐，想要什么礼物？',
+    '圣诞快乐，我的礼物就是你',
+    '下雪了，圣诞节快乐',
+    '圣诞快乐，今晚一起拆礼物吗'
+  ]},
+  '跨年夜':    { id:'cf-newyear-eve',  name:'跨年夜',    list:[
+    '跨年夜快乐，新的一年也一起',
+    '今年最后一天，想和你一起过',
+    '愿新的一年，我们还在彼此身边',
+    '跨年快乐，倒数的时候想牵你的手'
+  ]}
+};
+
+function getFestivalGroup(){
+  if(typeof getGroupsByOwner !== 'function') return null;
+  try{
+    return getGroupsByOwner('public').find(function(x){ return x && x.id === 'g-festival'; }) || null;
+  }catch(e){ return null; }
+}
+
+/* 首次加载：补齐节日专属分类（缺失才建，绝不覆盖已有内容） */
+function ensureFestivalCats(){
+  try{
+    if(typeof cardStore === 'undefined' || !cardStore || !Array.isArray(cardStore.public)) return;
+    let g = cardStore.public.find(function(x){ return x && x.id === 'g-festival'; });
+    let dirty = false;
+    if(!g){
+      g = {
+        id:'g-festival', name:'节日字卡', icon:'star', sub:'到节日时角色自动说祝福',
+        cats:[
+          { id:'cf-solar', name:'公历节日', list:[] },
+          { id:'cf-lunar', name:'农历节日', list:[] },
+          { id:'cf-term',  name:'节气',     list:[] }
+        ]
+      };
+      cardStore.public.push(g);
+      dirty = true;
+    }
+    if(!Array.isArray(g.cats)){ g.cats = []; dirty = true; }
+    Object.keys(FEST_CAT_MAP).forEach(function(festName){
+      const def = FEST_CAT_MAP[festName];
+      /* 已存在就完全不动（用户编辑 / 清空都保留） */
+      if(g.cats.some(function(c){ return c && c.id === def.id; })) return;
+      g.cats.push({
+        id: def.id,
+        name: def.name,
+        list: def.list.map(function(t){ return { text: t, t: Date.now() }; })
+      });
+      dirty = true;
+    });
+    if(dirty && typeof saveCardStore === 'function') saveCardStore();
+  }catch(e){ console.error('节日字卡分类初始化失败', e); }
+}
+try{ ensureFestivalCats(); }catch(e){ console.error('节日字卡分类初始化失败', e); }
+
+/* 拿某个节日分类的候选祝福语（优先专属分类，回退老的公历/农历/节气分类） */
 function getFestivalCandidates(kind, festName){
-  const g = getGroupsByOwner('public').find(x => x.id === 'g-festival');
+  const g = getFestivalGroup();
   if(!g || !g.cats) return [];
   /* kind: 'solar' / 'lunar' / 'term' */
-  const catId = kind === 'solar' ? 'cf-solar' : (kind === 'lunar' ? 'cf-lunar' : 'cf-term');
-  const cat = g.cats.find(c => c.id === catId);
+  const legacyId = kind === 'solar' ? 'cf-solar' : (kind === 'lunar' ? 'cf-lunar' : 'cf-term');
+  let scoped = null;
+  const def = FEST_CAT_MAP[festName];
+  if(def){
+    const c = g.cats.find(function(x){ return x && x.id === def.id; });
+    if(c && Array.isArray(c.list) && c.list.length) scoped = c;
+  }
+  const legacy = g.cats.find(function(x){ return x && x.id === legacyId; });
+  const cat = scoped || legacy;
   if(!cat || !cat.list || !cat.list.length) return [];
-  /* 优先匹配包含节日名的，没有就返回全部 */
-  const all = cat.list.map(cardText).map(s => String(s).trim()).filter(Boolean);
-  const matched = all.filter(t => t.indexOf(festName) >= 0);
+  const all = cat.list.map(cardText).map(function(s){ return String(s).trim(); }).filter(Boolean);
+  /* 专属分类整类都是这个节日的，直接全量返回 */
+  if(scoped) return all;
+  /* 老分类：优先匹配包含节日名的，没有就返回全部 */
+  const matched = all.filter(function(t){ return t.indexOf(festName) >= 0; });
   return matched.length ? matched : all;
 }
 
@@ -84,8 +236,10 @@ function getTodaySpecialEvents(){
     }
   }
 
-  /* 4. 节日（公历） */
-  const solarFest = SOLAR_FESTIVALS[m + '-' + d];
+  /* 4. 节日（公历，含母亲节 / 父亲节这类按星期推算的节日） */
+  const solarFest = (typeof getSolarFestivalName === 'function')
+    ? getSolarFestivalName(y, m, d)
+    : SOLAR_FESTIVALS[m + '-' + d];
   if(solarFest){
     const arr = getFestivalCandidates('solar', solarFest);
     events.push({ type:'festival-solar', name:solarFest, catId:'cf-solar', text: arr.length ? arr[Math.floor(Math.random()*arr.length)] : (solarFest + '快乐') });

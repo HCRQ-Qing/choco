@@ -6,6 +6,24 @@ const ROLE_SCHEDULE_KEY = 'mj_role_schedule_v1';
 const VIDEO_SEEN_KEY = 'mj_video_seen_v1';
 const VIDEO_PUB_RATE = 0.5;
 
+/* 共享池扩展：蹲一蹲 / 内置视频 / 收藏 */
+const VIDEO_WATCH_KEY = 'mj_video_watch_v1';
+const VIDEO_BUILTIN_FLAG = 'mj_video_builtin_seeded_v1';
+const VIDEO_FAV_ORDER = ['douyin', 'xhs', 'bili', 'weibo', 'kuaishou', 'youtube', 'other'];
+const VIDEO_BUILTIN_SEEDS = [
+  { url: 'https://www.douyin.com/', desc: '抖音首页，刷不完的短视频' },
+  { url: 'https://www.bilibili.com/', desc: 'B站首页，总有你想看的' },
+  { url: 'https://www.bilibili.com/v/popular/all', desc: 'B站热门榜，看看大家在追什么' },
+  { url: 'https://www.xiaohongshu.com/explore', desc: '小红书探索页，生活灵感一大堆' },
+  { url: 'https://weibo.com/', desc: '微博首页，看看今天发生了什么' },
+  { url: 'https://s.weibo.com/top/summary', desc: '微博热搜榜，今天都在聊这个' },
+  { url: 'https://www.kuaishou.com/', desc: '快手首页，记录每一种生活' },
+  { url: 'https://www.youtube.com/', desc: 'YouTube 首页，宝藏频道从这里开始' }
+];
+
+var _vpTab = 'all';
+var _vpWatchMode = 'random';
+
 function getVideoPool(){
   let a = lsGet(VIDEO_POOL_KEY, null);
   if(!Array.isArray(a)) a = [];
@@ -350,8 +368,290 @@ function runVideoScheduleTick(){
   }
 })();
 
+/* ============ 共享池：样式注入 ============ */
+function ensureVideoExtraStyles(){
+  if(document.getElementById('videoExtraStyles')) return;
+  const st = document.createElement('style');
+  st.id = 'videoExtraStyles';
+  st.textContent = `
+    #videoPoolScreen .vp-tabs{position:sticky;top:0;z-index:3;display:flex;
+      margin:-14px -18px 8px;padding:14px 18px 0;background:#f5f5f5;
+      border-bottom:0.7px solid #e8e8e8;}
+    #videoPoolScreen .vp-tab{flex:1;padding:11px 0 10px;border:none;background:transparent;
+      font-family:inherit;font-size:12px;font-weight:300;letter-spacing:3px;text-indent:3px;
+      color:#aaa;cursor:pointer;position:relative;-webkit-font-smoothing:antialiased;
+      transition:color .18s ease;}
+    #videoPoolScreen .vp-tab.on{color:#1a1a1a;font-weight:400;}
+    #videoPoolScreen .vp-tab.on::after{content:'';position:absolute;left:50%;bottom:-1px;
+      width:20px;height:2px;margin-left:-10px;background:#1a1a1a;border-radius:2px;}
+
+    #videoPoolScreen .vp-badge{display:inline-block;margin-left:6px;padding:1px 6px;
+      border:0.7px solid #e8e8e8;border-radius:8px;font-size:9.5px;font-weight:300;
+      color:#aaa;letter-spacing:1px;vertical-align:middle;}
+    #videoPoolScreen .vp-item .vp-fav{width:26px;height:26px;flex:none;
+      border:none;background:transparent;color:#ccc;font-size:15px;line-height:1;
+      cursor:pointer;padding:0;display:flex;align-items:center;justify-content:center;
+      transition:color .18s ease, transform .18s ease;}
+    #videoPoolScreen .vp-item .vp-fav.on{color:#1a1a1a;}
+    #videoPoolScreen .vp-item .vp-fav:active{transform:scale(.88);}
+
+    #videoPoolScreen .vp-group-title{display:flex;align-items:center;gap:6px;
+      font-family:Georgia,serif;font-size:11px;letter-spacing:2px;color:#999;
+      margin:16px 0 2px;padding:0 2px;}
+    #videoPoolScreen .vp-group-title b{margin-left:auto;font-size:10px;font-weight:400;
+      color:#bbb;letter-spacing:0;}
+
+    #videoPoolScreen .vp-watch-add{padding:4px 0 2px;}
+    #videoPoolScreen .vp-watch-add-btn{width:100%;padding:13px 0;border:0.7px solid #e8e8e8;
+      border-radius:12px;background:#fff;color:#1a1a1a;font-family:inherit;font-size:12.5px;
+      font-weight:300;letter-spacing:3px;cursor:pointer;transition:background .18s ease;}
+    #videoPoolScreen .vp-watch-add-btn:active{background:#fafafa;}
+    #videoPoolScreen .vp-watch-hint{font-size:10.5px;color:#bbb;letter-spacing:.5px;
+      margin:8px 2px 0;text-align:center;font-weight:300;}
+    #videoPoolScreen .vp-watch-item{display:flex;align-items:flex-start;gap:12px;
+      padding:13px 4px;border-bottom:0.7px dashed rgba(0,0,0,.1);}
+    #videoPoolScreen .vp-watch-item:last-child{border-bottom:none;}
+    #videoPoolScreen .vp-watch-item .vp-ic{width:36px;height:36px;border-radius:10px;flex:none;
+      border:0.7px solid #d0d0d0;display:flex;align-items:center;justify-content:center;
+      font-size:16px;background:#fff;}
+    #videoPoolScreen .vp-watch-main{flex:1;min-width:0;}
+    #videoPoolScreen .vp-watch-desc{font-size:13px;color:#1a1a1a;font-weight:500;
+      line-height:1.5;word-break:break-word;}
+    #videoPoolScreen .vp-watch-url{font-size:11px;color:#999;margin-top:3px;
+      white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    #videoPoolScreen .vp-watch-meta{font-size:10px;color:#bbb;margin-top:5px;
+      letter-spacing:.5px;font-family:Georgia,serif;}
+    #videoPoolScreen .vp-watch-meta.warn{color:#1a1a1a;}
+
+    #videoPoolScreen .vp-about{padding:8px 2px 20px;}
+    #videoPoolScreen .vp-about-title{font-family:Georgia,serif;font-size:11px;
+      letter-spacing:3px;color:#bbb;margin:6px 0 14px;}
+    #videoPoolScreen .vp-about p{font-size:12.5px;line-height:2;color:#666;
+      font-weight:300;letter-spacing:.6px;margin:0 0 12px;word-break:break-word;}
+
+    #vpWatchOverlay{position:fixed;left:0;top:0;right:0;bottom:0;z-index:99998;display:none;}
+    #vpWatchOverlay.show{display:block;}
+    #vpWatchOverlay .vpw-mask{position:absolute;left:0;top:0;right:0;bottom:0;
+      background:rgba(0,0,0,.36);}
+    #vpWatchOverlay .vpw-sheet{position:absolute;left:0;right:0;bottom:0;background:#fff;
+      border-radius:18px 18px 0 0;padding:22px 22px calc(24px + env(safe-area-inset-bottom,0px));
+      max-height:88vh;overflow-y:auto;box-shadow:0 -10px 40px rgba(0,0,0,.14);}
+    #vpWatchOverlay .vpw-close{position:absolute;right:14px;top:12px;width:28px;height:28px;
+      border:none;background:transparent;color:#ccc;font-size:14px;cursor:pointer;
+      font-family:inherit;display:flex;align-items:center;justify-content:center;padding:0;}
+    #vpWatchOverlay .vpw-title{font-size:14px;font-weight:300;letter-spacing:4px;
+      color:#1a1a1a;text-align:center;margin:0 0 18px;-webkit-font-smoothing:antialiased;}
+    #vpWatchOverlay .vpw-label{display:block;font-size:11px;color:#bbb;letter-spacing:1px;
+      margin:14px 0 7px;font-weight:300;}
+    #vpWatchOverlay .vpw-input{width:100%;box-sizing:border-box;border:0.7px solid #e8e8e8;
+      border-radius:10px;background:#fff;padding:11px 12px;font-family:inherit;font-size:13px;
+      color:#1a1a1a;outline:none;letter-spacing:.5px;transition:border-color .18s ease;}
+    #vpWatchOverlay .vpw-input:focus{border-color:#1a1a1a;}
+    #vpWatchUrl::placeholder,#vpWatchDesc::placeholder,#vpWatchDays::placeholder{
+      font-size:12px;color:#c8c8c8;}
+    #vpWatchOverlay .vpw-opts{display:flex;flex-direction:column;gap:8px;}
+    #vpWatchOverlay .vpw-opt{display:flex;align-items:center;gap:10px;padding:11px 12px;
+      border:0.7px solid #e8e8e8;border-radius:10px;background:#fff;font-size:12.5px;
+      color:#777;letter-spacing:.5px;cursor:pointer;transition:border-color .18s ease,color .18s ease;}
+    #vpWatchOverlay .vpw-opt.on{border-color:#1a1a1a;color:#1a1a1a;}
+    #vpWatchOverlay .vpw-opt .vpw-dot{width:14px;height:14px;border-radius:50%;flex:none;
+      border:0.7px solid #ccc;position:relative;box-sizing:border-box;transition:border-color .18s ease;}
+    #vpWatchOverlay .vpw-opt.on .vpw-dot{border-color:#1a1a1a;}
+    #vpWatchOverlay .vpw-opt.on .vpw-dot::after{content:'';position:absolute;
+      left:3px;top:3px;right:3px;bottom:3px;border-radius:50%;background:#1a1a1a;}
+    #vpWatchDays{width:66px;padding:5px 6px;margin-left:auto;font-size:12.5px;text-align:center;}
+    #vpWatchOverlay .vpw-unit{font-size:12px;flex:none;}
+    #vpWatchOverlay .vpw-save{width:100%;margin-top:20px;padding:13px 0;border:none;
+      border-radius:22px;background:#1a1a1a;color:#fff;font-family:inherit;font-size:13px;
+      font-weight:300;letter-spacing:4px;text-indent:4px;cursor:pointer;}
+    #vpWatchOverlay .vpw-save:active{opacity:.85;}
+  `;
+  (document.head || document.body).appendChild(st);
+}
+
+/* ============ 蹲一蹲：数据层 ============ */
+function getVideoWatch(){
+  let a = lsGet(VIDEO_WATCH_KEY, null);
+  if(!Array.isArray(a)) a = [];
+  return a;
+}
+function saveVideoWatch(a){ lsSet(VIDEO_WATCH_KEY, a); }
+
+/* 到期的蹲一蹲：标记已提醒，并向当前角色发一条提示（没有角色就只标记） */
+function checkWatch(){
+  const list = getVideoWatch();
+  const now = Date.now();
+  let changed = false;
+  list.forEach(function(it){
+    if(!it || it.notified) return;
+    if(!(it.dueAt <= now)) return;
+    it.notified = true;
+    changed = true;
+    let rid = '';
+    let role = null;
+    try{
+      rid = typeof getCurrentRoleId === 'function' ? getCurrentRoleId() : '';
+      role = (rid && typeof getRoleById === 'function') ? getRoleById(rid) : null;
+    }catch(e){
+      role = null;
+    }
+    if(!role) return;
+    try{
+      appendMsgToRole(rid, {
+        id: uid(),
+        role: 'char',
+        text: '蹲的视频到时间啦：' + it.url,
+        time: Date.now()
+      });
+    }catch(e){
+      console.error('发送蹲一蹲提醒失败', e);
+    }
+  });
+  if(changed){
+    saveVideoWatch(list);
+    const screen = document.getElementById('videoPoolScreen');
+    if(screen && screen.classList.contains('on')) renderVideoPool();
+  }
+}
+kaSchedule('video-watch', checkWatch, 60 * 1000);
+
+/* ============ 内置视频：首次打开预置，删完不再恢复 ============ */
+function ensureBuiltinVideos(){
+  if(lsGet(VIDEO_BUILTIN_FLAG, false)) return;
+  const pool = getVideoPool();
+  if(pool.length) return;
+  const now = Date.now();
+  const seeded = VIDEO_BUILTIN_SEEDS.map(function(s, i){
+    return {
+      id: hashUrl(s.url),
+      url: s.url,
+      desc: s.desc,
+      platform: detectPlatform(s.url),
+      time: now - i * 1000,
+      builtin: true,
+      fav: false
+    };
+  });
+  saveVideoPool(seeded);
+  lsSet(VIDEO_BUILTIN_FLAG, true);
+}
+
+/* ============ 共享池：渲染 ============ */
+function vpFavLabel(p){
+  return p === 'other' ? '其它' : platformName(p);
+}
+function vpTimeText(t){
+  return new Date(t || Date.now()).toLocaleString('zh-CN',
+    { month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit' });
+}
+function vpItemHTML(v){
+  const p = detectPlatform(v.url);
+  const fav = !!v.fav;
+  return '<div class="vp-item" data-open="' + esc(v.id) + '">' +
+    '<div class="vp-ic">' + platformIcon(p) + '</div>' +
+    '<div class="vp-main">' +
+      '<div class="vp-name">' + esc(v.desc || platformName(p) + '视频') +
+        (v.builtin ? '<span class="vp-badge">内置</span>' : '') +
+      '</div>' +
+      '<div class="vp-url">' + esc(v.url) + '</div>' +
+      '<div class="vp-time">' + vpTimeText(v.time) + '</div>' +
+    '</div>' +
+    '<button class="vp-fav' + (fav ? ' on' : '') + '" data-fav="' + esc(v.id) +
+      '" type="button">' + (fav ? '★' : '☆') + '</button>' +
+    '<button class="vp-del" data-del="' + esc(v.id) + '" type="button">✕</button>' +
+  '</div>';
+}
+function vpRenderAll(pool){
+  if(!pool.length){
+    return '<div class="vp-empty">视频池还是空的<br>点右上角「＋ 上传」粘贴链接添加一个吧<br>' +
+      '支持抖音 / B站 / 小红书 / 微博等任意链接</div>';
+  }
+  const sorted = pool.slice().sort(function(a, b){ return (b.time || 0) - (a.time || 0); });
+  return '<div class="vp-section-title">全部视频（' + sorted.length + '）</div>' +
+    sorted.map(vpItemHTML).join('');
+}
+function vpRenderFav(pool){
+  const favs = pool.filter(function(v){ return !!v.fav; });
+  if(!favs.length){
+    return '<div class="vp-empty">还没有收藏的视频<br>点视频右侧的 ☆ 就能收藏</div>';
+  }
+  let html = '';
+  VIDEO_FAV_ORDER.forEach(function(p){
+    const items = favs.filter(function(v){ return detectPlatform(v.url) === p; })
+      .sort(function(a, b){ return (b.time || 0) - (a.time || 0); });
+    if(!items.length) return;
+    html += '<div class="vp-group-title">' + platformIcon(p) + ' ' + esc(vpFavLabel(p)) +
+      '<b>' + items.length + '</b></div>';
+    html += items.map(vpItemHTML).join('');
+  });
+  return html;
+}
+function vpRenderWatch(){
+  const list = getVideoWatch().slice().sort(function(a, b){
+    return (a.dueAt || 0) - (b.dueAt || 0);
+  });
+  let html = '<div class="vp-watch-add">' +
+    '<button class="vp-watch-add-btn" data-watch-add="1" type="button">＋ 蹲一个视频</button>' +
+    '<div class="vp-watch-hint">粘贴链接，到时间提醒你去看</div>' +
+  '</div>';
+  if(!list.length){
+    return html + '<div class="vp-empty">还没有蹲的视频<br>先把想看的链接存进来吧</div>';
+  }
+  html += list.map(function(it){
+    const p = detectPlatform(it.url);
+    const left = (it.dueAt || 0) - Date.now();
+    let state;
+    let warn = false;
+    if(it.notified){
+      state = '已提醒';
+    } else if(left <= 0){
+      state = '即将提醒';
+      warn = true;
+    } else {
+      state = Math.ceil(left / 86400000) + ' 天后提醒';
+    }
+    const created = it.created
+      ? new Date(it.created).toLocaleString('zh-CN', { month:'numeric', day:'numeric' })
+      : '';
+    return '<div class="vp-watch-item">' +
+      '<div class="vp-ic">' + platformIcon(p) + '</div>' +
+      '<div class="vp-watch-main">' +
+        '<div class="vp-watch-desc">' + esc(it.desc || vpFavLabel(p) + '链接') + '</div>' +
+        '<div class="vp-watch-url">' + esc(it.url) + '</div>' +
+        '<div class="vp-watch-meta' + (warn ? ' warn' : '') + '">' + state +
+          (created ? ' · 加入于 ' + created : '') + '</div>' +
+      '</div>' +
+      '<button class="vp-del" data-watch-del="' + esc(it.id) + '" type="button">✕</button>' +
+    '</div>';
+  }).join('');
+  return html;
+}
+function vpRenderAbout(){
+  return '<div class="vp-about">' +
+    '<div class="vp-about-title">关 于 这 个 池 子</div>' +
+    '<p>这里是角色「刷视频」时分享视频的来源。角色会按自己的节奏，从这里随机挑一条视频发给你。</p>' +
+    '<p>你可以粘贴任意平台链接：抖音、B站、小红书、微博、快手、YouTube 都行。</p>' +
+    '<p>收藏只是给视频打个星标，方便按平台找回来；蹲一蹲会记下链接，到时间提醒你去看。</p>' +
+    '<p>所有数据只保存在这台设备的浏览器本地，不会上传任何东西。清理浏览器数据会一起清空。</p>' +
+    '<p>点任意一条视频，会在新窗口打开原链接。</p>' +
+  '</div>';
+}
+function vpTabBarHTML(){
+  const tabs = [
+    { k:'all',   label:'全部' },
+    { k:'fav',   label:'收藏' },
+    { k:'watch', label:'蹲一蹲' },
+    { k:'about', label:'关于' }
+  ];
+  return '<div class="vp-tabs">' + tabs.map(function(t){
+    return '<button class="vp-tab' + (_vpTab === t.k ? ' on' : '') + '" data-vtab="' + t.k +
+      '" type="button">' + t.label + '</button>';
+  }).join('') + '</div>';
+}
+
 function openVideoPool(){
   showScreen('videoPoolScreen');
+  try{ checkWatch(); }catch(e){ console.error('蹲一蹲检查出错', e); }
   renderVideoPool();
 }
 function closeVideoPool(){
@@ -360,45 +660,199 @@ function closeVideoPool(){
 function renderVideoPool(){
   const box = document.getElementById('vpBody');
   if(!box) return;
-  const pool = getVideoPool().slice().sort((a,b) => b.time - a.time);
-  if(!pool.length){
-    box.innerHTML = '<div class="vp-empty">还没有视频<br>点右上角「＋ 上传」粘贴链接添加一个吧<br>支持抖音 / B站 / 小红书 / 微博等任意链接</div>';
-    return;
-  }
-  let html = '<div class="vp-section-title">我上传的（' + pool.length + '）</div>';
-  html += pool.map(v => {
-    const p = detectPlatform(v.url);
-    return '<div class="vp-item" data-id="' + v.id + '">' +
-      '<div class="vp-ic">' + platformIcon(p) + '</div>' +
-      '<div class="vp-main">' +
-        '<div class="vp-name">' + esc(v.desc || platformName(p) + '视频') + '</div>' +
-        '<div class="vp-url">' + esc(v.url) + '</div>' +
-        '<div class="vp-time">' + new Date(v.time).toLocaleString('zh-CN', {month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}) + '</div>' +
+  ensureVideoExtraStyles();
+  ensureBuiltinVideos();
+  const pool = getVideoPool();
+  let inner;
+  if(_vpTab === 'fav') inner = vpRenderFav(pool);
+  else if(_vpTab === 'watch') inner = vpRenderWatch();
+  else if(_vpTab === 'about') inner = vpRenderAbout();
+  else inner = vpRenderAll(pool);
+  box.innerHTML = vpTabBarHTML() + '<div class="vp-tab-body">' + inner + '</div>';
+}
+
+/* ============ 收藏 / 删除 ============ */
+function toggleVideoFav(id){
+  const arr = getVideoPool();
+  const v = arr.find(function(x){ return x.id === id; });
+  if(!v) return;
+  v.fav = !v.fav;
+  saveVideoPool(arr);
+  renderVideoPool();
+  toast(v.fav ? '已收藏' : '已取消收藏');
+}
+function deleteVideoById(id){
+  if(!confirm('删除这条视频？')) return;
+  saveVideoPool(getVideoPool().filter(function(x){ return x.id !== id; }));
+  renderVideoPool();
+  toast('已删除');
+}
+function deleteWatchById(id){
+  if(!confirm('删除这条蹲一蹲？')) return;
+  saveVideoWatch(getVideoWatch().filter(function(x){ return x.id !== id; }));
+  renderVideoPool();
+  toast('已删除');
+}
+
+/* ============ 蹲一蹲：底部弹层 ============ */
+function ensureWatchOverlay(){
+  let ov = document.getElementById('vpWatchOverlay');
+  if(ov) return ov;
+  ov = document.createElement('div');
+  ov.id = 'vpWatchOverlay';
+  ov.innerHTML =
+    '<div class="vpw-mask" data-watch-close="1"></div>' +
+    '<div class="vpw-sheet">' +
+      '<button class="vpw-close" data-watch-close="1" type="button">✕</button>' +
+      '<div class="vpw-title">蹲 一 蹲</div>' +
+      '<label class="vpw-label">视频链接</label>' +
+      '<input class="vpw-input" id="vpWatchUrl" type="text" ' +
+        'placeholder="粘贴抖音 / B站 / 小红书等链接">' +
+      '<label class="vpw-label">备注（可选）</label>' +
+      '<input class="vpw-input" id="vpWatchDesc" type="text" placeholder="想蹲的是什么">' +
+      '<label class="vpw-label">提醒方式</label>' +
+      '<div class="vpw-opts">' +
+        '<div class="vpw-opt on" data-wmode="random">' +
+          '<span class="vpw-dot"></span><span>随机 1~30 天内提醒</span>' +
+        '</div>' +
+        '<div class="vpw-opt" data-wmode="custom">' +
+          '<span class="vpw-dot"></span><span>自定义</span>' +
+          '<input class="vpw-input" id="vpWatchDays" type="number" min="1" max="365" placeholder="1-365">' +
+          '<span class="vpw-unit">天后提醒</span>' +
+        '</div>' +
       '</div>' +
-      '<button class="vp-del" data-del="' + v.id + '" type="button">✕</button>' +
+      '<button class="vpw-save" id="vpWatchSave" type="button">加 入 蹲 一 蹲</button>' +
     '</div>';
-  }).join('');
-  box.innerHTML = html;
-  box.querySelectorAll('[data-del]').forEach(btn => {
-    btn.onclick = (e) => {
-      e.stopPropagation();
-      const id = btn.dataset.del;
-      if(!confirm('删除这条视频？')) return;
-      const arr = getVideoPool().filter(x => x.id !== id);
-      saveVideoPool(arr);
-      renderVideoPool();
-      toast('已删除');
-    };
-  });
-  box.querySelectorAll('.vp-item').forEach(item => {
-    item.onclick = (e) => {
-      if(e.target.closest('.vp-del')) return;
-      const id = item.dataset.id;
-      const v = getVideoPool().find(x => x.id === id);
-      if(v && v.url) window.open(v.url, '_blank');
-    };
+  document.body.appendChild(ov);
+  return ov;
+}
+function updateWatchModeUI(){
+  const ov = document.getElementById('vpWatchOverlay');
+  if(!ov) return;
+  ov.querySelectorAll('.vpw-opt').forEach(function(el){
+    if(el.getAttribute('data-wmode') === _vpWatchMode) el.classList.add('on');
+    else el.classList.remove('on');
   });
 }
+function openWatchOverlay(){
+  ensureVideoExtraStyles();
+  const ov = ensureWatchOverlay();
+  _vpWatchMode = 'random';
+  const urlEl = document.getElementById('vpWatchUrl');
+  const descEl = document.getElementById('vpWatchDesc');
+  const daysEl = document.getElementById('vpWatchDays');
+  if(urlEl) urlEl.value = '';
+  if(descEl) descEl.value = '';
+  if(daysEl) daysEl.value = '';
+  updateWatchModeUI();
+  ov.classList.add('show');
+  setTimeout(function(){ if(urlEl) urlEl.focus(); }, 200);
+}
+function closeWatchOverlay(){
+  const ov = document.getElementById('vpWatchOverlay');
+  if(ov) ov.classList.remove('show');
+}
+function saveWatchEntry(){
+  const urlEl = document.getElementById('vpWatchUrl');
+  const descEl = document.getElementById('vpWatchDesc');
+  if(!urlEl) return;
+  const raw = String(urlEl.value || '').trim();
+  if(!raw){ toast('请粘贴链接'); return; }
+  const url = extractUrl(raw);
+  if(!url){ toast('没找到有效链接，请检查粘贴内容'); return; }
+  let days;
+  if(_vpWatchMode === 'custom'){
+    const daysEl = document.getElementById('vpWatchDays');
+    days = parseInt(String((daysEl && daysEl.value) || ''), 10);
+    if(!(days >= 1 && days <= 365)){ toast('请输入 1~365 之间的整数天'); return; }
+  } else {
+    days = 1 + Math.floor(Math.random() * 30);
+  }
+  const list = getVideoWatch();
+  if(list.some(function(x){ return !x.notified && x.url === url; })){
+    toast('这条已经在蹲了');
+    return;
+  }
+  list.push({
+    id: uid(),
+    url: url,
+    desc: String((descEl && descEl.value) || '').trim(),
+    dueAt: Date.now() + days * 86400000,
+    created: Date.now(),
+    notified: false
+  });
+  saveVideoWatch(list);
+  closeWatchOverlay();
+  renderVideoPool();
+  toast('已加入蹲一蹲，' + days + ' 天后提醒');
+}
+
+/* ============ 共享池：事件委托 ============ */
+document.addEventListener('click', function(e){
+  const t = e.target;
+  if(!t || !t.closest) return;
+
+  const tabBtn = t.closest('.vp-tab');
+  if(tabBtn){
+    e.preventDefault();
+    _vpTab = tabBtn.getAttribute('data-vtab') || 'all';
+    renderVideoPool();
+    return;
+  }
+
+  if(t.closest('[data-watch-close]')){
+    e.preventDefault();
+    closeWatchOverlay();
+    return;
+  }
+
+  if(t.closest('[data-watch-add]')){
+    e.preventDefault();
+    openWatchOverlay();
+    return;
+  }
+
+  const modeEl = t.closest('.vpw-opt');
+  if(modeEl){
+    _vpWatchMode = modeEl.getAttribute('data-wmode') || 'random';
+    updateWatchModeUI();
+    return;
+  }
+
+  if(t.closest('#vpWatchSave')){
+    e.preventDefault();
+    saveWatchEntry();
+    return;
+  }
+
+  const favBtn = t.closest('.vp-fav');
+  if(favBtn){
+    e.preventDefault();
+    toggleVideoFav(favBtn.getAttribute('data-fav'));
+    return;
+  }
+
+  const wDel = t.closest('[data-watch-del]');
+  if(wDel){
+    e.preventDefault();
+    deleteWatchById(wDel.getAttribute('data-watch-del'));
+    return;
+  }
+
+  const delBtn = t.closest('[data-del]');
+  if(delBtn){
+    e.preventDefault();
+    deleteVideoById(delBtn.getAttribute('data-del'));
+    return;
+  }
+
+  const item = t.closest('.vp-item');
+  if(item){
+    const id = item.getAttribute('data-open');
+    const v = getVideoPool().find(function(x){ return x.id === id; });
+    if(v && v.url) window.open(v.url, '_blank');
+  }
+});
 
 function openVideoUpload(){
   document.getElementById('vuUrl').value = '';

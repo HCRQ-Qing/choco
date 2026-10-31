@@ -1405,6 +1405,15 @@ function _pickOrFallback(pool){
   if(pool && pool.length) return pickCardFrom(pool);
   return '嗯，我在。';
 }
+/* ★ 天气 / 时间段 / 单词字卡与普通字卡「等权重」抽取：
+   先等概率选一个非空池，再从池内随机一张。
+   这样不会因为普通字卡数量多，就把天气 / 时段字卡的比例压到几乎为 0。 */
+function _pickEqualPools(){
+  const pools = Array.prototype.slice.call(arguments).filter(function(p){ return p && p.length; });
+  if(!pools.length) return null;
+  const p = pools[Math.floor(Math.random() * pools.length)];
+  return p[Math.floor(Math.random() * p.length)];
+}
 
 function pickCard(roleId){
   const rid = roleId || getCurrentRoleId();
@@ -1433,19 +1442,27 @@ function pickCard(roleId){
     let mix;
     if(gc.length && normalBase.length) mix = gc.concat(normalBase);
     else mix = gc.length ? gc : normalBase;
-    const pool = mix.concat(_getTimedSegPool(), _getWeatherPool(), (typeof _getWordPool === 'function') ? _getWordPool() : []);
-    return _pickOrFallback(pool);
+    return _pickOrFallback([_pickEqualPools(
+      mix,
+      _getTimedSegPool(),
+      _getWeatherPool(),
+      (typeof _getWordPool === 'function') ? _getWordPool() : []
+    )]);
   }
 
 
-  /* 策略 A：群聊字卡 + 当前时段字卡 + 天气字卡，等权混池 */
+  /* 策略 A：群聊字卡 + 当前时段字卡 + 天气字卡，等权重 */
   if(strategy === 'A'){
     const gc = groupchatOf(rid);
-    const pool = gc.concat(_getTimedSegPool(), _getWeatherPool(), (typeof _getWordPool === 'function') ? _getWordPool() : []);
-    return _pickOrFallback(pool);
+    return _pickOrFallback([_pickEqualPools(
+      gc,
+      _getTimedSegPool(),
+      _getWeatherPool(),
+      (typeof _getWordPool === 'function') ? _getWordPool() : []
+    )]);
   }
 
-  /* 策略 B：群聊字卡 + 角色专属字卡 + 当前时段字卡 + 天气字卡，等权混池 */
+  /* 策略 B：群聊字卡 + 角色专属字卡 + 当前时段字卡 + 天气字卡，等权重 */
   if(strategy === 'B'){
     const gc = groupchatOf(rid);
     const own = getAllNormalCards(rid);
@@ -1455,11 +1472,15 @@ function pickCard(roleId){
     } else {
       base = gc.length ? gc : own;
     }
-    const pool = base.concat(_getTimedSegPool(), _getWeatherPool(), (typeof _getWordPool === 'function') ? _getWordPool() : []);
-    return _pickOrFallback(pool);
+    return _pickOrFallback([_pickEqualPools(
+      base,
+      _getTimedSegPool(),
+      _getWeatherPool(),
+      (typeof _getWordPool === 'function') ? _getWordPool() : []
+    )]);
   }
 
-  /* 策略 C（默认）：公用 + 角色专属按比例混，再并入当前时段字卡 + 天气字卡 + 单词字卡 */
+  /* 策略 C（默认）：公用 + 角色专属按比例混，再并入当前时段字卡 + 天气字卡 + 单词字卡（等权重） */
   const pub = getAllNormalCards('public');
   const role = getAllNormalCards(rid);
   const pubRate = poolRate.public ?? 0.7;
@@ -1469,8 +1490,12 @@ function pickCard(roleId){
   } else {
     base = pub.length ? pub : role;
   }
-  const pool = base.concat(_getTimedSegPool(), _getWeatherPool(), (typeof _getWordPool === 'function') ? _getWordPool() : []);
-  return _pickOrFallback(pool);
+  return _pickOrFallback([_pickEqualPools(
+    base,
+    _getTimedSegPool(),
+    _getWeatherPool(),
+    (typeof _getWordPool === 'function') ? _getWordPool() : []
+  )]);
 }
 
 /* ===== 时间字卡 ===== */
@@ -2090,6 +2115,18 @@ function loadMsgs(){
   return m;
 }
 function saveMsgs(){ lsSet(msgsKey(), msgs); }
+/* ★ 供扩展模块（letters.js 等）读写当前角色的聊天记录 */
+window.__getCurMsgs = function(){ return msgs; };
+window.__patchMsg = function(id, patch){
+  try{
+    const i = msgs.findIndex(function(x){ return x && x.id === id; });
+    if(i < 0) return false;
+    msgs[i] = Object.assign({}, msgs[i], patch);
+    saveMsgs();
+    renderChat(true, true);
+    return true;
+  }catch(e){ console.error('__patchMsg 出错', e); return false; }
+};
 
 /* ★ 试卷卡结算：到 dueAt 打上 settled 标记
    触发时机：切后台回来、切角色、每分钟 tick、进页面各跑一次
@@ -2245,7 +2282,9 @@ function doPat(targetMsgEl, fromIsUser){
 
   /* 谁拍谁：双击的是对方的头像 → 我拍 Ta；双击的是自己的头像 → Ta 拍我 */
   let html = '';
-  if(fromIsUser){
+  if(typeof patBuildHTML === 'function'){
+    html = patBuildHTML(!!fromIsUser, taName, role.id);
+  } else if(fromIsUser){
     html = `<b>${escapeHTML(meName)}</b> 拍了拍 <b>${escapeHTML(taName)}</b> 的头像`;
   } else {
     html = `<b>${escapeHTML(taName)}</b> 拍了拍 <b>${escapeHTML(meName)}</b> 的头像`;
@@ -2263,8 +2302,9 @@ function doPat(targetMsgEl, fromIsUser){
   saveMsgs();
   renderChat(true);
 
-  /* 如果是我拍 Ta，Ta 有 60% 概率回拍一下 */
-  if(fromIsUser && Math.random() < 0.6){
+  /* 如果是我拍 Ta，按设置里的概率回拍一下（默认 8%） */
+  const _patP = (typeof patRate === 'function') ? (patRate() / 100) : 0.08;
+  if(fromIsUser && Math.random() < _patP){
     const delay = 800 + Math.random() * 2200;
     setTimeout(function(){
       /* 中途切了角色就放弃 */
@@ -2272,7 +2312,9 @@ function doPat(targetMsgEl, fromIsUser){
       const backMsg = {
         id: uid(),
         time: Date.now(),
-        sys: `<b>${escapeHTML(taName)}</b> 拍了拍 <b>${escapeHTML(meName)}</b> 的头像`,
+        sys: (typeof patBuildHTML === 'function')
+          ? patBuildHTML(false, taName, role.id)
+          : `<b>${escapeHTML(taName)}</b> 拍了拍 <b>${escapeHTML(meName)}</b> 的头像`,
         pat: true,
         patFromUser: false
       };
@@ -2424,6 +2466,10 @@ function renderChatFull(forceBottom){
   const _moreHTML = _truncated
     ? '<div class="chat-more" id="chatMoreBtn" role="button"><span>↥ 查看更早的消息（还有 ' + (msgs.length - chatRenderLimit) + ' 条）</span></div>'
     : '';
+  /* ★ 性能：气泡回应的 localStorage 读取提到循环外，整页只读一次。
+     之前每条消息都 getReactionsMap() → getItem + JSON.parse，
+     300 条消息就是 300 次同步 IO，是发消息卡顿的主要原因。 */
+  const __reactMap = getReactionsMap();
   box.innerHTML = _moreHTML + _viewMsgs.map((m)=>{
 	const isUser = m.role==='user';
 	const avSrc = (m.fwdAvatar !== undefined) ? m.fwdAvatar : (isUser ? userProfile.avatar : role.avatar);
@@ -2625,11 +2671,11 @@ function renderChatFull(forceBottom){
 	  body = `<div class="bubble">${esc(m.pinyin||'')}</div><div class="py-tag"><span class="pfx">单字字卡：</span><b><span class="py-word">${esc(m.han||'')}</span></b></div>`;
 	}else if(m.voice){
 	  const vBubbleCls = isUser ? 'message-sent message-bubble-user' : 'message-received message-bubble-char';
-	  body = `<div class="voice-bubble ${vBubbleCls}" data-side="${isUser?'user':'char'}" data-url="${m.voiceUrl||''}" data-dur="${m.voice}" data-idbkey="${m.voiceIdbKey||''}"><div class="vb-play"><svg class="icon-play" viewBox="0 0 12 12"><path d="M3 1.5 L10 6 L3 10.5 Z"/></svg><svg class="icon-pause" viewBox="0 0 12 12"><rect x="3" y="2" width="2.5" height="8" rx="1"/><rect x="6.5" y="2" width="2.5" height="8" rx="1"/></svg></div><div class="vb-wave"><span></span><span></span><span></span><span></span><span></span><span></span></div><span class="vb-dur">${m.voice}"</span></div>`;
+	  body = `<div class="voice-bubble bubble ${vBubbleCls}" data-side="${isUser?'user':'char'}" data-url="${m.voiceUrl||''}" data-dur="${m.voice}" data-idbkey="${m.voiceIdbKey||''}"><div class="vb-play"><svg class="icon-play" viewBox="0 0 12 12"><path d="M3 1.5 L10 6 L3 10.5 Z"/></svg><svg class="icon-pause" viewBox="0 0 12 12"><rect x="3" y="2" width="2.5" height="8" rx="1"/><rect x="6.5" y="2" width="2.5" height="8" rx="1"/></svg></div><div class="vb-wave"><span></span><span></span><span></span><span></span><span></span><span></span></div><span class="vb-dur">${m.voice}"</span></div>`;
 	}else if(m.sticker){
 	  const stickerBubbleCls = isUser ? 'message-sent message-bubble-user' : 'message-received message-bubble-char';
 	  const _sSrc = String(m.sticker || '').replace(/"/g, '&quot;');
-	  body = `<div class="bubble ${stickerBubbleCls}" data-side="${isUser?'user':'char'}" style="padding:4px"><img src="${_sSrc}" style="max-width:140px;border-radius:12px;display:block"></div>`;
+	  body = `<div class="bubble sticker-bubble ${stickerBubbleCls}" data-side="${isUser?'user':'char'}" style="padding:4px"><img src="${_sSrc}" style="max-width:140px;border-radius:12px;display:block"></div>`;
 	}else if(m.imageIdbKey){
 	  /* ★ 图片消息：不包 .bubble，直接一张图，记录宽高比防抖动 */
 	  var _imgRatioStyle = '';
@@ -2637,22 +2683,49 @@ function renderChatFull(forceBottom){
 	    _imgRatioStyle = ` style="aspect-ratio:${m.imageRatio};"`;
 	  }
 	  body = `<div class="msg-image-bubble" data-idbkey="${m.imageIdbKey}"><div class="img-wrapper loading"${_imgRatioStyle}></div></div>`;
+	}else if(m.letterCard){
+	  /* ★ 信件卡：直接发到聊天界面，也可在「写信」页查看 */
+	  const _lc = m.letterCard;
+	  const _lf = t => new Date(t).toLocaleString('zh-CN',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});
+	  const _isOut = _lc.dir === 'out';
+	  const _who = _isOut ? '我' : escapeHTML(_chatRoleDisplay || getRole().name || 'Ta');
+	  const _und = _lc.understanding ? (
+	    '<div class="letter-under">' +
+	      '<div class="lu-h">我的理解' + (typeof _lc.accuracy === 'number' ? ' · Ta 判定准确度 ' + _lc.accuracy + '%' : '') + '</div>' +
+	      '<div class="lu-t">' + escapeHTML(_lc.understanding) + '</div>' +
+	      '<div class="lu-acts">' +
+	        '<button type="button" class="lu-btn" data-letter-mem="' + m.id + '">存到回忆</button>' +
+	        '<button type="button" class="lu-btn" data-letter-save="' + m.id + '">存本地</button>' +
+	      '</div>' +
+	    '</div>'
+	  ) : '';
+	  const _readBtn = (!_isOut && !_lc.understanding)
+	    ? '<button type="button" class="letter-read-btn" data-letter-read="' + m.id + '">写理解</button>'
+	    : '';
+	  body = '<div class="letter-card' + (_isOut ? ' out' : ' in') + '">' +
+	    '<div class="lc-head">LETTER</div>' +
+	    '<div class="lc-title">' + escapeHTML(_lc.title || '无题') + '</div>' +
+	    '<div class="lc-body">' + escapeHTML(_lc.text || '') + '</div>' +
+	    '<div class="lc-foot">' + _who + ' 写 · ' + _lf(_lc.time || m.time) + '</div>' +
+	    _und + _readBtn +
+	  '</div>';
 	}else if(m.divine){
 	  const reads = m.divine.reads || [];
 	  const roleReads = m.divine.roleReads || [];
 	  const fmt = t => new Date(t).toLocaleString('zh-CN',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});
 
 	  /* ---- 我的理解 ---- */
+	  const accHTML = r => (typeof r.acc === 'number' ? `<span class="dc-acc">准度 ${r.acc}%</span>` : '');
 	  const readsHTML = reads.length ? (()=>{
 	    const list = reads.slice();
 	    const first = list[0];
 	    const rest = list.slice(1);
 	    let inner = `<div class="dc-reads" id="dcReads-${m.id}">`;
-	    inner += `<div class="dc-read-item"><span class="rn">1.</span>${escapeHTML(first.text)}<span class="rt">${fmt(first.time)}</span></div>`;
+	    inner += `<div class="dc-read-item"><span class="rn">1.</span>${escapeHTML(first.text)}<span class="rt">${fmt(first.time)}</span>${accHTML(first)}</div>`;
 	    if(rest.length){
 	      inner += `<div class="dc-read-hidden">`;
 	      rest.forEach((r, i)=>{
-	        inner += `<div class="dc-read-item"><span class="rn">${i+2}.</span>${escapeHTML(r.text)}<span class="rt">${fmt(r.time)}</span></div>`;
+	        inner += `<div class="dc-read-item"><span class="rn">${i+2}.</span>${escapeHTML(r.text)}<span class="rt">${fmt(r.time)}</span>${accHTML(r)}</div>`;
 	      });
 	      inner += `</div>`;
 	      inner += `</div>`;
@@ -2742,7 +2815,7 @@ function renderChatFull(forceBottom){
 	const activeMark = meta.activeMark;
 
 	/* ★ 气泡回应：贴在气泡下方，固定靠左 */
-	const reactList = getReactions(m.id);
+	const reactList = Array.isArray(__reactMap[m.id]) ? __reactMap[m.id] : [];
 	const reactHTML = reactList.length ? (
 	  '<div class="reactions">' + reactList.map(function(r){
 	    let whoName = '';
@@ -4914,12 +4987,34 @@ function hideMsgMenu(){ const menu=$('#msgMenu'); if(menu) menu.classList.remove
   border-radius: 10px;
 }
 
-/* 选中的消息：纯白底，完全凸显 */
+/* 选中的消息：浅灰底 + 黑色描边，在白底页面上也一眼可见 */
 #app.mem-dim #chatList .msg.memory-selected {
-  z-index: 61; 
-  background: #ffffff; 
+  z-index: 61;
+  background: #ededed !important;
   opacity: 1 !important;
   filter: none !important;
+  box-shadow: inset 0 0 0 1.4px #1a1a1a;
+}
+/* 选中的消息右上角打钩，点击即时反馈 */
+#app.mem-dim #chatList .msg.memory-selected::after{
+  content: "✓";
+  position: absolute;
+  right: 8px;
+  top: 8px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #1a1a1a;
+  color: #fff;
+  font-size: 11px;
+  line-height: 18px;
+  text-align: center;
+  z-index: 62;
+}
+/* 截屏模式：顶部固定标题栏 + 底部工具栏不能压住最后一条消息 */
+#app.mem-dim #chatList{
+  padding-top: 84px !important;
+  padding-bottom: 132px !important;
 }
 
 /* 相邻选中的消息，吃掉缝隙，连成一整片 */
@@ -5036,8 +5131,9 @@ function enterMemorySelectMode(startId){
   document.querySelectorAll('#chatList .msg').forEach(function(el){
     el.classList.toggle('memory-selected', memSelected.has(el.dataset.id));
   });
-  /* 点消息切换选中；capture 阶段拦住长按菜单与气泡点击 */
-  list.onclick = function(e){
+  /* 点消息切换选中；capture 阶段拦住长按菜单与气泡点击。
+     ★ 用捕获监听，避免消息内部（引用块/占卜卡等）stopPropagation 把选中事件吃掉 */
+  list._memClick = function(e){
     if(!isMemMode) return;
     const msgEl = e.target && e.target.closest ? e.target.closest('.msg') : null;
     if(!msgEl) return;
@@ -5049,6 +5145,7 @@ function enterMemorySelectMode(startId){
     else { memSelected.add(id); msgEl.classList.add('memory-selected'); }
     _memUpdateCount();
   };
+  list.addEventListener('click', list._memClick, true);
   try{ if(navigator.vibrate) navigator.vibrate(10); }catch(e){}
   if(startId){
     setTimeout(function(){
@@ -5064,7 +5161,11 @@ function exitMemorySelectMode(){
   const app = document.getElementById('app');
   if(app) app.classList.remove('mem-dim');
   const list = document.getElementById('chatList');
-  if(list) list.onclick = null;
+  if(list){
+    if(list._memClick) list.removeEventListener('click', list._memClick, true);
+    list._memClick = null;
+    list.onclick = null;
+  }
   document.querySelectorAll('#chatList .msg').forEach(function(el){ el.classList.remove('memory-selected'); });
   const h = document.getElementById('memSelectHeader'); if(h) h.remove();
   const tb = document.getElementById('memSelectToolbar'); if(tb) tb.remove();
@@ -6143,8 +6244,9 @@ function appendMsgToRole(roleId, msg){
 
   arr.push(msg);
   lsSet(key, arr);
-  /* ★ 统一撤回入口：只要是角色发的、不是系统/撤回消息，就各自摇一次撤回 */
-  if(msg && msg.role === 'char' && !msg.sys && !msg.recalled){
+  /* ★ 统一撤回入口：只要是角色发的、不是系统/撤回消息，就各自摇一次撤回
+     信件卡不参与撤回，信件是「信」，不能被撤回成空气 */
+  if(msg && msg.role === 'char' && !msg.sys && !msg.recalled && !msg.letterCard){
     try{ _scheduleRecallForMsg(roleId, msg.id); }catch(e){}
   }
   /* 如果用户正在看这个角色，直接刷 UI */
@@ -6449,11 +6551,14 @@ try{
   localStorage.removeItem('mj_sys_notify_on_v2');
 }catch(e){}
 function getSysNotifyOn(){
-  /* ★ 默认关：用户第一次进来看到的是"未开启"
-     想让用户主动点开关去触发权限请求
-     本地存 '1' → 开；存 '0' → 关；没存过 → 关 */
+  /* ★ 默认策略：用户从没点过开关时，只要浏览器已经授权通知，就默认开启。
+     之前“没存过 = 关”，导致很多已经授权通知的用户永远收不到后台通知。 */
   var v = lsGet(SYS_NOTIFY_KEY, null);
-  if(v === null) return false;
+  if(v === null){
+    try{
+      return (typeof Notification !== 'undefined' && Notification.permission === 'granted');
+    }catch(e){ return false; }
+  }
   return v === '1' || v === true;
 }
 
@@ -6981,6 +7086,7 @@ function notifyPush(roleId, msg){
     else if(msg.voice) notifyText = '[语音]';
     else if(msg.namecard && msg.namecard.name) notifyText = '[名片] ' + msg.namecard.name;
     else if(msg.videoCard) notifyText = '[视频] ' + (msg.videoCard.title || '');
+    else if(msg.letterCard) notifyText = '[来信] ' + (msg.letterCard.title || '');
     else if(msg.divine) notifyText = '[占卜] ' + (msg.divine.q || '');
     if(!notifyText) return;
     /* ③ 交给横幅/系统通知自己判断前台后台 */
@@ -7538,6 +7644,23 @@ function runReplyChain(onDone){
     return getCurrentRoleId() === targetRoleId;
   }
 
+  /* ★ 用户中途切到别的角色时，不要把这条回复丢掉：
+     直接落库到「原本那个角色」的聊天记录里（同时记未读），
+     这样回到 Ta 的聊天页仍然能看到这条回复，且绝不会串到当前角色的界面。 */
+  function emitToOriginalRole(){
+    try{
+      hideTypingBar();
+      if(res && res[0] && res[0].kind === 'bubbles'){
+        const outMsgs = buildMsgsFromBubbles(res[0].bubbles, targetRoleId, null);
+        outMsgs.forEach(function(m){
+          const _id = appendMsgToRole(targetRoleId, m);
+          if(_id){ try{ tryRoleReaction(targetRoleId, _id); }catch(e){} }
+        });
+      }
+    }catch(e){ console.error('切角色后补发回复失败', e); }
+    onDone();
+  }
+
   const res = genReply();
 
   const typingDelay = Math.min(delay, 800 + Math.random()*1200);
@@ -7586,14 +7709,14 @@ function runReplyChain(onDone){
   function runGaps(cb){
     if(gapCount <= 0){ cb(); return; }
     setTimeout(()=>{
-      if(!stillSameRole()){ onDone(); return; }
+      if(!stillSameRole()){ emitToOriginalRole(); return; }
       gapCount--;
       setTimeout(()=>runGaps(cb), 600 + Math.random()*1500);
     }, 800 + Math.random()*1500);
   }
 
   function emitBubbles(){
-    if(!stillSameRole()){ onDone(); return; }
+    if(!stillSameRole()){ emitToOriginalRole(); return; }
     try{
       hideTypingBar();
       if(res[0].kind==='bubbles'){
@@ -7846,6 +7969,12 @@ $$('.func-item').forEach(item=>{ item.addEventListener('click',e=>{
     setTimeout(function(){
       if(typeof openWordsScreen === 'function') openWordsScreen();
       else toast('背单词模块还没加载好');
+    }, 200);
+  } else if(fn === 'letter'){
+    closeAllThings('drawer');
+    setTimeout(function(){
+      if(typeof window.openLettersPage === 'function') window.openLettersPage();
+      else toast('写信模块还没加载好');
     }, 200);
   }
 }); });
@@ -10643,7 +10772,7 @@ $('#btnSaveRead').addEventListener('click',()=>{
     const rec = arr.find(r => r.id === recId);
     if(rec){
       if(!rec.reads) rec.reads = [];
-      rec.reads.push({ time: Date.now(), text: text });
+      rec.reads.push({ time: Date.now(), text: text, acc: 1 + Math.floor(Math.random() * 100) });
       saveDivineRecords(roleId, arr);
       saved = true;
     }
@@ -10665,7 +10794,7 @@ $('#btnSaveRead').addEventListener('click',()=>{
       const hit = arr.find(x => x.divine && x.divine.recordId === recId);
       if(hit){
         if(!hit.divine.reads) hit.divine.reads = [];
-        hit.divine.reads.push({ time: Date.now(), text: text });
+        hit.divine.reads.push({ time: Date.now(), text: text, acc: 1 + Math.floor(Math.random() * 100) });
         lsSet('mj_msgs_' + roleId, arr);
         saved = true;
       }
@@ -10674,7 +10803,7 @@ $('#btnSaveRead').addEventListener('click',()=>{
   if(targetMsg){
     if(!targetMsg.divine) targetMsg.divine = {};
     if(!targetMsg.divine.reads) targetMsg.divine.reads = [];
-    targetMsg.divine.reads.push({ time: Date.now(), text: text });
+    targetMsg.divine.reads.push({ time: Date.now(), text: text, acc: 1 + Math.floor(Math.random() * 100) });
     /* 顺便把 recordId 补上，方便以后同步 */
     if(recId && !targetMsg.divine.recordId) targetMsg.divine.recordId = recId;
     saveMsgs();
@@ -13996,6 +14125,7 @@ document.addEventListener('click', function(e){
     }
     else if(f === 'quiz')      { if(typeof openQuizPick === 'function') openQuizPick(); else toast('问卷 · 待补'); }
     else if(f === 'ludo')      { if(typeof openGroupLudo === 'function') openGroupLudo(); else toast('飞行棋 · 待补'); }
+    else if(f === 'werewolf')  { if(typeof window.openWerewolf === 'function') window.openWerewolf(); else toast('狼人杀 · 待补'); }
     else if(f === 'voicecall') toast('群聊暂不支持语音通话，去一对一吧');
     else if(f === 'videocall') toast('群聊暂不支持视频通话，去一对一吧');
     return;
@@ -14337,7 +14467,9 @@ function gchEnterMultiSelect(startId){
     const taName = displayName(target) || target.name || '?';
 
     let html;
-    if(fromIsUser){
+    if(typeof patBuildHTML === 'function'){
+      html = patBuildHTML(!!fromIsUser, taName, targetRid);
+    } else if(fromIsUser){
       html = '<b>' + escapeHTML(meName) + '</b> 拍了拍 <b>' + escapeHTML(taName) + '</b>';
     } else {
       html = '<b>' + escapeHTML(taName) + '</b> 拍了拍 <b>' + escapeHTML(meName) + '</b>';
@@ -14352,14 +14484,17 @@ function gchEnterMultiSelect(startId){
     saveGroup(g);
     renderGroupChat();
 
-    /* 我拍 Ta → Ta 60% 概率回拍一下 */
-    if(fromIsUser && Math.random() < 0.6){
+    /* 我拍 Ta → 按设置概率回拍一下（默认 8%） */
+    const _gchPatP = (typeof patRate === 'function') ? (patRate() / 100) : 0.08;
+    if(fromIsUser && Math.random() < _gchPatP){
       setTimeout(function(){
         if(window.__curGroupId !== g.id) return;
         const arr2 = getGroupMsgs(g.id);
         arr2.push({
           id: uid(),
-          sys: '<b>' + escapeHTML(taName) + '</b> 拍了拍 <b>' + escapeHTML(meName) + '</b>',
+          sys: (typeof patBuildHTML === 'function')
+            ? patBuildHTML(false, taName, targetRid)
+            : '<b>' + escapeHTML(taName) + '</b> 拍了拍 <b>' + escapeHTML(meName) + '</b>',
           pat: true,
           patFromUser: false,
           time: Date.now()
@@ -18297,6 +18432,14 @@ document.addEventListener('click', function(e){
     }
     else if(key === 'export-chat'){
       try{ exportChatDialog(); }catch(e){ console.error('导出失败', e); toast('导出失败：' + e.message); }
+    }
+    else if(key === 'letter'){
+      if(typeof window.openLetterSettings === 'function') window.openLetterSettings();
+      else toast('写信模块还没加载好');
+    }
+    else if(key === 'pat'){
+      if(typeof window.openPatSettings === 'function') window.openPatSettings();
+      else toast('拍一拍模块还没加载好');
     }
     return;
   }
@@ -25869,6 +26012,12 @@ function exportChatDialog(){
 	on('#roleSwitchBtn','click',(e)=>{
 	  e.preventDefault();
 	  e.stopPropagation();
+	  /* ★ 再点一次同一个图标 = 关闭弹窗（之前只会重开，永远关不掉） */
+	  const _rsm = document.getElementById('roleSwitchMenu');
+	  if(_rsm && _rsm.classList.contains('show')){
+	    if(typeof closeRoleSwitchMenu === 'function') closeRoleSwitchMenu();
+	    return;
+	  }
 	  if(typeof openRoleSwitchMenu === 'function') openRoleSwitchMenu();
 	});
 	on('#searchInput','input',function(){ friendKeyword=this.value; renderFriends(); });

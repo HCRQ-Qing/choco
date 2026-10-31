@@ -137,12 +137,22 @@ function getSolarTerm(y, m, d){
 const SOLAR_FESTIVALS = {
   '1-1':'元旦','2-14':'情人节','3-8':'妇女节','3-12':'植树节','4-1':'愚人节',
   '5-1':'劳动节','5-4':'青年节','6-1':'儿童节','7-1':'建党节','8-1':'建军节',
-  '9-10':'教师节','10-1':'国庆节','12-24':'平安夜','12-25':'圣诞节'
+  '9-10':'教师节','10-1':'国庆节','10-31':'万圣节','12-24':'平安夜',
+  '12-25':'圣诞节','12-31':'跨年夜'
 };
 const LUNAR_FESTIVALS = {
   '1-1':'春节','1-15':'元宵节','2-2':'龙抬头','5-5':'端午节','7-7':'七夕',
   '7-15':'中元节','8-15':'中秋节','9-9':'重阳节','12-8':'腊八节','12-23':'小年'
 };
+/* 公历节日查询：固定日期 + 按星期推算（母亲节 5月第2个周日 / 父亲节 6月第3个周日） */
+function getSolarFestivalName(y, m, d){
+  const fixed = SOLAR_FESTIVALS[m + '-' + d];
+  if(fixed) return fixed;
+  const wd = new Date(y, m - 1, d).getDay();
+  if(m === 5 && wd === 0 && d >= 8 && d <= 14) return '母亲节';
+  if(m === 6 && wd === 0 && d >= 15 && d <= 21) return '父亲节';
+  return '';
+}
 
 /* ---------- 4. 特殊日期存储 ---------- */
 const CAL_SPECIAL_KEY = 'mj_cal_special_v1';
@@ -518,7 +528,7 @@ function renderCalendar(y, m){
     }
     const term = getSolarTerm(y, m, d);
     if(term) sub = term;
-    const solarFest = SOLAR_FESTIVALS[m + '-' + d];
+    const solarFest = getSolarFestivalName(y, m, d);
     if(solarFest) sub = solarFest;
     if(lunar){
       const lunarFest = LUNAR_FESTIVALS[lunar.month + '-' + lunar.day];
@@ -533,6 +543,10 @@ function renderCalendar(y, m){
     }
     inner += '<div class="lunar">' + (sub || '') + '</div>';
     if(isThisMonth && d === todayDate) inner += '<div class="today-dot"></div>';
+    /* 经期标记（period.js 提供 window.__periodMark） */
+    if(typeof window.__periodMark === 'function'){
+      try{ if(window.__periodMark(y, m, d)) inner += '<div class="cal-period-dot"></div>'; }catch(e){}
+    }
 
     html += '<div class="' + cls.join(' ') + '">' + inner + '</div>';
   }
@@ -1131,6 +1145,12 @@ document.addEventListener('click', function(e){
     refreshWeather(true);
     return;
   }
+  /* 经期设置入口（弹层由 period.js 提供） */
+  if(e.target.closest('#calPeriodEntry')){
+    e.preventDefault(); e.stopPropagation();
+    if(typeof window.openPeriodSettings === 'function') window.openPeriodSettings();
+    return;
+  }
   if(e.target.closest('#calPrevMonth')){
     e.preventDefault(); e.stopPropagation();
     let m = calCurrentMonth - 1, y = calCurrentYear;
@@ -1340,6 +1360,7 @@ function openDeskCalendar(){
       '<div class="cal-topbar" style="display:flex;align-items:center;padding:18px 22px 4px;">' +
         '<button class="cal-desk-back" id="calDeskBack" type="button" style="width:38px;height:38px;flex:none;border:none;background:transparent;color:#1a1a1a;font-size:22px;line-height:1;display:flex;align-items:center;justify-content:center;padding:0 0 4px;font-family:inherit;cursor:pointer;opacity:.55;transition:opacity .18s ease;">‹</button>' +
         '<div style="flex:1"></div>' +
+        '<button class="cal-period-entry" id="calPeriodEntry" type="button" style="border:1px solid #e8e8e8;background:transparent;color:#1a1a1a;font-family:inherit;font-size:11px;letter-spacing:2px;padding:4px 10px;margin-right:8px;border-radius:12px;cursor:pointer;opacity:.7;">经期</button>' +
         '<button class="cal-edit-entry" id="calEditEntry" type="button" style="border:none;background:transparent;color:#1a1a1a;font-family:Georgia,serif;font-size:11px;letter-spacing:4px;text-indent:4px;font-weight:400;padding:6px 2px;cursor:pointer;opacity:.55;">EDIT</button>' +
       '</div>' +
       '<div class="cal-page-wrap">' +
