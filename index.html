@@ -199,6 +199,9 @@
 		  <div class="me-row" data-func="about">
 			<span class="num">06</span><span class="name">关于</span><span class="en">ABOUT</span><span class="arr">→</span>
 		  </div>
+		  <div class="me-row" data-func="update">
+			<span class="num">07</span><span class="name">更新</span><span class="en">UPDATE</span><span class="arr">→</span>
+		  </div>
 		</div>
 	  </div>
 	</div>
@@ -271,7 +274,7 @@
   <div class="mood-top-actions">
 	<button class="mood-btn primary" id="moodAddBtn" type="button"><svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>添加心情</button>
 	<button class="mood-btn" id="moodPlayAllBtn" type="button"><svg viewBox="0 0 24 24"><path d="M5 3l14 9-14 9V3z"/></svg>一键预览</button>
-  </div>.
+  </div>
 </div>
 
 <div class="screen" id="chatSearchScreen">
@@ -457,28 +460,24 @@
         <span class="num">03</span><span class="name">已拉黑</span>
         <span class="val" id="setBlockedCount">0</span><span class="en">BLOCKED</span><span class="arr">→</span>
       </div>
-      <div class="set-row" data-set="update">
-        <span class="num">04</span><span class="name">更新</span>
-        <span class="val">查看更新</span><span class="en">UPDATE</span><span class="arr">→</span>
-      </div>
       <div class="set-row" data-set="refresh">
-        <span class="num">05</span><span class="name">刷新</span>
+        <span class="num">04</span><span class="name">刷新</span>
         <span class="val">强制刷新</span><span class="en">REFRESH</span><span class="arr">→</span>
       </div>
       <div class="set-row" data-set="wipe">
-        <span class="num">06</span><span class="name">清除全部数据</span>
+        <span class="num">05</span><span class="name">清除全部数据</span>
         <span class="val">不可恢复</span><span class="en">WIPE</span><span class="arr">→</span>
       </div>
       <div class="set-row" data-set="backup-export">
-        <span class="num">07</span><span class="name">导出备份</span>
+        <span class="num">06</span><span class="name">导出备份</span>
         <span class="val">存成 JSON</span><span class="en">EXPORT</span><span class="arr">→</span>
       </div>
       <div class="set-row" data-set="backup-import">
-        <span class="num">08</span><span class="name">恢复备份</span>
+        <span class="num">07</span><span class="name">恢复备份</span>
         <span class="val">导入 JSON</span><span class="en">RESTORE</span><span class="arr">→</span>
       </div>
       <div class="set-row" data-set="export-chat">
-        <span class="num">09</span><span class="name">导出聊天</span>
+        <span class="num">08</span><span class="name">导出聊天</span>
         <span class="val">TXT / MD / JSON</span><span class="en">CHAT EXPORT</span><span class="arr">→</span>
       </div>
 
@@ -638,6 +637,7 @@
       <div class="gch-func-item" data-gfunc="uploadimg"><div class="gch-fi-box"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="M3.5 17l5-5 4 4 3-3 5 5"/></svg></div><span class="gch-fi-label">图片</span></div>
       <div class="gch-func-item" data-gfunc="voicecall"><div class="gch-fi-box"><svg viewBox="0 0 24 24"><path d="M21 16.5v2.4a1.6 1.6 0 0 1-1.7 1.6 15.5 15.5 0 0 1-6.7-2.4 15 15 0 0 1-4.6-4.6A15.5 15.5 0 0 1 5.5 6.7 1.6 1.6 0 0 1 7.1 5h2.4a1.6 1.6 0 0 1 1.6 1.4c.1.9.3 1.7.6 2.5a1.6 1.6 0 0 1-.4 1.7l-1 1a12 12 0 0 0 4.6 4.6l1-1a1.6 1.6 0 0 1 1.7-.4c.8.3 1.6.5 2.5.6A1.6 1.6 0 0 1 21 16.5z"></path></svg></div><span class="gch-fi-label">语音通话</span></div>
       <div class="gch-func-item" data-gfunc="videocall"><div class="gch-fi-box"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="13" height="12" rx="2"></rect><path d="M16 10l5-3v10l-5-3"></path></svg></div><span class="gch-fi-label">视频通话</span></div>
+      <div class="gch-func-item" data-gfunc="ludo"><div class="gch-fi-box"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/><circle cx="8.5" cy="8.5" r="1.4" fill="currentColor" stroke="none"/><circle cx="15.5" cy="8.5" r="1.4" fill="currentColor" stroke="none"/><circle cx="8.5" cy="15.5" r="1.4" fill="currentColor" stroke="none"/><circle cx="15.5" cy="15.5" r="1.4" fill="currentColor" stroke="none"/></svg></div><span class="gch-fi-label">飞行棋</span></div>
     </div>
   </div>
 
