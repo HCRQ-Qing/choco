@@ -176,18 +176,37 @@ function getWeatherCfg(){
 }
 function saveWeatherCfg(c){ lsSet(CAL_WEATHER_KEY, c); }
 
-/* 天气代码 → 中文 + 图标 key */
+/* 天气代码 → 中文 + 图标 key（更精细） */
 function weatherCodeToText(code){
   const c = Number(code);
   if(c === 0) return { text: '晴', icon: 'sunny' };
-  if(c >= 1 && c <= 3) return { text: '多云', icon: 'cloudy' };
-  if(c === 45 || c === 48) return { text: '雾', icon: 'fog' };
-  if(c >= 51 && c <= 57) return { text: '毛毛雨', icon: 'rain' };
-  if(c >= 61 && c <= 67) return { text: '雨', icon: 'rain' };
-  if(c >= 71 && c <= 77) return { text: '雪', icon: 'snow' };
-  if(c >= 80 && c <= 82) return { text: '阵雨', icon: 'rain' };
-  if(c >= 85 && c <= 86) return { text: '阵雪', icon: 'snow' };
-  if(c >= 95 && c <= 99) return { text: '雷雨', icon: 'storm' };
+  if(c === 1) return { text: '大部晴朗', icon: 'sunny' };
+  if(c === 2) return { text: '局部多云', icon: 'cloudy' };
+  if(c === 3) return { text: '阴', icon: 'cloudy' };
+  if(c === 45) return { text: '雾', icon: 'fog' };
+  if(c === 48) return { text: '冻雾', icon: 'fog' };
+  if(c === 51) return { text: '小毛毛雨', icon: 'rain' };
+  if(c === 53) return { text: '毛毛雨', icon: 'rain' };
+  if(c === 55) return { text: '大毛毛雨', icon: 'rain' };
+  if(c === 56) return { text: '冻毛毛雨', icon: 'rain' };
+  if(c === 57) return { text: '强冻毛毛雨', icon: 'rain' };
+  if(c === 61) return { text: '小雨', icon: 'rain' };
+  if(c === 63) return { text: '中雨', icon: 'rain' };
+  if(c === 65) return { text: '大雨', icon: 'rain' };
+  if(c === 66) return { text: '冻雨', icon: 'rain' };
+  if(c === 67) return { text: '强冻雨', icon: 'rain' };
+  if(c === 71) return { text: '小雪', icon: 'snow' };
+  if(c === 73) return { text: '中雪', icon: 'snow' };
+  if(c === 75) return { text: '大雪', icon: 'snow' };
+  if(c === 77) return { text: '雪粒', icon: 'snow' };
+  if(c === 80) return { text: '小阵雨', icon: 'rain' };
+  if(c === 81) return { text: '阵雨', icon: 'rain' };
+  if(c === 82) return { text: '强阵雨', icon: 'rain' };
+  if(c === 85) return { text: '小阵雪', icon: 'snow' };
+  if(c === 86) return { text: '强阵雪', icon: 'snow' };
+  if(c === 95) return { text: '雷暴', icon: 'storm' };
+  if(c === 96) return { text: '雷暴伴小冰雹', icon: 'storm' };
+  if(c === 99) return { text: '雷暴伴大冰雹', icon: 'storm' };
   return { text: '未知', icon: 'cloudy' };
 }
 
@@ -204,12 +223,12 @@ function weatherIconSVG(icon){
   return icons[icon] || icons.cloudy;
 }
 
-/* 从 Open-Meteo 拉天气 */
+/* 从 Open-Meteo 拉天气（更全面） */
 function fetchWeather(lat, lon, cityName){
   const url = 'https://api.open-meteo.com/v1/forecast?latitude=' + lat +
     '&longitude=' + lon +
-    '&current=temperature_2m,weather_code,relative_humidity_2m,wind_speed_10m' +
-    '&daily=temperature_2m_max,temperature_2m_min,weather_code' +
+    '&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m,wind_direction_10m,precipitation' +
+    '&daily=temperature_2m_max,temperature_2m_min,weather_code,precipitation_probability_max' +
     '&timezone=auto&forecast_days=3';
   return fetch(url).then(r => r.json()).then(data => {
     if(!data || !data.current) throw new Error('天气数据异常');
@@ -219,18 +238,22 @@ function fetchWeather(lat, lon, cityName){
     const result = {
       city: cityName || '当前位置',
       temp: Math.round(cur.temperature_2m),
+      feels: cur.apparent_temperature != null ? Math.round(cur.apparent_temperature) : null,
       code: cur.weather_code,
       text: wInfo.text,
       icon: wInfo.icon,
       humidity: cur.relative_humidity_2m || 0,
       wind: cur.wind_speed_10m || 0,
+      windDir: cur.wind_direction_10m || 0,
+      precip: cur.precipitation || 0,
       tmax: daily.temperature_2m_max ? Math.round(daily.temperature_2m_max[0]) : '',
       tmin: daily.temperature_2m_min ? Math.round(daily.temperature_2m_min[0]) : '',
       daily: (daily.time || []).map((t, i) => ({
         date: t,
         code: daily.weather_code[i],
         tmax: Math.round(daily.temperature_2m_max[i]),
-        tmin: Math.round(daily.temperature_2m_min[i])
+        tmin: Math.round(daily.temperature_2m_min[i]),
+        pop: daily.precipitation_probability_max ? daily.precipitation_probability_max[i] : 0
       })),
       fetchedAt: Date.now()
     };
@@ -239,6 +262,12 @@ function fetchWeather(lat, lon, cityName){
     saveWeatherCfg(cfg);
     return result;
   });
+}
+
+/* 风向角度 → 中文 */
+function windDirText(deg){
+  const dirs = ['北','东北','东','东南','南','西南','西','西北'];
+  return dirs[Math.round(deg / 45) % 8];
 }
 
 /* 浏览器定位 */
@@ -265,6 +294,19 @@ function geocodeCity(name){
     const r = data.results[0];
     return { lat: r.latitude, lon: r.longitude, city: r.name || name };
   });
+}
+
+/* 反向地理编码：经纬度 → 城市名（用 Open-Meteo Geocoding） */
+function reverseGeocode(lat, lon){
+  const url = 'https://geocoding-api.open-meteo.com/v1/reverse?latitude=' + lat +
+    '&longitude=' + lon + '&language=zh&format=json';
+  return fetch(url).then(r => r.json()).then(data => {
+    if(data && data.results && data.results.length){
+      const r = data.results[0];
+      return r.name || r.admin1 || r.country || '当前位置';
+    }
+    return '当前位置';
+  }).catch(() => '当前位置');
 }
 
 /* 定位失败时的默认城市（广东） */
@@ -317,9 +359,17 @@ function refreshWeather(force){
     return locateUser().then(pos => {
       cfg.lat = pos.lat;
       cfg.lon = pos.lon;
-      cfg.city = '广东';
       saveWeatherCfg(cfg);
-      return doFetch(pos.lat, pos.lon, '广东');
+      /* 先用坐标拉天气，城市名异步反查后更新 */
+      return doFetch(pos.lat, pos.lon, '定位中…').then(w => {
+        reverseGeocode(pos.lat, pos.lon).then(city => {
+          cfg.city = city;
+          if(w) w.city = city;
+          saveWeatherCfg(cfg);
+          renderBigCardWeather(w || cfg.cache);
+        });
+        return w;
+      });
     }).catch(e => {
       console.warn('定位失败，用默认城市', e);
       /* 定位失败 → 用默认城市兜底 */
@@ -343,16 +393,43 @@ function refreshWeather(force){
 function renderBigCardWeather(w, errText){
   const main = document.getElementById('calBigWMain');
   const sub = document.getElementById('calBigWSub');
+  const detail = document.getElementById('calBigWDetail');
+  const fc = document.getElementById('calBigWForecast');
   const icoBox = document.getElementById('calBigWIcon');
   if(!main || !sub || !icoBox) return;
   if(!w){
     main.textContent = errText || '未获取';
     sub.textContent = '点右侧刷新';
+    if(detail) detail.textContent = '';
+    if(fc) fc.innerHTML = '';
     icoBox.innerHTML = weatherIconSVG('cloudy');
     return;
   }
   main.textContent = w.text + ' · ' + w.temp + '°C';
-  sub.textContent = '最高 ' + w.tmax + '° / 最低 ' + w.tmin + '° · ' + w.city;
+  /* 体感温度 */
+  const feels = (w.feels != null) ? (' 体感 ' + w.feels + '°') : '';
+  sub.textContent = '最高 ' + w.tmax + '° / 最低 ' + w.tmin + '° · ' + w.city + feels;
+  /* 详细信息：湿度、风力、降水 */
+  if(detail){
+    const parts = [];
+    if(w.humidity != null) parts.push('💧 ' + w.humidity + '%');
+    if(w.wind != null) parts.push('🌬 ' + windDirText(w.windDir || 0) + ' ' + Math.round(w.wind) + 'km/h');
+    if(w.precip != null && w.precip > 0) parts.push('🌧 ' + w.precip + 'mm');
+    detail.textContent = parts.join('  ');
+  }
+  /* 3日预报 */
+  if(fc && w.daily && w.daily.length){
+    const dayNames = ['今天','明天','后天'];
+    fc.innerHTML = w.daily.slice(0,3).map((d, i) => {
+      const wi = weatherCodeToText(d.code);
+      return '<div class="bc-fc-item">' +
+        '<div class="bc-fc-day">' + (dayNames[i] || d.date.slice(5)) + '</div>' +
+        '<div class="bc-fc-ico">' + weatherIconSVG(wi.icon) + '</div>' +
+        '<div class="bc-fc-pop">' + (d.pop || 0) + '%</div>' +
+        '<div class="bc-fc-temp">' + d.tmin + '°~' + d.tmax + '°</div>' +
+      '</div>';
+    }).join('');
+  }
   icoBox.innerHTML = weatherIconSVG(w.icon);
 }
 
@@ -1283,10 +1360,12 @@ function openDeskCalendar(){
             '<div class="bc-w-txt">' +
               '<div class="bc-w-main" id="calBigWMain">天气加载中…</div>' +
               '<div class="bc-w-sub" id="calBigWSub">正在获取定位</div>' +
+              '<div class="bc-w-detail" id="calBigWDetail"></div>' +
             '</div>' +
             '<button class="bc-w-refresh" id="calBigWRefresh" type="button" title="刷新天气">' +
               '<svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3-6.7"/><polyline points="21 4 21 10 15 10"/></svg>' +
             '</button>' +
+            '<div class="bc-w-forecast" id="calBigWForecast"></div>' +
           '</div>' +
           '<div class="bc-events" id="calBigEvents"></div>' +
         '</div>' +
@@ -1751,8 +1830,13 @@ function closeDeskCalendar(){
     var el = document.getElementById('musicScreen');
     if(!el) return;
     if(el.classList.contains('on')) return;
-    document.querySelectorAll('.screen.on').forEach(function(s){ s.classList.remove('on'); });
-    el.classList.add('on');
+    /* ★ 功能页模式：把音乐搬进 desk，支持左右滑切页 */
+    if(window.__deskMode && typeof openDeskFeature === 'function'){
+      openDeskFeature('musicScreen');
+    } else {
+      document.querySelectorAll('.screen.on').forEach(function(s){ s.classList.remove('on'); });
+      el.classList.add('on');
+    }
     /* 首次打开时尝试恢复 IndexedDB 里的音频 */
     if(!el._restored){
       el._restored = true;
@@ -1763,6 +1847,11 @@ function closeDeskCalendar(){
     }
   };
   window.closeMusicScreen = function(){
+    /* ★ 功能页模式：走 closeDeskFeature 恢复功能页 */
+    if(window.__deskMode && typeof closeDeskFeature === 'function'){
+      closeDeskFeature();
+      return;
+    }
     var el = document.getElementById('musicScreen');
     if(el) el.classList.remove('on');
   };
