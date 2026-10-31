@@ -809,6 +809,10 @@ html[data-theme="bw"] .tarot .t-suit-en{
 @keyframes shRun{0%{left:0}50%{left:66px}100%{left:0}}
 .result-cards{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;padding:14px 0}
 
+/* ★ 选择弹窗：新增「数字 / 拼音」和图片选项后内容变高，
+   小屏要能滚动，避免按钮被顶出屏幕 */
+#mChoice .sheet{max-height:86vh;display:flex;flex-direction:column}
+#mChoice .sheet-body{overflow-y:auto;-webkit-overflow-scrolling:touch;min-height:0}
 #mChoice .choice-head{display:flex;gap:8px;margin-bottom:16px}
 #mChoice .choice-head .mode-btn{flex:1;padding:10px 0;border-radius:22px;font-size:12.5px;font-family:inherit;letter-spacing:2px;font-weight:300;border:0.7px solid rgba(0,0,0,.1);background:#fafafa;color:#999;cursor:pointer;transition:all .2s ease}
 #mChoice .choice-head .mode-btn.on{background:#1a1a1a;color:#fff;border-color:#1a1a1a;font-weight:400}

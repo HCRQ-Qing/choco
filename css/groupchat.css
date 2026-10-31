@@ -302,7 +302,7 @@ body[data-bubble="custom"] .gch-bubble{
   border-top:0 solid transparent;
   transition:height .28s cubic-bezier(.22,1,.36,1), border-top-width .3s ease;
 }
-.gch-func.open{height:180px;border-top-width:1px;border-top-color:#f0f0f0}
+.gch-func.open{height:320px;border-top-width:1px;border-top-color:#f0f0f0;overflow-y:auto;-webkit-overflow-scrolling:touch}
 
 /* ===== 群聊专用表情抽屉（独立于聊天页 #drawerContent） ===== */
 .gch-drawer{
