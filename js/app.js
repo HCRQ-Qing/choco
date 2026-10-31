@@ -39,6 +39,19 @@ function kaRunIfLeader(fn){
   }catch(e){ console.error('[kaRunIfLeader] 出错', e); }
 }
 
+/* ★ 统一的「页面是否在后台」判断
+   手机浏览器切后台时，有时候 visibilityState 不及时更新，
+   这里把 hidden / visibilityState / hasFocus 三个信号都用上，
+   避免「明明切出去了却以为还在前台」导致系统通知被挡掉。 */
+function isPageInBackground(){
+  try{
+    if(document.hidden) return true;
+    if(document.visibilityState && document.visibilityState !== 'visible') return true;
+    if(typeof document.hasFocus === 'function' && !document.hasFocus()) return true;
+  }catch(e){}
+  return false;
+}
+
 const THEMES = [
   {id:'bw',name:'黑白',accent:'#1a1a1a',mbText:'#ffffff',v:{'--th-bg0':'#ffffff','--th-bg1':'#ffffff','--th-card':'#ffffff','--th-text':'#1a1a1a','--th-text-soft':'#999999','--th-text-mute':'#bbbbbb','--th-accent':'#1a1a1a','--th-accent-deep':'#000000','--th-accent-soft':'rgba(0,0,0,.04)','--th-accent-soft-2':'rgba(0,0,0,.08)','--th-accent-line':'rgba(0,0,0,.15)','--topbar-a':'rgba(0,0,0,.04)','--topbar-b':'#ffffff','--topbar-c':'#ffffff','--topbar-line':'rgba(0,0,0,.12)'}}
 ];
@@ -1157,6 +1170,10 @@ function randPinyin(){ const keys=Object.keys(PY_CHARS).filter(k=>PY_CHARS[k]&&P
 
 function getGroupsByOwner(owner){
   if(owner==='public') return cardStore.public||[];
+  /* ★ 性能修复：原来每次访问角色字卡都会 saveCardStore()，
+     pickCard / genReply / 渲染里会反复调用 → 每次都全量 JSON 序列化写 localStorage，
+     这是聊天卡顿的主要来源之一。现在只在真的补了数据时写一次。 */
+  let _dirty = false;
   if(!cardStore.roles[owner]){
     /* 第一次访问这个角色的专属字卡：复制一份公用的分组结构（不含卡内容） */
     const cloned = (cardStore.public || []).map(function(g){
@@ -1171,17 +1188,19 @@ function getGroupsByOwner(owner){
       };
     });
     cardStore.roles[owner] = cloned;
-    saveCardStore();
+    _dirty = true;
   }
   /* ★ 每个角色专属字卡里，保证有「个签字卡」分组（cs-me + cs-role） */
   (function ensureRoleSignGroup(){
     const arr = cardStore.roles[owner];
+    let changed = false;
     let g = arr.find(function(x){ return x && x.id === 'g-sign'; });
     if(!g){
       g = { id:'g-sign', name:'个签字卡', icon:'note', sub:'随机切换个签', cats:[] };
       arr.push(g);
+      changed = true;
     }
-    if(!Array.isArray(g.cats)) g.cats = [];
+    if(!Array.isArray(g.cats)){ g.cats = []; changed = true; }
     if(!g.cats.some(function(c){ return c.id === 'cs-me'; })){
       g.cats.push({ id:'cs-me', name:'我的个签', list: [
         '云和阳光不过一公尺',
@@ -1190,6 +1209,7 @@ function getGroupsByOwner(owner){
         { text:'自顾自己已经有了定义\n何时该靠近什么应该摒弃', t:Date.now() },
         '眷恋唯一的星光就是你'
       ]});
+      changed = true;
     }
     if(!g.cats.some(function(c){ return c.id === 'cs-role'; })){
       g.cats.push({ id:'cs-role', name:'角色个签', list: [
@@ -1214,8 +1234,9 @@ function getGroupsByOwner(owner){
         '自己想',
         '不想'
       ]});
+      changed = true;
     }
-    saveCardStore();
+    if(changed) _dirty = true;
   })();
 
   /* ★ 每个角色专属字卡的「普通字卡」下，保证「修改后的字卡」分类存在，并在第一个 */
@@ -1238,8 +1259,9 @@ function getGroupsByOwner(owner){
         dirty = true;
       }
     }
-    if(dirty) saveCardStore();
+    if(dirty) _dirty = true;
   })();
+  if(_dirty) saveCardStore();
   return cardStore.roles[owner];
 }
 function isStatusGroup(g){
@@ -1394,6 +1416,27 @@ function pickCard(roleId){
     if(own.length) return own;
     return getCardsFromGroup('public', 'g-groupchat');
   }
+
+  /* ★ 群聊里：普通字卡和群聊字卡混合，等权抽
+     （由 groupChatTrigger* 在调用 genReply 期间打开 __gchReplyMode） */
+  if(window.__gchReplyMode){
+    const gc = groupchatOf(rid);
+    const pub = getAllNormalCards('public');
+    const role = getAllNormalCards(rid);
+    const pubRate = poolRate.public ?? 0.7;
+    let normalBase;
+    if(pub.length && role.length){
+      normalBase = (Math.random() < pubRate) ? pub : role;
+    } else {
+      normalBase = pub.length ? pub : role;
+    }
+    let mix;
+    if(gc.length && normalBase.length) mix = gc.concat(normalBase);
+    else mix = gc.length ? gc : normalBase;
+    const pool = mix.concat(_getTimedSegPool(), _getWeatherPool(), (typeof _getWordPool === 'function') ? _getWordPool() : []);
+    return _pickOrFallback(pool);
+  }
+
 
   /* 策略 A：群聊字卡 + 当前时段字卡 + 天气字卡，等权混池 */
   if(strategy === 'A'){
@@ -2436,12 +2479,17 @@ function renderChatFull(forceBottom){
 	if(m.choiceCard){
 	  const cc = m.choiceCard;
 	  const dirCls = isUser ? 'user' : 'char';
+	  /* 图片选项（可选）：有就一起渲染 */
+	  const ccImgs = (cc.images || []).map(function(u){
+		return '<img src="' + escapeHTML(u) + '" style="max-width:110px;max-height:110px;border-radius:10px;display:block;object-fit:cover">';
+	  }).join('');
 	  /* tag 用内联 style + br 换行，不进任何 class，不会被自定义 CSS 污染 */
 	  const innerHTML =
 	    '<span style="font-size:10.5px;letter-spacing:2px;opacity:.6;font-weight:300">' +
 	      escapeHTML(cc.q) +
 	    '</span><br>' +
-	    escapeHTML(cc.answer);
+	    escapeHTML(cc.answer) +
+	    (ccImgs ? '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">' + ccImgs + '</div>' : '');
 	  const bubbleCls = isUser
 	    ? 'bubble message-sent message-bubble-user'
 	    : 'bubble message-received message-bubble-char';
@@ -6317,8 +6365,6 @@ function showMsgNotify(roleName, text, roleAvatar, targetRoleId){
   }
   /* ★ 收到消息 → 播收消息音效 */
   try{ playSoundOnce('inMsg'); }catch(e){}
-  /* 聊天界面通知总开关：关了就直接不弹 */
-  if(!getNotifyChat()) return;
   /* ★ 直接去掉前台判断，让 showSystemNotify 内部的 isBg 自己决定 */
   /* 原因：手机浏览器切后台时 visibilityState 经常不更新，导致误判成"还在前台" */
   /* 不再用 isViewingRole 挡系统通知：切后台时页面栈还是停在聊天页，
@@ -6327,16 +6373,20 @@ function showMsgNotify(roleName, text, roleAvatar, targetRoleId){
      但如果页面已经切到后台，还是要走系统通知，所以这里不能直接 return，
      只跳过顶部横幅部分。 */
   const _viewingCur = (targetRoleId && typeof isViewingRole === 'function' && isViewingRole(targetRoleId));
-  const _pageHidden = (document.visibilityState !== 'visible') || document.hidden;
+  const _pageHidden = isPageInBackground();
   if(_viewingCur && !_pageHidden){
     /* 前台且正在看：什么都不做 */
     return;
   }
-  if(_viewingCur && _pageHidden){
-    /* 正在看这个角色，但页面已经切后台 → 只弹系统通知，不弹顶部横幅 */
+  if(_pageHidden){
+    /* ★ 页面在后台：直接走系统通知。
+       注意这里不受「聊天界面通知」开关影响——那个开关只管前台横幅，
+       关了它不应该把后台系统通知也一起挡掉（之前就是这里 return 导致收不到）。 */
     showSystemNotify(roleName, text);
     return;
   }
+  /* 前台，但没在看这个角色的聊天：走顶部横幅，受聊天通知开关控制 */
+  if(!getNotifyChat()) return;
   const el = document.getElementById('msgNotify');
   if(!el) return;
 
@@ -6763,7 +6813,7 @@ function swNotifyLater(title, opts, chanOut){
 function swLaterFlush(reg){
   if(!swLaterTimer) return;
   clearTimeout(swLaterTimer); swLaterTimer = null;
-  if(document.visibilityState !== 'hidden'){
+  if(!isPageInBackground()){
     for(let i = 0; i < swLaterQueue.length; i++) swNotifyNote('none', swLaterQueue[i].chanOut);
     swLaterQueue = [];
     return;
@@ -6950,7 +7000,7 @@ function showSystemNotify(title, body){
     }catch(e){}
 
     /* 只在页面不可见时才弹系统通知（前台判断交给上层总闸） */
-    if(document.visibilityState === 'visible' && !document.hidden) return;
+    if(!isPageInBackground()) return;
 
     const finalTitle = String(title || '角色').trim() || '角色';
     const finalBody  = String(body || '').trim();
@@ -7125,9 +7175,6 @@ function fireActiveMessage(roleId){
           id: uid(), role: 'char', text: text, time: Date.now(), active: true
         };
         appendMsgToRole(roleId, fallback);
-      markActiveUnreadNoReply();
-        markActiveUnreadNoReply();
-      markActiveUnreadNoReply();
         markActiveUnreadNoReply();
         notifyPush(roleId, { id: uid(), role: 'char', text: text, time: Date.now() });
         cfg.activeLastFireAt = Date.now();
@@ -7146,7 +7193,6 @@ function fireActiveMessage(roleId){
       const _vId = appendMsgToRole(roleId, vMsg);
       if(_vId){ try{ _scheduleRecallForMsg(roleId, _vId); }catch(e){} }
       markActiveUnreadNoReply();
-      markActiveUnreadNoReply();
       notifyPush(roleId, vMsg);
       cfg.activeLastFireAt = Date.now();
       saveReply();
@@ -7155,7 +7201,6 @@ function fireActiveMessage(roleId){
         id: uid(), role: 'char', text: text, time: Date.now(), active: true
       };
       appendMsgToRole(roleId, fallback);
-      markActiveUnreadNoReply();
       markActiveUnreadNoReply();
       cfg.activeLastFireAt = Date.now();
       saveReply();
@@ -7188,11 +7233,14 @@ function fireActiveMessage(roleId){
   saveReply();
 }
 
-/* 每分钟 tick 一次：遍历所有角色，各摇一次 */
-let activeSendTimer = null;
+/* 每分钟 tick 一次：遍历所有角色，各摇一次
+   ★ 修复后台收不到消息：原来用原生 setInterval，切后台被浏览器节流/冻结就停了，
+     消息根本没生成，自然收不到通知。改走 KA 调度，后台也能正常跑。 */
+let activeSendStarted = false;
 function scheduleActiveSend(){
-  if(activeSendTimer){ clearInterval(activeSendTimer); activeSendTimer = null; }
-  activeSendTimer = setInterval(function(){
+  if(activeSendStarted) return;
+  activeSendStarted = true;
+  kaSchedule('active-send', function(){
     const ids = getAllRoleIds();
     ids.forEach(function(rid){
       const role = getRoleById(rid);
@@ -7273,15 +7321,24 @@ function fireActiveDivine(roleId){
   saveReply();
 }
 
-let activeDivineTimer = null;
-let activeDivinePending = [];
+let activeDivineStarted = false;
+/* ★ 主动占卜不再用 setTimeout 等待 30 分钟内的随机时刻：
+   手机切后台后长定时器会被冻结，到点也不会发。
+   改成只在角色配置里记一个「到期时间」，由 KA 的 1 分钟 tick 检查。 */
 function clearActiveDivinePending(){
-  activeDivinePending.forEach(function(t){ clearTimeout(t); });
-  activeDivinePending = [];
+  try{
+    getAllRoleIds().forEach(function(rid){
+      const r = replyMap[rid];
+      if(r && r.divinePendingAt) r.divinePendingAt = 0;
+    });
+    saveReply();
+  }catch(e){}
 }
 function scheduleActiveDivine(){
-  if(activeDivineTimer){ clearInterval(activeDivineTimer); activeDivineTimer = null; }
-  activeDivineTimer = setInterval(function(){
+  if(activeDivineStarted) return;
+  activeDivineStarted = true;
+  /* ★ 后台也能跑：走 KA 调度（原生 setInterval 切后台会被冻结） */
+  kaSchedule('active-divine', function(){
     const now = Date.now();
     const ids = getAllRoleIds();
     ids.forEach(function(rid){
@@ -7293,25 +7350,28 @@ function scheduleActiveDivine(){
       if(typeof r.divineRate !== 'number')  r.divineRate = 0.05;
       if(!r.divineOn) return;
 
+      /* 到点：直接发 */
+      if(r.divinePendingAt){
+        if(now >= r.divinePendingAt){
+          r.divinePendingAt = 0;
+          try { fireActiveDivine(rid); } catch(e){ console.error('主动占卜出错', e); }
+        }
+        return;
+      }
+
       /* 每天每个角色最多排一次：今天已经排过就跳过 */
       const last = r.divineLastFireAt || 0;
       if(last && (now - last) < DIVINE_TICK_MS) return;
 
       if(Math.random() >= r.divineRate) return;
 
-      /* 摇中：在接下来 30 分钟内随机挑一个时刻发 */
-      const delay = Math.floor(Math.random() * DIVINE_TICK_MS);
-      const rid2 = rid;
-      const _dvT = setTimeout(function(){
-        try { fireActiveDivine(rid2); } catch(e){ console.error('主动占卜出错', e); }
-      }, delay);
-      activeDivinePending.push(_dvT);
-
+      /* 摇中：记下接下来 30 分钟内的随机时刻，交给 tick 到点发 */
+      r.divinePendingAt = now + Math.floor(Math.random() * DIVINE_TICK_MS);
       /* 先占坑，避免同一天重复安排 */
       r.divineLastFireAt = now;
       saveReply();
     });
-  }, DIVINE_TICK_MS);
+  }, 60 * 1000);
 }
 
  
@@ -10741,7 +10801,41 @@ on('#drSearchInput','input',()=>renderDivineRecords());
   }, true);
 })();
 
-let choiceMode='multi';   /* 'yn' | 'multi' */
+let choiceMode='multi';   /* 'yn' | 'multi' | 'num' */
+/* ★ 多选图片选项（只在本次弹窗里有效，不写进 localStorage 记忆） */
+let choiceImgs = [];
+
+/* 把上传的图片压成小尺寸 dataURL（避免撑爆 localStorage） */
+function readChoiceImage(file){
+  return new Promise(function(resolve, reject){
+    try{
+      const fr = new FileReader();
+      fr.onload = function(){
+        const img = new Image();
+        img.onload = function(){
+          try{
+            /* 聊天里只显示 110px，压到 480px 足够，避免撑爆 localStorage */
+            const maxSide = 480;
+            let w = img.naturalWidth || img.width;
+            let h = img.naturalHeight || img.height;
+            const scale = Math.min(1, maxSide / Math.max(w, h));
+            w = Math.round(w * scale); h = Math.round(h * scale);
+            const cv = document.createElement('canvas');
+            cv.width = w; cv.height = h;
+            const ctx = cv.getContext('2d');
+            ctx.drawImage(img, 0, 0, w, h);
+            resolve(cv.toDataURL('image/jpeg', 0.55));
+          }catch(e){ reject(e); }
+        };
+        img.onerror = function(){ reject(new Error('图片解析失败')); };
+        img.src = fr.result;
+      };
+      fr.onerror = function(){ reject(new Error('读取失败')); };
+      fr.readAsDataURL(file);
+    }catch(e){ reject(e); }
+  });
+}
+
 
 /* ★ 选择弹窗的记忆存储
    结构：{
@@ -10758,9 +10852,10 @@ const CHOICE_MEM_KEY = 'mj_choice_mem_v2';
 function getChoiceMem(){
   let m = lsGet(CHOICE_MEM_KEY, null);
   if(!m || typeof m !== 'object') m = {};
-  /* ★ 新增两个独立的桶 */
+  /* ★ 独立的桶：yes/no、多选、数字/拼音互不覆盖 */
   if(!m.yn || typeof m.yn !== 'object') m.yn = {};
   if(!m.multi || typeof m.multi !== 'object') m.multi = {};
+  if(!m.num || typeof m.num !== 'object') m.num = {};
   return m;
 }
 function saveChoiceMem(m){ lsSet(CHOICE_MEM_KEY, m); }
@@ -10768,10 +10863,15 @@ function saveChoiceMem(m){ lsSet(CHOICE_MEM_KEY, m); }
 function openChoice(){
   /* ★ 从上次记忆里读，读独立桶 */
   const mem = getChoiceMem();
-  choiceMode = (mem.mode === 'yn') ? 'yn' : 'multi';
+  choiceMode = (mem.mode === 'yn') ? 'yn' : (mem.mode === 'num' ? 'num' : 'multi');
+  choiceImgs = [];
+  /* ★ 记录这次是不是从群聊打开的：结果要发到群里而不是私聊 */
+  const _choiceGroupId = window.__choiceGroupId || '';
+  window.__choiceGroupId = '';
 
   const yn = mem.yn;
   const mu = mem.multi;
+  const nu = mem.num;
 
   const _ynQ     = (typeof yn.q === 'string') ? yn.q : '';
   const _ynMin   = (typeof yn.min === 'number') ? yn.min : 2;
@@ -10783,18 +10883,32 @@ function openChoice(){
   const _mCntMax = (typeof mu.cntMax === 'number') ? mu.cntMax : 2;
   const _mOpts   = (typeof mu.opts === 'string') ? mu.opts : '';
 
+  /* 数字 / 拼音模式记忆 */
+  const _nQ        = (typeof nu.q === 'string') ? nu.q : '';
+  const _nFrom     = (typeof nu.from === 'number') ? nu.from : 1;
+  const _nTo       = (typeof nu.to === 'number') ? nu.to : 10;
+  const _nPinyin   = !!nu.pinyin;
+  const _nCntMin   = (typeof nu.cntMin === 'number') ? nu.cntMin : 1;
+  const _nCntMax   = (typeof nu.cntMax === 'number') ? nu.cntMax : 2;
+  const _nMin      = (typeof nu.min === 'number') ? nu.min : 2;
+  const _nMax      = (typeof nu.max === 'number') ? nu.max : 5;
+
   const ynOn    = (choiceMode === 'yn')    ? 'on' : '';
   const multiOn = (choiceMode === 'multi') ? 'on' : '';
+  const numOn   = (choiceMode === 'num')   ? 'on' : '';
   const paneYnShow    = (choiceMode === 'yn')    ? 'block' : 'none';
   const paneMultiShow = (choiceMode === 'multi') ? 'block' : 'none';
+  const paneNumShow   = (choiceMode === 'num')   ? 'block' : 'none';
+  const _initQ = (choiceMode === 'yn') ? _ynQ : (choiceMode === 'num' ? _nQ : _mQ);
 
   $('#choiceBody').innerHTML = `
 	<div class="choice-head">
 	  <button class="mode-btn ${ynOn}" data-mode="yn" type="button">Yes / No</button>
 	  <button class="mode-btn ${multiOn}" data-mode="multi" type="button">多 选</button>
+	  <button class="mode-btn ${numOn}" data-mode="num" type="button">数字 / 拼音</button>
 	</div>
 
-	<textarea class="choice-q" id="cq" rows="2" placeholder="比如：今晚想干嘛？" style="height:64px;min-height:64px;max-height:64px;overflow-y:auto;line-height:1.6;">${escapeHTML(choiceMode === 'yn' ? _ynQ : _mQ)}</textarea>
+	<textarea class="choice-q" id="cq" rows="2" placeholder="比如：今晚想干嘛？" style="height:64px;min-height:64px;max-height:64px;overflow-y:auto;line-height:1.6;">${escapeHTML(_initQ)}</textarea>
 
 	<div id="paneYn" style="display:${paneYnShow}">
 	  <div class="choice-opts-row" style="padding:8px 2px;border-bottom:none;margin-top:6px;">
@@ -10808,6 +10922,13 @@ function openChoice(){
 
 	<div id="paneMulti" style="display:${paneMultiShow}">
 	  <textarea class="choice-q" id="mOpts" rows="5" placeholder="一行一个选项&#10;吃饭&#10;睡觉&#10;打游戏&#10;看电影" style="height:120px;min-height:120px;max-height:120px;margin-top:6px;">${escapeHTML(_mOpts)}</textarea>
+
+	  <div style="display:flex;align-items:center;gap:10px;padding:8px 2px 2px;">
+		<button id="mImgPick" type="button" style="flex:none;height:32px;padding:0 14px;border:0.6px solid rgba(0,0,0,.15);border-radius:16px;background:#fff;color:#1a1a1a;font-size:12px;">＋ 上传图片</button>
+		<span style="font-size:11px;color:#bbb;">图片也可以当选项，文字可留空（最多 6 张）</span>
+	  </div>
+	  <input type="file" id="mImgFile" accept="image/*" multiple style="display:none">
+	  <div id="mImgPrev" style="display:flex;flex-wrap:wrap;gap:6px;padding:2px 0 4px;"></div>
 
 	  <div class="choice-opts-row" style="padding:8px 2px;border-bottom:none;">
 		<span style="font-size:11.5px;color:#bbb;flex:none;">选</span>
@@ -10826,6 +10947,38 @@ function openChoice(){
 	  </div>
 	</div>
 
+	<div id="paneNum" style="display:${paneNumShow}">
+	  <div class="choice-opts-row" style="padding:8px 2px;border-bottom:none;margin-top:6px;">
+		<span style="font-size:11.5px;color:#bbb;flex:none;">数字</span>
+		<input class="choice-opt-input" type="number" id="numFrom" value="${_nFrom}" min="0" max="99" style="text-align:center;max-width:60px;">
+		<span style="font-size:11.5px;color:#bbb;flex:none;">到</span>
+		<input class="choice-opt-input" type="number" id="numTo" value="${_nTo}" min="0" max="99" style="text-align:center;max-width:60px;">
+	  </div>
+
+	  <div class="choice-opts-row" style="padding:6px 2px;border-bottom:none;">
+		<label style="display:flex;align-items:center;gap:8px;font-size:12px;color:#666;font-weight:300;">
+		  <input type="checkbox" id="numPinyin" ${_nPinyin ? 'checked' : ''} style="width:16px;height:16px;">
+		  包含拼音 a-z
+		</label>
+	  </div>
+
+	  <div class="choice-opts-row" style="padding:8px 2px;border-bottom:none;">
+		<span style="font-size:11.5px;color:#bbb;flex:none;">选</span>
+		<input class="choice-opt-input" type="number" id="nCntMin" value="${_nCntMin}" min="1" max="26" style="text-align:center;max-width:52px;">
+		<span style="font-size:11.5px;color:#bbb;flex:none;">个 到</span>
+		<input class="choice-opt-input" type="number" id="nCntMax" value="${_nCntMax}" min="1" max="26" style="text-align:center;max-width:52px;">
+		<span style="font-size:11.5px;color:#bbb;flex:none;">个</span>
+	  </div>
+
+	  <div class="choice-opts-row" style="padding:8px 2px;border-bottom:none;">
+		<span style="font-size:11.5px;color:#bbb;flex:none;">思考</span>
+		<input class="choice-opt-input" type="number" id="nMin" value="${_nMin}" min="1" max="60" style="text-align:center;max-width:52px;">
+		<span style="font-size:11.5px;color:#bbb;flex:none;">秒 到</span>
+		<input class="choice-opt-input" type="number" id="nMax" value="${_nMax}" min="1" max="60" style="text-align:center;max-width:52px;">
+		<span style="font-size:11.5px;color:#bbb;flex:none;">秒</span>
+	  </div>
+	</div>
+
 	<div class="choice-result" id="result"><div class="r-head">TA'S CHOICE</div><div class="r-answer" id="rAns">—</div></div>
 	<button class="choice-go" id="go" type="button">让 Ta 选</button>
   `;
@@ -10840,11 +10993,9 @@ function openChoice(){
 	  const memNow = getChoiceMem();
 	  const cq = $('#cq');
 	  const curQ = cq ? cq.value : '';
-	  if(prevMode === 'yn'){
-		memNow.yn.q = curQ;
-	  } else {
-		memNow.multi.q = curQ;
-	  }
+	  if(prevMode === 'yn') memNow.yn.q = curQ;
+	  else if(prevMode === 'num') memNow.num.q = curQ;
+	  else memNow.multi.q = curQ;
 	  memNow.mode = nextMode;
 	  saveChoiceMem(memNow);
 
@@ -10854,39 +11005,82 @@ function openChoice(){
 
 	  /* ★ 切换后，把新模式的自己的问题填回问题框 */
 	  if(cq){
-		cq.value = (nextMode === 'yn') ? (memNow.yn.q || '') : (memNow.multi.q || '');
+		cq.value = (nextMode === 'yn') ? (memNow.yn.q || '')
+		  : (nextMode === 'num' ? (memNow.num.q || '') : (memNow.multi.q || ''));
 	  }
 
-	  if(choiceMode === 'yn'){
-		$('#paneYn').style.display = 'block';
-		$('#paneMulti').style.display = 'none';
-	  } else {
-		$('#paneYn').style.display = 'none';
-		$('#paneMulti').style.display = 'block';
-	  }
+	  $('#paneYn').style.display    = (choiceMode === 'yn')    ? 'block' : 'none';
+	  $('#paneMulti').style.display = (choiceMode === 'multi') ? 'block' : 'none';
+	  $('#paneNum').style.display   = (choiceMode === 'num')   ? 'block' : 'none';
 	};
+  });
+
+  /* ★ 多选：上传图片作为选项 */
+  function renderChoiceImgs(){
+	const box = $('#mImgPrev');
+	if(!box) return;
+	box.innerHTML = choiceImgs.map(function(u, i){
+	  return '<div style="position:relative;width:58px;height:58px;border-radius:9px;overflow:hidden;border:0.6px solid rgba(0,0,0,.08)">' +
+		'<img src="' + u + '" style="width:100%;height:100%;object-fit:cover;display:block">' +
+		'<button type="button" data-del-img="' + i + '" style="position:absolute;top:2px;right:2px;width:16px;height:16px;border:none;border-radius:50%;background:rgba(0,0,0,.55);color:#fff;font-size:10px;line-height:16px;padding:0">×</button>' +
+	  '</div>';
+	}).join('');
+	box.querySelectorAll('[data-del-img]').forEach(function(btn){
+	  btn.onclick = function(){
+		const i = parseInt(btn.dataset.delImg, 10);
+		if(isNaN(i)) return;
+		choiceImgs.splice(i, 1);
+		renderChoiceImgs();
+	  };
+	});
+  }
+  on('#mImgPick', 'click', function(){
+	const f = $('#mImgFile');
+	if(f){ f.value = ''; f.click(); }
+  });
+  on('#mImgFile', 'change', function(){
+	const f = $('#mImgFile');
+	if(!f || !f.files) return;
+	const files = Array.prototype.slice.call(f.files, 0, Math.max(0, 6 - choiceImgs.length));
+	if(!files.length){ toast('最多 6 张图片'); return; }
+	files.forEach(function(file){
+	  readChoiceImage(file).then(function(url){
+		if(choiceImgs.length >= 6) return;
+		choiceImgs.push(url);
+		renderChoiceImgs();
+	  }).catch(function(){ toast('图片读取失败'); });
+	});
   });
 
   $('#go').onclick = () => {
 	const q = $('#cq').value.trim() || '（未填写问题）';
-	/* ★ 独立记忆：把问题按「模式」分开存，yes/no 和 多选 互不覆盖 */
+	/* ★ 独立记忆：把问题按「模式」分开存，三种模式互不覆盖 */
 	const _memQ = getChoiceMem();
-	if(choiceMode === 'yn'){
-	  _memQ.yn.q = $('#cq').value;
-	} else {
-	  _memQ.multi.q = $('#cq').value;
-	}
+	if(choiceMode === 'yn') _memQ.yn.q = $('#cq').value;
+	else if(choiceMode === 'num') _memQ.num.q = $('#cq').value;
+	else _memQ.multi.q = $('#cq').value;
 	saveChoiceMem(_memQ);
 	let answer = '';
 	let thinkMs = 3000;
+	let pickedImgs = [];   /* 多选里抽中的图片 */
+	const _intVal = (sel, dflt) => { const v = parseInt(($(sel) || {}).value, 10); return isNaN(v) ? dflt : v; };
 
-	/* ★ 点这一刻，先把当前所有值写回记忆（yn 和 multi 各存各的） */
+	/* ★ 点这一刻，先把当前所有值写回记忆（yn / multi / num 各存各的） */
 	const memNow = getChoiceMem();
 	memNow.mode = choiceMode;
 	if (choiceMode === 'yn') {
 	  memNow.yn.q   = $('#cq').value;
 	  memNow.yn.min = Math.max(1, parseInt(($('#ynMin')||{}).value) || 2);
 	  memNow.yn.max = Math.max(1, parseInt(($('#ynMax')||{}).value) || 5);
+	} else if (choiceMode === 'num') {
+	  memNow.num.q      = $('#cq').value;
+	  memNow.num.from   = Math.max(0, _intVal('#numFrom', 1));
+	  memNow.num.to     = Math.max(0, _intVal('#numTo', 10));
+	  memNow.num.pinyin = !!($('#numPinyin') && $('#numPinyin').checked);
+	  memNow.num.cntMin = Math.max(1, parseInt(($('#nCntMin')||{}).value) || 1);
+	  memNow.num.cntMax = Math.max(1, parseInt(($('#nCntMax')||{}).value) || 2);
+	  memNow.num.min    = Math.max(1, parseInt(($('#nMin')||{}).value) || 2);
+	  memNow.num.max    = Math.max(1, parseInt(($('#nMax')||{}).value) || 5);
 	} else {
 	  memNow.multi.q      = $('#cq').value;
 	  memNow.multi.min    = Math.max(1, parseInt(($('#mMin')||{}).value) || 2);
@@ -10918,27 +11112,64 @@ function openChoice(){
 	  else if(p < 0.80) answer = pickYesNoCat('cyn-no',  'no');
 	  else              answer = pickYesNoCat('cyn-or',  '再说吧');
 
-	} else {
-	  const raw = $('#mOpts').value || '';
-	  const opts = raw.split('\n').map(s => s.trim()).filter(Boolean);
-	  if(!opts.length){ toast('至少写一个选项'); return; }
+	} else if(choiceMode === 'num'){
+	  /* ★ 数字 / 拼音卷子：从 ?~? 的数字里，加上可选 a-z，随机抽最少~最多个 */
+	  let from = Math.max(0, _intVal('#numFrom', 0));
+	  let to   = Math.max(0, _intVal('#numTo', 10));
+	  if(from > to){ const t = from; from = to; to = t; }
+	  if(to - from > 99) to = from + 99;
+	  const pool = [];
+	  for(let n = from; n <= to; n++) pool.push(String(n));
+	  if($('#numPinyin') && $('#numPinyin').checked){
+		for(let ci = 97; ci <= 122; ci++) pool.push(String.fromCharCode(ci));
+	  }
+	  if(!pool.length){ toast('先设置一个数字范围'); return; }
 
-	  let cMin = Math.max(1, parseInt(($('#mCntMin')||{}).value) || 1);
-	  let cMax = Math.max(cMin, parseInt(($('#mCntMax')||{}).value) || 2);
-	  cMax = Math.min(cMax, opts.length);
+	  let cMin = Math.max(1, parseInt(($('#nCntMin')||{}).value) || 1);
+	  let cMax = Math.max(cMin, parseInt(($('#nCntMax')||{}).value) || 2);
+	  cMax = Math.min(cMax, pool.length);
 	  const cnt = cMin + Math.floor(Math.random() * (cMax - cMin + 1));
 
-	  const sMin = Math.max(1, parseInt(($('#mMin')||{}).value) || 2);
-	  const sMax = Math.max(sMin, parseInt(($('#mMax')||{}).value) || 5);
+	  const sMin = Math.max(1, parseInt(($('#nMin')||{}).value) || 2);
+	  const sMax = Math.max(sMin, parseInt(($('#nMax')||{}).value) || 5);
 	  thinkMs = (sMin + Math.floor(Math.random() * (sMax - sMin + 1))) * 1000;
 
-	  const copy = opts.slice();
+	  const copy = pool.slice();
 	  const picked = [];
 	  for(let i = 0; i < cnt && copy.length; i++){
 		const idx = Math.floor(Math.random() * copy.length);
 		picked.push(copy.splice(idx, 1)[0]);
 	  }
 	  answer = picked.join('　');
+
+	} else {
+	  const raw = $('#mOpts').value || '';
+	  const opts = raw.split('\n').map(s => s.trim()).filter(Boolean);
+	  /* ★ 图片也可以当选项；文字和图片都为空才提示 */
+	  const poolItems = [];
+	  opts.forEach(function(t){ poolItems.push({ type:'text', text:t }); });
+	  choiceImgs.forEach(function(u){ poolItems.push({ type:'img', url:u }); });
+	  if(!poolItems.length){ toast('至少写一个选项或上传一张图片'); return; }
+
+	  let cMin = Math.max(1, parseInt(($('#mCntMin')||{}).value) || 1);
+	  let cMax = Math.max(cMin, parseInt(($('#mCntMax')||{}).value) || 2);
+	  cMax = Math.min(cMax, poolItems.length);
+	  const cnt = cMin + Math.floor(Math.random() * (cMax - cMin + 1));
+
+	  const sMin = Math.max(1, parseInt(($('#mMin')||{}).value) || 2);
+	  const sMax = Math.max(sMin, parseInt(($('#mMax')||{}).value) || 5);
+	  thinkMs = (sMin + Math.floor(Math.random() * (sMax - sMin + 1))) * 1000;
+
+	  const copy = poolItems.slice();
+	  const texts = [];
+	  for(let i = 0; i < cnt && copy.length; i++){
+		const idx = Math.floor(Math.random() * copy.length);
+		const it = copy.splice(idx, 1)[0];
+		if(it.type === 'text') texts.push(it.text);
+		else pickedImgs.push(it.url);
+	  }
+	  answer = texts.join('　');
+	  /* 只有图片没文字时，answer 留空，图片照常显示 */
 	}
 
 	/* 结果区先转圈 */
@@ -10947,20 +11178,40 @@ function openChoice(){
 
 	/* 思考时间到：显示答案 + 推一张卡片进聊天 */
 	setTimeout(() => {
-	  $('#rAns').textContent = answer;
+	  $('#rAns').textContent = answer || (pickedImgs.length ? '（图片）' : '—');
 	  try{
-		const cardMsg = {
-		  id: uid(),
-		  role: 'char',
-		  time: Date.now(),
-		  choiceCard: {
-			q: q,
-			answer: answer
+		const ccData = { q: q, answer: answer, images: pickedImgs.slice() };
+		if(_choiceGroupId){
+		  /* ★ 从群聊打开：结果落到群消息里，由群里的角色来选 */
+		  const g0 = getGroupById(_choiceGroupId) || {};
+		  const gmem = (g0.members || []).slice();
+		  const picker = gmem.length ? gmem[Math.floor(Math.random() * gmem.length)] : '';
+		  const gm = getGroupMsgs(_choiceGroupId);
+		  gm.push({
+			id: uid(),
+			role: 'char',
+			roleId: picker,
+			time: Date.now(),
+			choiceCard: ccData
+		  });
+		  saveGroupMsgs(_choiceGroupId, gm);
+		  if(g0 && g0.id){
+			g0.lastMsgAt = Date.now();
+			g0.lastMsgText = '选择：' + (answer || '图片');
+			saveGroup(g0);
 		  }
-		};
-		msgs.push(cardMsg);
-		saveMsgs();
-		renderChat(true);
+		  if(window.__curGroupId === _choiceGroupId && typeof renderGroupChat === 'function') renderGroupChat();
+		}else{
+		  const cardMsg = {
+			id: uid(),
+			role: 'char',
+			time: Date.now(),
+			choiceCard: ccData
+		  };
+		  msgs.push(cardMsg);
+		  saveMsgs();
+		  renderChat(true);
+		}
 	  }catch(e){ console.error('选择结果发到聊天失败', e); }
 	}, thinkMs);
   };
@@ -12571,7 +12822,12 @@ function injectCustomCss(){
     el.id = 'customCssStyle';
     document.head.appendChild(el);
   }
-  el.textContent = getCustomCss();
+  /* ★ 性能修复：内容没变就不重新赋值，避免每次渲染都触发一次样式重算 */
+  const css = getCustomCss();
+  if(el.__cssCache !== css){
+    el.__cssCache = css;
+    el.textContent = css;
+  }
 }
 
 /* 把某段 CSS 设为当前生效 */
@@ -13734,11 +13990,12 @@ document.addEventListener('click', function(e){
       else toast('占卜 · 待补');
     }
     else if(f === 'choice'){
-      /* 选择：复用私聊的选择弹窗 */
-      if(typeof openChoice === 'function') openChoice();
+      /* 选择：复用私聊的选择弹窗；结果回填到当前群聊 */
+      if(typeof openChoice === 'function'){ window.__choiceGroupId = window.__curGroupId || ''; openChoice(); }
       else toast('选择 · 待补');
     }
     else if(f === 'quiz')      { if(typeof openQuizPick === 'function') openQuizPick(); else toast('问卷 · 待补'); }
+    else if(f === 'ludo')      { if(typeof openGroupLudo === 'function') openGroupLudo(); else toast('飞行棋 · 待补'); }
     else if(f === 'voicecall') toast('群聊暂不支持语音通话，去一对一吧');
     else if(f === 'videocall') toast('群聊暂不支持视频通话，去一对一吧');
     return;
@@ -13873,10 +14130,12 @@ function gchShowMenu(msgEl, x, y){
         }catch(err){ console.error('群聊收藏失败', err); toast('收藏失败'); }
 
       } else if(act === 'multi'){
-        toast('群聊多选 · 待补');
+        if(typeof gchEnterMultiSelect === 'function') gchEnterMultiSelect(m.id);
+        else toast('群聊多选 · 待补');
 
       } else if(act === 'forward'){
-        toast('群聊转发 · 待补');
+        if(typeof window.__openForwardPickerWithTemp === 'function') window.__openForwardPickerWithTemp([m], 'single');
+        else toast('转发模块没加载好');
 
       } else if(act === 'delete'){
         const arr = getGroupMsgs(window.__curGroupId);
@@ -13895,6 +14154,74 @@ function gchShowMenu(msgEl, x, y){
       if(mm && !mm.contains(ev.target)){ mm.classList.remove('show'); document.removeEventListener('click', hide); }
     });
   }, 0);
+}
+
+/* ===== 群聊多选：选几条消息 → 逐条转发 ===== */
+let gchMultiSel = new Set();
+function gchMultiBarUpdate(){
+  const bar = document.getElementById('gchMultiBar');
+  if(!bar) return;
+  const n = gchMultiSel.size;
+  const cnt = document.getElementById('gchMultiCount');
+  if(cnt) cnt.textContent = n ? ('已选 ' + n + ' 条') : '点消息选中要转发的';
+  const fw = document.getElementById('gchMultiFwd');
+  if(fw) fw.style.opacity = n ? '1' : '.4';
+}
+function gchExitMultiSelect(){
+  gchMultiSel = new Set();
+  const bar = document.getElementById('gchMultiBar');
+  if(bar) bar.remove();
+  const list = document.getElementById('gchList');
+  if(list){
+    list.onclick = null;
+    list.querySelectorAll('.gch-msg').forEach(function(el){
+      el.style.background = '';
+      el.style.borderRadius = '';
+    });
+  }
+}
+function gchEnterMultiSelect(startId){
+  gchExitMultiSelect();
+  if(startId) gchMultiSel.add(startId);
+  const list = document.getElementById('gchList');
+  if(!list) return;
+
+  const bar = document.createElement('div');
+  bar.id = 'gchMultiBar';
+  bar.style.cssText = 'position:fixed;left:0;right:0;bottom:0;z-index:400;background:#fff;border-top:0.7px solid #f0f0f0;padding:12px 16px calc(14px + env(safe-area-inset-bottom));display:flex;gap:10px;align-items:center;max-width:520px;margin:0 auto';
+  bar.innerHTML =
+    '<span id="gchMultiCount" style="flex:1;font-size:12.5px;color:#999;letter-spacing:.5px"></span>' +
+    '<button id="gchMultiCancel" type="button" style="padding:9px 16px;border-radius:14px;border:0.6px solid rgba(0,0,0,.15);background:#fff;color:#1a1a1a;font-size:13px;font-family:inherit">取消</button>' +
+    '<button id="gchMultiFwd" type="button" style="padding:9px 16px;border-radius:14px;border:none;background:#1a1a1a;color:#fff;font-size:13px;font-family:inherit">转发</button>';
+  document.body.appendChild(bar);
+
+  list.querySelectorAll('.gch-msg').forEach(function(el){
+    if(gchMultiSel.has(el.dataset.id)) el.style.background = 'rgba(0,0,0,.05)';
+  });
+  list.onclick = function(e){
+    const el = e.target.closest('.gch-msg');
+    if(!el) return;
+    const id = el.dataset.id;
+    if(!id) return;
+    const m = getGroupMsgs(window.__curGroupId).find(function(x){ return x.id === id; });
+    if(!m || m.sys || m.recalled) return;
+    e.preventDefault(); e.stopPropagation();
+    if(gchMultiSel.has(id)) gchMultiSel.delete(id);
+    else gchMultiSel.add(id);
+    el.style.background = gchMultiSel.has(id) ? 'rgba(0,0,0,.05)' : '';
+    gchMultiBarUpdate();
+  };
+
+  bar.querySelector('#gchMultiCancel').onclick = gchExitMultiSelect;
+  bar.querySelector('#gchMultiFwd').onclick = function(){
+    const arr = getGroupMsgs(window.__curGroupId);
+    const picked = arr.filter(function(x){ return gchMultiSel.has(x.id) && !x.sys && !x.recalled; });
+    if(!picked.length){ toast('先选中要转发的消息'); return; }
+    if(typeof window.__openForwardPickerWithTemp !== 'function'){ toast('转发模块没加载好'); return; }
+    gchExitMultiSelect();
+    window.__openForwardPickerWithTemp(picked, 'multi-batch');
+  };
+  gchMultiBarUpdate();
 }
 
 (function bindGchLongPress(){
@@ -14202,6 +14529,7 @@ function openGroupChat(gid){
     onBack: function(){
       if(window.__gchTimers) window.__gchTimers.forEach(function(t){ clearTimeout(t); });
       window.__gchTimers = [];
+      if(typeof gchExitMultiSelect === 'function') gchExitMultiSelect();
       document.querySelectorAll('.screen.on').forEach(function(s){ s.classList.remove('on'); });
       openGroupList();
     },
@@ -14242,7 +14570,14 @@ function renderGroupChat(){
     list.innerHTML = '<div style="text-align:center;color:#ccc;font-size:12.5px;padding:60px 20px;letter-spacing:1px;font-weight:300">还没有消息，说点什么吧</div>';
     return;
   }
-  list.innerHTML = arr.map(function(m){
+  /* ★ 性能修复：消息太多时全量 innerHTML 会明显卡顿，只渲染最近 260 条；
+     同时记录旧滚动位置，不是新消息就不强制拉到底。 */
+  const _prevTop = list.scrollTop;
+  const _prevH = list.scrollHeight;
+  const _prevN = list.__renderedN || 0;
+  const MAX_RENDER = 260;
+  const view = arr.length > MAX_RENDER ? arr.slice(arr.length - MAX_RENDER) : arr;
+  list.innerHTML = view.map(function(m){
     if(m.recalled){
       const who = m.role === 'user' ? userName() : (displayName(getRoleById(m.roleId) || {}) || '?');
       return '<div class="gch-recalled-line">' + escapeHTML(who) + '撤回了一条消息</div>';
@@ -14282,6 +14617,30 @@ function renderGroupChat(){
       : '';
 
     const isMe = m.role === 'user';
+
+    /* ★ 选择结果卡片（群聊里同样显示，支持图片选项） */
+    if(m.choiceCard){
+      const cc = m.choiceCard;
+      const av = isMe ? userAvHTML(userProfile.avatar) : avatarHTML((getRoleById(m.roleId) || {}).avatar || '');
+      const nm = isMe ? userName() : escapeHTML(displayName(getRoleById(m.roleId) || {}) || '?');
+      const cls = isMe ? 'gch-msg me' : 'gch-msg';
+      const bubbleCls = isMe ? 'message-sent msg-out msg-bubble' : 'message-received msg-in msg-bubble';
+      const side = isMe ? 'user' : 'char';
+      const ccImgs = (cc.images || []).map(function(u){
+        return '<img src="' + escapeHTML(u) + '" style="max-width:110px;max-height:110px;border-radius:10px;display:block;object-fit:cover">';
+      }).join('');
+      const inner =
+        '<span style="font-size:10.5px;letter-spacing:2px;opacity:.6;font-weight:300">' + escapeHTML(cc.q || '') + '</span><br>' +
+        escapeHTML(cc.answer || '') +
+        (ccImgs ? '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">' + ccImgs + '</div>' : '');
+      return '<div class="' + cls + '" data-id="' + m.id + '">' +
+        '<div class="gch-mav">' + av + '</div>' +
+        '<div class="gch-body"><div class="gch-name">' + nm + '</div>' +
+        timeSep + quoteHTML +
+        '<div class="gch-bubble ' + bubbleCls + '" data-side="' + side + '">' + inner + '</div>' +
+        '</div>' +
+      '</div>';
+    }
 
     /* ★ 单字字卡卡分支：跟聊天页同款 */
     if(m.kind === 'pinyin' || m.pinyin){
@@ -14390,7 +14749,7 @@ function renderGroupChat(){
       return '<div class="' + cls + '" data-id="' + m.id + '">' +
         '<div class="gch-mav">' + av + '</div>' +
         '<div class="gch-body"><div class="gch-name">' + nm + '</div>' +
-        quoteHTML +
+        timeSep + quoteHTML +
         '<div class="gch-bubble" style="background:transparent;padding:0"><img src="' + _sSrc + '" style="max-width:140px;border-radius:12px;display:block"></div></div>' +
       '</div>';
     }
@@ -14416,7 +14775,13 @@ function renderGroupChat(){
   /* ★ 图片消息：统一呼叫总入口 */
   hydrateAllImages(list);
 
-  list.scrollTop = list.scrollHeight;
+  /* 有新消息才拉到底；只是重渲染（比如撤回、编辑）就保持原来的位置 */
+  if(arr.length > _prevN){
+    list.scrollTop = list.scrollHeight;
+  } else {
+    list.scrollTop = _prevTop + (list.scrollHeight - _prevH);
+  }
+  list.__renderedN = arr.length;
 
   /* ★ 渲染后补 IndexedDB 里的语音地址（原来靠包装层，现在合进本体） */
   list.querySelectorAll('.voice-bubble[data-idbkey]').forEach(function(vb){
@@ -14457,15 +14822,17 @@ function groupChatTriggerMentionedReply(mentionedRids){
         const _backupRid = getCurrentRoleId();
         let outMsgs = [];
         try{
-          if(_backupRid !== rid){
-            window.__gchTmpRid = rid;
-          }
-          const _res = genReply();
+          /* ★ 关键修复：直接把 rid 传给 genReply。
+             原来靠 window.__gchTmpRid，但 getCurrentRoleId() 根本不读它，
+             导致群聊里所有角色都用「当前私聊角色」的字卡和设置。 */
+          window.__gchReplyMode = true;   /* 群聊池：普通字卡 + 群聊字卡混合 */
+          const _res = genReply(false, rid);
           outMsgs = buildMsgsFromBubbles(_res[0].bubbles, rid, null);
         }catch(e){
           console.error('群聊@回复 genReply 出错', e);
           outMsgs = [];
         }finally{
+          window.__gchReplyMode = false;
           window.__gchTmpRid = '';
         }
 
@@ -14519,21 +14886,19 @@ function groupChatTriggerReply(){
       if(window.__curGroupId !== g.id) return;
       try {
         /* ★ 走主路径：genReply 负责抽卡拼气泡，buildMsgsFromBubbles 负责变消息数组
-           genReply 内部读的是 getCurrentRoleId()，所以这里临时把当前角色
-           切到 rid，跑完再切回去，让单字字卡 / 标点 / emoji 都按这个角色自己的设置来 */
+           关键修复：第二个参数传 rid，让字卡 / 单字卡 / 标点 / emoji
+           全部按这个角色自己的设置来（原来 __gchTmpRid 是无效变量） */
         const _backupRid = getCurrentRoleId();
         let outMsgs = [];
         try{
-          if(_backupRid !== rid){
-            /* 只改内存里的 role id，不动 localStorage 里的"当前聊天角色" */
-            window.__gchTmpRid = rid;
-          }
-          const _res = genReply();
+          window.__gchReplyMode = true;   /* 群聊池：普通字卡 + 群聊字卡混合 */
+          const _res = genReply(false, rid);
           outMsgs = buildMsgsFromBubbles(_res[0].bubbles, rid, null);
         }catch(e){
           console.error('群聊 genReply 出错', e);
           outMsgs = [];
         }finally{
+          window.__gchReplyMode = false;
           window.__gchTmpRid = '';
         }
 
@@ -16256,6 +16621,22 @@ document.addEventListener('touchend', function(e){
    - 只在这个面板里显示，不弹开屏、不影响别的地方
    ============================================================ */
 const UPDATE_LIST = [
+  {
+    ver: '0.1.1',
+    date: '2026-10-31',
+    items: [
+      '优化：修复聊天/字卡页反复写本地存储导致的卡顿，群聊只渲染最近 260 条',
+      '修复：开启后台通知/保活后，切后台收不到消息弹窗（定时任务改由保活层驱动）',
+      '修复：天气字卡只有打开日历才刷新缓存，现在后台每 30 分钟自动刷新',
+      '修复：心情字卡右上角设置按钮点不开',
+      '新增：群聊可以把普通字卡和群聊字卡混合发送',
+      '调整：更新入口从设置移到「我的 → 07 更新」',
+      '修复：群聊回复用错角色、@ 回复失效等多个群聊 bug',
+      '新增：选择功能支持「字母 / 数字」抽选，可设定角色最少最多选几个',
+      '新增：群聊飞行棋',
+      '新增：选择多选支持上传图片作为选项，文字可选、图片可选'
+    ]
+  },
   {
     ver: '0.1.0',
     date: '2026-10-17',
@@ -20561,6 +20942,7 @@ $$('#page-me .me-row').forEach(el=>{ el.addEventListener('click',()=>{
   if(fn==='card') openCardLib();
   else if(fn==='beauty') openMyBeauty();
   else if(fn==='settings') openSettingsPanel();
+  else if(fn==='update'){ if(typeof openUpdatePanel === 'function') openUpdatePanel(); }
   else if(fn==='about'){
     showScreen('aboutScreen');
     renderTopBar({
@@ -22500,7 +22882,7 @@ function openMoodScreen(){
     title: '心 情 字 卡',
     act: '⚙',
     onBack: function(){ showScreen('cardLibScreen'); renderGroupList(); },
-    onAct: function(){ moodSettingsBtn && moodSettingsBtn.click(); }
+    onAct: function(){ if(typeof openMoodSettings === 'function') openMoodSettings(); }
   });
   renderMoodList();
   applyMoodUI();
@@ -22690,7 +23072,21 @@ on('#animPickTabs','click',e=>{
   $('#mAnimPick').classList.remove('show');
   renderMoodList();
 });
-on('#moodSettingsBtn','click',()=>{ const c = getMoodCfg(); $('#inMoodMin').value = c.moodMin; $('#inMoodMax').value = c.moodMax; $('#inStatusMin').value = c.statusMin; $('#inStatusMax').value = c.statusMax; $('#mMoodSettings').classList.add('show'); });
+/* ★ 心情设置弹窗：原来靠 #moodSettingsBtn.click()，但这个按钮并不存在，
+   而且 #inStatusMin / #inStatusMax 在弹窗里也没有，直接赋值会报错导致弹不开。
+   这里统一成一个函数，缺哪个输入框就跳过哪个。 */
+function openMoodSettings(){
+  try{
+    const c = getMoodCfg();
+    const setV = function(sel, v){ const el = $(sel); if(el) el.value = v; };
+    setV('#inMoodMin', c.moodMin);
+    setV('#inMoodMax', c.moodMax);
+    setV('#inStatusMin', c.statusMin);
+    setV('#inStatusMax', c.statusMax);
+    $('#mMoodSettings').classList.add('show');
+  }catch(e){ console.error('打开心情设置失败', e); }
+}
+on('#moodSettingsBtn','click', openMoodSettings);
 on('#btnMoodSettingsOk','click',()=>{
   const mm = parseInt($('#inMoodMin').value,10); const mx = parseInt($('#inMoodMax').value,10);
   if(!mm||!mx||mm<1||mx<mm){ alert('区间不合法，请检查'); return; }
@@ -25128,6 +25524,22 @@ document.addEventListener('click', function(e){
 	scheduleActiveDivine();
 	scheduleGroupActivity();
 	scheduleGroupDivine();
+	/* ★ 天气缓存定期刷新：天气字卡按 cfg.cache 判定，
+	   原来只有打开日历页才会刷新，导致平时根本没有天气卡。
+	   这里后台每 30 分钟刷一次；只有已经拿到过缓存或设过城市才刷，
+	   不会凭空弹定位授权。 */
+	(function scheduleWeatherRefresh(){
+	  const tick = function(){
+		try{
+		  if(typeof refreshWeather !== 'function' || typeof getWeatherCfg !== 'function') return;
+		  const cfg = getWeatherCfg();
+		  if(!cfg.cache && !cfg.city) return;
+		  refreshWeather(false);
+		}catch(e){}
+	  };
+	  kaSchedule('weather-refresh', tick, 30 * 60 * 1000);
+	  setTimeout(tick, 8000);
+	})();
 	/* ★ 启动个签自动切换定时器 */
 	try{ startSignSwitchTimer(); }catch(e){ console.error('个签切换启动失败', e); }
 	/* ★ 启动通话模块：延迟到页面初始化完再跑，避免 callState 未初始化完成就访问 */

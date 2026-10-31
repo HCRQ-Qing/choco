@@ -485,3 +485,251 @@
     jungleInit();
   }
 })();
+
+/* ============================================================
+   群聊飞行棋（openGroupLudo）
+   ------------------------------------------------------------
+   - 群成员 + 我，最多 4 方，每人 1 枚棋子
+   - 掷到 6 起飞；每回合按骰子前进
+   - 绕场一圈（40 格）先到终点者获胜
+   - 同一格撞到别人 → 对方回机场重新起飞
+   - 角色自动掷骰，用户点按钮掷
+   ============================================================ */
+(function(){
+  'use strict';
+  var mask = null;
+  var state = null;
+  var gen = 0;                 /* 每次重开/关闭 +1，用来作废旧定时器 */
+  var PERIM = 40;
+
+  function cellPos(i){
+    if(i < 11) return [0, i];
+    if(i < 21) return [i - 10, 10];
+    if(i < 31) return [10, 10 - (i - 20)];
+    return [10 - (i - 30), 0];
+  }
+
+  function ensureMask(){
+    if(mask) return mask;
+    mask = document.createElement('div');
+    mask.id = 'gchLudo';
+    mask.style.cssText =
+      'position:fixed;inset:0;z-index:2147483000;background:#fff;max-width:520px;margin:0 auto;' +
+      'display:none;flex-direction:column;overflow:hidden;font-family:inherit;color:#1a1a1a';
+    document.body.appendChild(mask);
+    return mask;
+  }
+
+  function buildBoard(){
+    var map = {};
+    for(var i = 0; i < PERIM; i++){
+      var p = cellPos(i);
+      map[p[0] * 11 + p[1]] = i;
+    }
+    var html = '<div style="display:grid;grid-template-columns:repeat(11,1fr);grid-template-rows:repeat(11,1fr);gap:2px;' +
+      'width:min(88vw,342px);aspect-ratio:1/1;margin:0 auto">';
+    for(var r = 0; r < 11; r++){
+      for(var c = 0; c < 11; c++){
+        var k = r * 11 + c;
+        if(map[k] !== undefined){
+          var idx = map[k];
+          var bg = '#ffffff';
+          if(idx === 0) bg = '#eef7ee';
+          else if(idx === PERIM - 1) bg = '#fdf3e7';
+          html += '<div class="ld-cell" data-idx="' + idx + '" style="position:relative;display:flex;align-items:center;' +
+            'justify-content:center;background:' + bg + ';border:0.6px solid rgba(0,0,0,.12);border-radius:4px;overflow:hidden"></div>';
+        } else {
+          html += '<div></div>';
+        }
+      }
+    }
+    html += '</div>';
+    return html;
+  }
+
+  function initState(){
+    var players = [];
+    var uname = (typeof userName === 'function') ? userName() : '我';
+    players.push({ name: uname, isUser: true, color: '#1a1a1a', pos: -1, started: false, done: false });
+    var g = (typeof getGroupById === 'function') ? getGroupById(window.__curGroupId) : null;
+    var colors = ['#e57373', '#64b5f6', '#81c784'];
+    var mem = (g && g.members || []).slice(0, 3);
+    mem.forEach(function(rid, i){
+      var r = (typeof getRoleById === 'function') ? getRoleById(rid) : null;
+      if(!r) return;
+      players.push({
+        name: (typeof displayName === 'function' ? displayName(r) : r.name) || '?',
+        isUser: false,
+        color: colors[i % 3],
+        pos: -1, started: false, done: false
+      });
+    });
+    return { players: players, turn: 0, busy: false, over: false, logs: [] };
+  }
+
+  function log(t){
+    if(!state) return;
+    state.logs.unshift(t);
+    if(state.logs.length > 30) state.logs.length = 30;
+    var box = mask.querySelector('#ldLog');
+    if(box){
+      box.innerHTML = state.logs.map(function(s){ return '<div>' + escapeHTML(s) + '</div>'; }).join('');
+    }
+  }
+
+  function renderHangar(){
+    var box = mask.querySelector('#ldHangar');
+    if(!box || !state) return;
+    box.innerHTML = state.players.map(function(p){
+      if(p.done) return '<span style="color:' + p.color + '">🏁 ' + escapeHTML(p.name) + ' 已到终点</span>';
+      if(p.started) return '<span style="color:' + p.color + '">● ' + escapeHTML(p.name) + ' 第 ' + (p.pos + 1) + ' 格</span>';
+      return '<span>○ ' + escapeHTML(p.name) + ' 待起飞</span>';
+    }).join('');
+  }
+
+  function renderPieces(){
+    if(!mask || !state) return;
+    mask.querySelectorAll('.ld-cell').forEach(function(cell){ cell.innerHTML = ''; });
+    state.players.forEach(function(p){
+      if(!p.started) return;
+      var idx = p.done ? PERIM - 1 : p.pos;
+      var cell = mask.querySelector('.ld-cell[data-idx="' + idx + '"]');
+      if(!cell) return;
+      var dot = document.createElement('div');
+      dot.style.cssText = 'width:66%;aspect-ratio:1/1;border-radius:50%;background:' + p.color +
+        ';border:1.5px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.2)';
+      cell.appendChild(dot);
+    });
+  }
+
+  function renderInfo(){
+    var info = mask.querySelector('#ldInfo');
+    if(!info || !state) return;
+    if(state.over){
+      var w = state.players.find(function(x){ return x.done; });
+      info.innerHTML = '<div style="font-size:15px;letter-spacing:2px">🏁 ' + escapeHTML(w ? w.name : '') + ' 获胜</div>';
+      return;
+    }
+    var p = state.players[state.turn];
+    var diceShown = (typeof state.lastDice === 'number') ? state.lastDice : '🎲';
+    info.innerHTML = '<div style="font-size:12px;color:#999;letter-spacing:1px">' +
+      (p && p.isUser ? '轮到你掷骰子' : '轮到 ' + escapeHTML(p ? p.name : '') + ' 掷骰子') +
+      '</div><div id="ldDice" style="font-size:30px;line-height:1.3;font-weight:300;letter-spacing:2px">' + diceShown + '</div>';
+  }
+
+  function rollFor(p){
+    var dice = 1 + Math.floor(Math.random() * 6);
+    state.lastDice = dice;
+    var diceEl = mask.querySelector('#ldDice');
+    if(diceEl) diceEl.textContent = dice;
+    if(!p.started){
+      if(dice === 6){ p.started = true; p.pos = 0; log(p.name + ' 掷出 6，起飞！'); }
+      else log(p.name + ' 掷出 ' + dice + '，还没起飞');
+      return;
+    }
+    p.pos += dice;
+    if(p.pos >= PERIM){
+      p.pos = PERIM - 1;
+      p.done = true;
+      log(p.name + ' 掷出 ' + dice + '，到达终点！');
+      return;
+    }
+    log(p.name + ' 掷出 ' + dice + '，走到第 ' + (p.pos + 1) + ' 格');
+    /* 撞子：同格的其他已起飞玩家回机场 */
+    state.players.forEach(function(q){
+      if(q === p || !q.started || q.done) return;
+      if(q.pos === p.pos){
+        q.pos = -1; q.started = false;
+        log(p.name + ' 把 ' + q.name + ' 撞回了机场');
+      }
+    });
+  }
+
+  function nextTurn(token){
+    if(!state || state.over || token !== gen) return;
+    state.busy = false;
+    state.turn = (state.turn + 1) % state.players.length;
+    renderInfo();
+    var p = state.players[state.turn];
+    if(p && !p.isUser){
+      setTimeout(function(){
+        if(!state || state.over || token !== gen) return;
+        if(state.players[state.turn] !== p) return;
+        doRoll(p);
+      }, 800 + Math.random() * 700);
+    }
+  }
+
+  function doRoll(p){
+    if(!state || state.busy || state.over) return;
+    state.busy = true;
+    var token = gen;
+    renderInfo();
+    rollFor(p);
+    renderHangar();
+    renderPieces();
+    renderInfo();
+    if(p.done){
+      state.over = true;
+      renderInfo();
+      var btn = mask.querySelector('#ldRoll');
+      if(btn) btn.style.opacity = '.4';
+      return;
+    }
+    setTimeout(function(){ nextTurn(token); }, 700);
+  }
+
+  function restart(){
+    gen++;
+    state = initState();
+    var btn = mask.querySelector('#ldRoll');
+    if(btn) btn.style.opacity = '1';
+    renderHangar();
+    renderPieces();
+    renderInfo();
+    log('新的一局开始，掷到 6 才能起飞');
+  }
+
+  window.openGroupLudo = function(){
+    if(typeof getGroupById === 'function' && !getGroupById(window.__curGroupId)){
+      if(typeof toast === 'function') toast('先打开一个群聊再玩飞行棋');
+      return;
+    }
+    var m = ensureMask();
+    if(!m.__built){
+      m.__built = true;
+      m.innerHTML =
+        '<div style="flex:none;display:flex;align-items:center;gap:10px;padding:18px 18px 8px">' +
+          '<button id="ldBack" type="button" style="width:36px;height:36px;flex:none;border:none;background:transparent;font-size:22px;opacity:.6">‹</button>' +
+          '<div style="flex:1;text-align:center;font-size:15px;font-weight:300;letter-spacing:6px">飞 行 棋</div>' +
+          '<div style="width:36px;flex:none"></div>' +
+        '</div>' +
+        '<div id="ldHangar" style="flex:none;display:flex;gap:12px;justify-content:center;flex-wrap:wrap;padding:0 16px 8px;font-size:11px;color:#999"></div>' +
+        '<div style="flex:none;padding:0 12px">' + buildBoard() + '</div>' +
+        '<div id="ldInfo" style="flex:none;text-align:center;padding:12px 18px 2px"></div>' +
+        '<div id="ldLog" style="flex:1;overflow-y:auto;padding:4px 20px;font-size:11.5px;color:#999;line-height:1.75"></div>' +
+        '<div style="flex:none;padding:10px 18px 20px;display:flex;gap:10px">' +
+          '<button id="ldRoll" type="button" style="flex:1;height:46px;border:none;border-radius:23px;background:#1a1a1a;color:#fff;font-size:14px;letter-spacing:4px">掷 骰 子</button>' +
+          '<button id="ldRestart" type="button" style="flex:none;width:94px;height:46px;border:0.6px solid rgba(0,0,0,.15);border-radius:23px;background:#fff;color:#1a1a1a;font-size:13px">重开</button>' +
+        '</div>';
+      m.querySelector('#ldBack').onclick = function(){
+        gen++;
+        m.style.display = 'none';
+        if(state) state.over = true;
+      };
+      m.querySelector('#ldRestart').onclick = function(){ restart(); };
+      m.querySelector('#ldRoll').onclick = function(){
+        if(!state) return;
+        var p = state.players[state.turn];
+        if(!p) return;
+        if(!p.isUser){
+          if(typeof toast === 'function') toast('轮到 ' + p.name + ' 了');
+          return;
+        }
+        doRoll(p);
+      };
+    }
+    m.style.display = 'flex';
+    restart();
+  };
+})();
