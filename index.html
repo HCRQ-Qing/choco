@@ -137,6 +137,7 @@
               <div class="func-item" data-func="truth"><div class="fi-box"><svg viewBox="0 0 24 24"><path d="M3 5h18v12H3z"/><path d="M8 21l4-4 4 4"/><circle cx="9" cy="10" r="1" fill="currentColor" stroke="none"/><circle cx="15" cy="10" r="1" fill="currentColor" stroke="none"/></svg></div><span class="fi-label">真心话</span></div>
               <div class="func-item" data-func="games"><div class="fi-box"><svg viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="11" rx="5"/><path d="M7 11v4"/><path d="M5 13h4"/><circle cx="16" cy="12" r="1" fill="currentColor" stroke="none"/><circle cx="18.5" cy="14" r="1" fill="currentColor" stroke="none"/></svg></div><span class="fi-label">小游戏</span></div>
               <div class="func-item" data-func="words"><div class="fi-box"><svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></div><span class="fi-label">背单词</span></div>
+              <div class="func-item" data-func="letter"><div class="fi-box"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3.5 6.5l8.5 6.5 8.5-6.5"/></svg></div><span class="fi-label">写信</span></div>
             </div>
           </div>
         </div>
@@ -480,6 +481,14 @@
         <span class="num">08</span><span class="name">导出聊天</span>
         <span class="val">TXT / MD / JSON</span><span class="en">CHAT EXPORT</span><span class="arr">→</span>
       </div>
+      <div class="set-row" data-set="letter">
+        <span class="num">09</span><span class="name">写信设置</span>
+        <span class="val">回信 / 主动来信</span><span class="en">LETTER</span><span class="arr">→</span>
+      </div>
+      <div class="set-row" data-set="pat">
+        <span class="num">10</span><span class="name">拍一拍</span>
+        <span class="val">概率 / 模板</span><span class="en">PAT</span><span class="arr">→</span>
+      </div>
 
     </div>
     <input type="file" id="bkImportFile" accept="application/json,.json" style="display:none">
@@ -638,6 +647,7 @@
       <div class="gch-func-item" data-gfunc="voicecall"><div class="gch-fi-box"><svg viewBox="0 0 24 24"><path d="M21 16.5v2.4a1.6 1.6 0 0 1-1.7 1.6 15.5 15.5 0 0 1-6.7-2.4 15 15 0 0 1-4.6-4.6A15.5 15.5 0 0 1 5.5 6.7 1.6 1.6 0 0 1 7.1 5h2.4a1.6 1.6 0 0 1 1.6 1.4c.1.9.3 1.7.6 2.5a1.6 1.6 0 0 1-.4 1.7l-1 1a12 12 0 0 0 4.6 4.6l1-1a1.6 1.6 0 0 1 1.7-.4c.8.3 1.6.5 2.5.6A1.6 1.6 0 0 1 21 16.5z"></path></svg></div><span class="gch-fi-label">语音通话</span></div>
       <div class="gch-func-item" data-gfunc="videocall"><div class="gch-fi-box"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="13" height="12" rx="2"></rect><path d="M16 10l5-3v10l-5-3"></path></svg></div><span class="gch-fi-label">视频通话</span></div>
       <div class="gch-func-item" data-gfunc="ludo"><div class="gch-fi-box"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/><circle cx="8.5" cy="8.5" r="1.4" fill="currentColor" stroke="none"/><circle cx="15.5" cy="8.5" r="1.4" fill="currentColor" stroke="none"/><circle cx="8.5" cy="15.5" r="1.4" fill="currentColor" stroke="none"/><circle cx="15.5" cy="15.5" r="1.4" fill="currentColor" stroke="none"/></svg></div><span class="gch-fi-label">飞行棋</span></div>
+      <div class="gch-func-item" data-gfunc="werewolf"><div class="gch-fi-box"><svg viewBox="0 0 24 24"><path d="M4 14c0-4 3-7 7-7 1.5 0 2.5.5 3.5 1.5L17 6l1 3.5c1 1.5 1 3.5 1 5.5 0 2-1.5 3-3 3-1 0-1.5-.5-2.5-1.5H8c-2 0-4-1-4-2.5z"/><circle cx="9" cy="12" r="1" fill="currentColor" stroke="none"/><circle cx="14" cy="12" r="1" fill="currentColor" stroke="none"/></svg></div><span class="gch-fi-label">狼人杀</span></div>
     </div>
   </div>
 
@@ -4787,6 +4797,14 @@
 <script src="js/games.js"></script>
 <!-- ===== 背单词（单词/句子字卡 + 发音） ===== -->
 <script src="js/words.js"></script>
+<!-- ===== 写信（信件卡 / 回信调度 / 写理解 / 存回忆） ===== -->
+<script src="js/letters.js"></script>
+<!-- ===== 拍一拍（模板 / 概率设置） ===== -->
+<script src="js/pat.js"></script>
+<!-- ===== 经期（经期字卡 + 日历标记） ===== -->
+<script src="js/period.js"></script>
+<!-- ===== 群聊狼人杀 ===== -->
+<script src="js/werewolf.js"></script>
 <!-- ===== 截图库（用于真实截屏） ===== -->
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 </body>
