@@ -1327,6 +1327,8 @@ document.addEventListener('visibilitychange', function(){
 function openDeskCalendar(){
   const desk = document.getElementById('page-desk');
   if(!desk) return;
+  /* ★ 进入日历前先记住功能页原始结构，返回时按原样恢复（含「背单词」等后加的入口） */
+  if(!desk._homeHTML) desk._homeHTML = desk.innerHTML;
   /* ★ 每次进入都强制重建，避免被外部恢复过 / 被 pageStack 移动过 / 结构残留 */
   desk._calInited = true;
   /* 直接清空 desk，然后重新注入日历结构 */
@@ -1429,6 +1431,25 @@ function openDeskCalendar(){
 function closeDeskCalendar(){
   const desk = document.getElementById('page-desk');
   if(!desk) return;
+  /* ★ 优先按进入日历前保存的原始结构恢复，避免硬编码结构把新入口（背单词等）弄丢 */
+  if(desk._homeHTML){
+    desk.innerHTML = desk._homeHTML;
+    desk.style.display = '';
+    desk.style.flexDirection = '';
+    desk.style.overflow = '';
+    desk.style.overflowY = '';
+    desk.style.overflowX = '';
+    desk.style.webkitOverflowScrolling = '';
+    desk.style.scrollbarWidth = '';
+    desk.style.padding = '';
+    desk.style.background = '';
+    if(typeof bindDeskApps === 'function') bindDeskApps();
+    function _ck(){ const d=new Date(); const el=document.getElementById('deskClock'); if(el) el.textContent=String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }
+    _ck();
+    if(window.__deskClockTimer) clearInterval(window.__deskClockTimer);
+    window.__deskClockTimer = setInterval(_ck, 1000);
+    return;
+  }
   /* 恢复功能页结构：重新注入原始 HTML */
   desk.innerHTML =
     '<div class="desk-top"><div class="desk-title">功 能 页<small>FUNCTIONS</small></div><div class="desk-clock" id="deskClock">--:--</div></div>' +

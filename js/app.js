@@ -7705,6 +7705,12 @@ $$('.func-item').forEach(item=>{ item.addEventListener('click',e=>{
       if(typeof openGameLobby === 'function') openGameLobby();
       else toast('小游戏模块还没加载好');
     }, 200);
+  } else if(fn === 'words'){
+    closeAllThings('drawer');
+    setTimeout(function(){
+      if(typeof openWordsScreen === 'function') openWordsScreen();
+      else toast('背单词模块还没加载好');
+    }, 200);
   }
 }); });
 
@@ -19277,6 +19283,7 @@ function bindDeskApps(){
       else if(k==='watch'){ openWatchScreen(); }
       else if(k==='dream'){ openDreamScreen(); }
       else if(k==='carddemand'){ openCardDemandScreen(); }
+      else if(k==='words'){ if(typeof openWordsScreen === 'function') openWordsScreen(); }
     });
   });
 }
