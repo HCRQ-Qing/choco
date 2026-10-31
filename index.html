@@ -35,20 +35,6 @@
 <link rel="stylesheet" href="css/media.css">
 </head>
 <body>
-<!-- ★ 开屏启动页 -->
-<div id="bootLoader">
-  <svg class="boot-icon" viewBox="0 0 100 100">
-    <rect width="100" height="100" rx="22" fill="#bde8f5"/>
-    <path d="M62 22 A30 30 0 1 0 62 78 A24 24 0 1 1 62 22 Z" fill="#ffffff"/>
-    <circle cx="76" cy="34" r="2.6" fill="#ffffff"/>
-    <circle cx="82" cy="50" r="1.8" fill="#ffffff"/>
-    <circle cx="74" cy="64" r="1.4" fill="#ffffff"/>
-  </svg>
-  <div class="boot-name">choco</div>
-  <div class="boot-sub">THE OTHER SIDE</div>
-  <div class="boot-line"></div>
-</div>
-
 <div id="app">
   <div class="page-stack" id="pageStack">
 	<div class="page" id="page-friends">
@@ -149,6 +135,8 @@
               <div class="func-item" data-func="reply"><div class="fi-box"><svg viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 0 1-8.5 8.3 9 9 0 0 1-3.6-.7L4 20.5l1.4-4.1a8.1 8.1 0 0 1-1.3-4.4A8.4 8.4 0 0 1 12.5 3.2 8.4 8.4 0 0 1 21 11.5z"/></svg></div><span class="fi-label">回复设置</span></div>
               <div class="func-item" data-func="beauty"><div class="fi-box"><svg viewBox="0 0 24 24"><path d="M12 3l2 5 5 .5-4 3.5 1.3 5L12 14.5 7.7 17l1.3-5-4-3.5L10 8z"/></svg></div><span class="fi-label">美化</span></div>
               <div class="func-item" data-func="truth"><div class="fi-box"><svg viewBox="0 0 24 24"><path d="M3 5h18v12H3z"/><path d="M8 21l4-4 4 4"/><circle cx="9" cy="10" r="1" fill="currentColor" stroke="none"/><circle cx="15" cy="10" r="1" fill="currentColor" stroke="none"/></svg></div><span class="fi-label">真心话</span></div>
+              <div class="func-item" data-func="games"><div class="fi-box"><svg viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="11" rx="5"/><path d="M7 11v4"/><path d="M5 13h4"/><circle cx="16" cy="12" r="1" fill="currentColor" stroke="none"/><circle cx="18.5" cy="14" r="1" fill="currentColor" stroke="none"/></svg></div><span class="fi-label">小游戏</span></div>
+              <div class="func-item" data-func="words"><div class="fi-box"><svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></div><span class="fi-label">背单词</span></div>
             </div>
           </div>
         </div>
@@ -437,7 +425,6 @@
     <div class="sheet-body">
       <div class="rs-tabs" id="relSetTabs">
         <button class="rs-tab on" data-tab="basic" type="button">基础设置</button>
-        <button class="rs-tab" data-tab="oc" type="button">OC 专用</button>
       </div>
       <div id="relSetBody"></div>
     </div>
@@ -452,20 +439,6 @@
   </div>
 </div>
 
-<div class="modal" id="mRelationPairing">
-  <div class="overlay" data-close></div>
-  <div class="sheet">
-    <div class="sheet-head"><h3>官配管理</h3><button class="x" data-close type="button">✕</button></div>
-    <div class="sheet-body">
-      <div class="hint" style="margin:0 0 10px;font-size:11.5px;color:#bbb;line-height:1.7">官配只是标记，不特殊影响关系摇摆。</div>
-      <label>选择两个角色</label>
-      <div id="pairingPick"></div>
-      <button class="primary-btn" id="pairingAddBtn" type="button" style="margin-top:12px">添加官配</button>
-      <label style="margin-top:16px">已有官配</label>
-      <div id="pairingList"></div>
-    </div>
-  </div>
-</div>
 <!-- ============ 设置桌面页 ============ -->
 <div class="screen" id="settingsScreen">
   <div class="set-wrap">
@@ -503,6 +476,10 @@
       <div class="set-row" data-set="backup-import">
         <span class="num">08</span><span class="name">恢复备份</span>
         <span class="val">导入 JSON</span><span class="en">RESTORE</span><span class="arr">→</span>
+      </div>
+      <div class="set-row" data-set="export-chat">
+        <span class="num">09</span><span class="name">导出聊天</span>
+        <span class="val">TXT / MD / JSON</span><span class="en">CHAT EXPORT</span><span class="arr">→</span>
       </div>
 
     </div>
@@ -2896,13 +2873,6 @@
         <div class="cip-sub">按关键词搜索</div>
       </div>
 
-      <!-- 导出聊天 -->
-      <div class="cip-card" id="cipExport">
-        <span class="cip-ic"><svg viewBox="0 0 24 24"><path d="M12 3v12m0 0l-4-4m4 4l4-4"/><path d="M5 21h14"/></svg></span>
-        <div class="cip-tt">导出聊天</div>
-        <div class="cip-sub">TXT / Markdown / JSON</div>
-      </div>
-
       <!-- 删除好友（横条卡片） -->
       <div class="cip-card wide" id="cipDeleteFriend">
         <span class="cip-ic"><svg viewBox="0 0 24 24"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></span>
@@ -4796,10 +4766,6 @@
 .utop-av img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
 </style>
 
-<!-- ===== 启动页 ===== -->
-<script src="js/boot.js"></script>
-<!-- ===== 版本号 ===== -->
-<script src="js/version.js"></script>
 <!-- ===== IndexedDB 数据底座 ===== -->
 <script src="js/indexeddb.js"></script>
 <!-- ===== 聊天 / 群聊 · 上传图片 ===== -->
@@ -4818,5 +4784,11 @@
 <script src="js/calendar.js"></script>
 <!-- ===== 节日 / 特殊日期 · 自动祝福 ===== -->
 <script src="js/festival.js"></script>
+<!-- ===== 小游戏（2048 + 斗兽棋） ===== -->
+<script src="js/games.js"></script>
+<!-- ===== 背单词（单词/句子字卡 + 发音） ===== -->
+<script src="js/words.js"></script>
+<!-- ===== 截图库（用于真实截屏） ===== -->
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 </body>
 </html>

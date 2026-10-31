@@ -15,7 +15,7 @@
    所以每个事件进来都先从 IndexedDB 读回排期再重新 arm 一次。
    ============================================================ */
 
-const CACHE_NAME = 'choco-v3';          /* ★ 改了 css/js 就把它 +1，用户下次刷新即更新 */
+const CACHE_NAME = 'choco-v4';          /* ★ 改了 css/js 就把它 +1，用户下次刷新即更新 */
 const DB_NAME = 'mj_big_files';
 const STORE = 'files';
 const SCHED_KEY = 'sw_ka_schedule_v1';
@@ -50,7 +50,6 @@ const PRECACHE = [
   './css/groupchat.css',
   './css/media.css',
   './js/boot.js',
-  './js/version.js',
   './js/indexeddb.js',
   './js/chat-image.js',
   './js/bubble-alias.js',
@@ -59,7 +58,9 @@ const PRECACHE = [
   './js/backup.js',
   './js/video-pool.js',
   './js/calendar.js',
-  './js/festival.js'
+  './js/festival.js',
+  './js/words.js',
+  './js/games.js'
   /* ★ 不再预缓存 fonts/LikeJian.ttf（6MB）：这个字体现在没有任何元素使用，
      放进预缓存只会让首次加载白等 6MB。真要用了会由下面的「静态资源按需缓存」兜住。 */
 ];
