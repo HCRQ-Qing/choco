@@ -1279,7 +1279,7 @@ function openRoleSwitchMenu(){
       '#roleSwitchMenu .rsm-item.on{background:#fafafa;}' +
       '#roleSwitchMenu .rsm-av{width:38px;height:38px;' +
       'flex:none;background:#f0f0f0;position:relative;overflow:hidden;' +
-      'border-radius:' + ((lsGet('mj_beauty_v1',{}).avatarShape === 'circle') ? '50%' : '12%') + ';}' +
+      'border-radius:var(--avatar-radius,12%);}' +
       '#roleSwitchMenu .rsm-av svg{position:absolute;inset:0;width:100%;height:100%;}' +
       '#roleSwitchMenu .rsm-av .silhouette{fill:#c8c8c8;}' +
       '#roleSwitchMenu .rsm-av img{position:absolute;inset:0;width:100%;height:100%;' +
@@ -1321,7 +1321,7 @@ function openRoleSwitchMenu(){
   const list = document.getElementById('rsmList');
   const friends = getFriends().filter(f => !f.hidden && !f.builtin);
   const curId = getCurrentRoleId();
-  const avShape = (lsGet('mj_beauty_v1',{}).avatarShape === 'circle') ? '50%' : '12%';
+  const avShape = 'var(--avatar-radius,12%)';
   const unreadMap = getUnreadMap();
   list.innerHTML = friends.map(f => {
     const on = f.id === curId ? ' on' : '';

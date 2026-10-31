@@ -1016,7 +1016,8 @@ function renderDeRole(body){
   } else {
     html += friends.map(f => {
       const status = f.status || 'online';
-      const avRadius = (beautyCfg.avatarShape === 'circle') ? '50%' : '12%';
+      /* ★ 跟随全局头像形状（CSS 变量），不再写死快照值 */
+      const avRadius = 'var(--avatar-radius,12%)';
       return '<div class="de-role-item" data-rid="' + f.id + '">' +
         '<div class="de-role-av" style="border-radius:' + avRadius + '">' + avatarHTML(f.avatar) + '</div>' +
         '<div class="de-role-info">' +
@@ -1701,7 +1702,6 @@ function closeDeskCalendar(){
     '</div>' +
     '<div class="ms-tabs" id="msTabs">' +
       '<button class="ms-tab on" data-g="list" type="button">歌 单</button>' +
-      '<button class="ms-tab" data-g="bgm" type="button">B G M</button>' +
     '</div>' +
     '<div class="ms-list" id="msList"></div>' +
     '<input type="file" id="msFilePick" accept="audio/*" multiple>' +
@@ -1709,9 +1709,9 @@ function closeDeskCalendar(){
   document.body.appendChild(wrap);
 
   /* ---- 3. JS 逻辑 ---- */
-  var _msLists = { list: [], bgm: [] };
+  var _msLists = { list: [] };
   var _msLyrics = {};  /* id -> [{t:秒, txt:歌词}] */
-  var _msState = { group:'list', idx:{list:-1,bgm:-1}, mode:'loop', armed:false, shuffle:false, repeat:'off' };
+  var _msState = { group:'list', idx:{list:-1}, mode:'loop', shuffle:false, repeat:'off' };
   var _msAudio = new Audio();
   _msAudio.preload = 'metadata';
   _msAudio.volume = 0.7;
@@ -1733,13 +1733,14 @@ function closeDeskCalendar(){
   function msLoadMeta(){
     try{
       var raw = localStorage.getItem(MS_META_KEY);
-      if(!raw) return { list:[], bgm:[] };
+      if(!raw) return { list:[] };
       var m = JSON.parse(raw);
-      if(!m || typeof m !== 'object') return { list:[], bgm:[] };
+      if(!m || typeof m !== 'object') return { list:[] };
       if(!Array.isArray(m.list)) m.list = [];
-      if(!Array.isArray(m.bgm))  m.bgm  = [];
+      /* ★ 已删除 BGM 分组：顺手清掉旧数据 */
+      if(m.bgm){ delete m.bgm; try{ localStorage.setItem(MS_META_KEY, JSON.stringify(m)); }catch(e){} }
       return m;
-    }catch(e){ return { list:[], bgm:[] }; }
+    }catch(e){ return { list:[] }; }
   }
   function msSaveMeta(m){
     try{ localStorage.setItem(MS_META_KEY, JSON.stringify(m)); }catch(e){}
@@ -1758,11 +1759,7 @@ function closeDeskCalendar(){
   function msRestoreAll(){
     var meta = msLoadMeta();
     _msLists.list = meta.list.slice();
-    _msLists.bgm  = meta.bgm.slice();
     _msLists.list.forEach(function(t){
-      if(t.key) msIdbGetURL(t.key).then(function(u){ if(u) t.url = u; });
-    });
-    _msLists.bgm.forEach(function(t){
       if(t.key) msIdbGetURL(t.key).then(function(u){ if(u) t.url = u; });
     });
     msLoadLyrics();
@@ -1900,7 +1897,7 @@ function closeDeskCalendar(){
     }
     var t = _msLists[g][idx];
     if(nameEl) nameEl.textContent = t.name;
-    if(subEl)  subEl.textContent  = (g === 'bgm' ? 'BGM · ' : 'PLAYING · ') + String(idx+1).padStart(2,'0');
+    if(subEl)  subEl.textContent  = 'PLAYING · ' + String(idx+1).padStart(2,'0');
   }
 
   function msNextByMode(){
@@ -2241,25 +2238,7 @@ function closeDeskCalendar(){
     if(fill) fill.style.width = (_msAudio.volume*100) + '%';
   }, 200);
 
-  /* BGM 进站自动播 */
-  function msArmBgmAutoPlay(){
-    if(_msState.armed) return;
-    _msState.armed = true;
-    var bgmArr = _msLists.bgm;
-    if(!bgmArr.length) return;
-    if(_msAudio.paused){
-      var i = 0;
-      var g0 = _msState.group;
-      var i0 = _msState.idx[_msState.group];
-      _msState.group = 'bgm';
-      _msState.idx.bgm = i;
-      msPlayAt('bgm', i);
-      _msState.group = g0;
-      _msState.idx.list = i0;
-    }
-  }
-  window.addEventListener('touchstart', msArmBgmAutoPlay, {once:false, passive:true});
-  window.addEventListener('click', msArmBgmAutoPlay, {once:false, passive:true});
+  /* ★ BGM 已删除：进站不再自动播放任何音乐 */
 
 })();
 window.__calendar = {

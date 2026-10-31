@@ -2004,9 +2004,16 @@ function buildMsgsFromBubbles(bubbles, roleId, quote){
   bubbles.forEach(function(bubble, idx){
     const inlineParts = [];
     const standaloneParts = [];
+    /* ★ 空白气泡修复：把「抽出来是空文本」的片段直接丢掉
+       （字卡对象缺字段 / 表情库为空 / 精选池为空时，旧逻辑会拼出空字符串仍然发一条，
+         看起来就是角色莫名其妙发了一个空气泡） */
     (bubble.parts || []).forEach(function(p){
-      if(p.type === 'sticker' && p.__standalone) standaloneParts.push(p);
-      else inlineParts.push(p);
+      const _raw = (p.type === 'card') ? cardText(p.text) : p.text;
+      const _hasSticker = (p.type === 'sticker');
+      if(!_hasSticker && !String(_raw == null ? '' : _raw).trim()) return;
+      const pp = Object.assign({}, p, { text: _raw });
+      if(p.type === 'sticker' && p.__standalone) standaloneParts.push(pp);
+      else inlineParts.push(pp);
     });
 
     /* 先把独立表情图按顺序排好，跟内联消息共享时间戳递增 */
@@ -2033,6 +2040,7 @@ function buildMsgsFromBubbles(bubbles, roleId, quote){
       if(r2.punctOn && r2.punctList.length && text.trim()){
         text += r2.punctList[Math.floor(Math.random() * r2.punctList.length)];
       }
+      if(!String(text).trim() && !stickerPart && !hasPinyin) return;
       const m = { id: uid(), role: 'char', text: text, time: baseTime + timeOffset++ };
       if(stickerPart){ m.sticker = stickerPart.text; }
       if(hasPinyin){
@@ -2045,6 +2053,7 @@ function buildMsgsFromBubbles(bubbles, roleId, quote){
     }
 
     standaloneParts.forEach(function(p){
+      if(!p.text || !String(p.text).trim()) return;
       const m = { id: uid(), role: 'char', time: baseTime + timeOffset++ };
       if(p.type === 'sticker'){ m.sticker = p.text; }
       else { m.text = p.text; }
@@ -2155,8 +2164,10 @@ setInterval(function(){
   }catch(e){}
 }, 60 * 1000);
 function avatarHTML(a){ 
-  /* ★ 统一头像生成入口：全站所有头像都走这里 */
-  var shape = (typeof beautyCfg !== 'undefined' && beautyCfg.avatarShape === 'circle') ? '50%' : '12%';
+  /* ★ 统一头像生成入口：全站所有头像都走这里
+     圆角不再写死成具体值（以前切换方/圆之后，顶部栏这类不重渲染的地方会一直是旧形状），
+     改为 inherit：外层的 .chat-avatar / .msg-av / .pav 等都由 --avatar-radius 控制，
+     切换形状时 CSS 变量一变，所有头像立刻跟着变。 */
   var inner = '';
   
   if(a && String(a).startsWith('data:')) {
@@ -2166,7 +2177,7 @@ function avatarHTML(a){
     inner = `<svg viewBox="0 0 100 100" style="width:100%;height:100%;display:block;"><circle fill="#d4d4d4" cx="50" cy="38" r="19"/><path fill="#d4d4d4" d="M12 100 C12 74 28 62 50 62 C72 62 88 74 88 100 Z"/></svg>`;
   }
   
-  return `<div style="width:100%;height:100%;border-radius:${shape};background:#f2f2f2;overflow:hidden;display:flex;align-items:center;justify-content:center;">${inner}</div>`;
+  return `<div style="width:100%;height:100%;border-radius:inherit;background:#f2f2f2;overflow:hidden;display:flex;align-items:center;justify-content:center;">${inner}</div>`;
 }
 /* ★ 死代码清理：userAvHTML 直接复用统一入口 avatarHTML，防止两套逻辑打架 */
 function userAvHTML(a){ return avatarHTML(a); }
@@ -3726,7 +3737,8 @@ function renderCollectScreen(tab){
     return;
   }
 
-  const avRadius = (beautyCfg.avatarShape === 'circle') ? '50%' : '12%';
+  /* ★ 跟随全局头像形状（CSS 变量），不再写死快照值 */
+  const avRadius = 'var(--avatar-radius,12%)';
   const role = getRole();
 
   body.innerHTML = filterBarHTML + groupTipHTML + list.map(function(it){
@@ -5439,7 +5451,7 @@ function openForwardPicker(msgIds, mode){
   }
   const curId = getCurrentRoleId();
 
-  const avRadius = (lsGet('mj_beauty_v1',{}).avatarShape === 'circle') ? '50%' : '12%';
+  const avRadius = 'var(--avatar-radius,12%)';
 
   /* ★ 带备注开关：只在“单条转发”且源数据里确实有备注时，才显示
      记住上次选择，存 mj_collect_fwd_note_v1 */
@@ -7964,17 +7976,11 @@ $$('.func-item').forEach(item=>{ item.addEventListener('click',e=>{
       if(typeof openGameLobby === 'function') openGameLobby();
       else toast('小游戏模块还没加载好');
     }, 200);
-  } else if(fn === 'words'){
+  } else if(fn === 'pat'){
     closeAllThings('drawer');
     setTimeout(function(){
-      if(typeof openWordsScreen === 'function') openWordsScreen();
-      else toast('背单词模块还没加载好');
-    }, 200);
-  } else if(fn === 'letter'){
-    closeAllThings('drawer');
-    setTimeout(function(){
-      if(typeof window.openLettersPage === 'function') window.openLettersPage();
-      else toast('写信模块还没加载好');
+      if(typeof window.openPatSettings === 'function') window.openPatSettings();
+      else toast('拍一拍模块还没加载好');
     }, 200);
   }
 }); });
@@ -8677,7 +8683,56 @@ function loadStickerStore(){
   migrateLegacyStickers(s);
   return s;
 }
-function saveStickerStore(s){ lsSet(STICKER_STORE_KEY, s); }
+function saveStickerStore(s){
+  try{
+    lsSet(STICKER_STORE_KEY, s);
+  }catch(e){
+    console.error('表情图写盘失败', e);
+  }
+  /* ★ 写盘后再校验一次：localStorage 超配额时 lsSet 会静默失败，
+     结果就是「导入的表情图刷新后不见了」。这里明确提示，避免用户以为导入成功。 */
+  try{
+    if(!localStorage.getItem(STICKER_STORE_KEY)){
+      if(typeof toast === 'function') toast('表情图太多了，本地存不下，请先删掉一些');
+    }
+  }catch(e){}
+}
+
+/* ★ 导入表情图统一入口：压缩后再存。
+   以前直接把原图 dataURL 塞进 localStorage，几张截图就能把 5MB 配额撑爆，
+   之后导入的图写不进去 → 看起来就是「导入后看不见」。 */
+function importStickerFile(file, cb){
+  var fr = new FileReader();
+  fr.onload = function(ev){
+    var src = ev.target && ev.target.result;
+    if(!src){ cb(''); return; }
+    /* GIF 保留原图，避免丢动画 */
+    if(file && file.type === 'image/gif'){ cb(src); return; }
+    var img = new Image();
+    img.onload = function(){
+      try{
+        var MAX = 240;
+        var w = img.naturalWidth || img.width || MAX;
+        var h = img.naturalHeight || img.height || MAX;
+        if(w > MAX || h > MAX){
+          var k = Math.min(MAX / w, MAX / h);
+          w = Math.max(1, Math.round(w * k));
+          h = Math.max(1, Math.round(h * k));
+        }
+        var cv = document.createElement('canvas');
+        cv.width = w; cv.height = h;
+        var cx = cv.getContext('2d');
+        cx.drawImage(img, 0, 0, w, h);
+        var out = cv.toDataURL('image/jpeg', 0.72);
+        cb(out && out.length < src.length ? out : src);
+      }catch(e){ cb(src); }
+    };
+    img.onerror = function(){ cb(src); };
+    img.src = src;
+  };
+  fr.onerror = function(){ cb(''); };
+  fr.readAsDataURL(file);
+}
 
 /* 从旧 v1 结构搬一次。搬完不清空 v1，只打标记，防止重复搬 */
 function migrateLegacyStickers(store){
@@ -9830,7 +9885,7 @@ function openAddCat(type){
     }
   });
 }
-on('#stickerFile','change',function(){ const files=[...this.files]; this.value=''; if(!files.length) return; const sc=getStickerCats(); const c=sc.find(x=>x.name===curStickerCat); if(!c){ toast('请先选择分类'); return; } let loaded=0; files.forEach(f=>{ const r=new FileReader(); r.onload=e=>{ c.list.push(e.target.result); loaded++; if(loaded===files.length){ setStickerCats(sc); persistStickers(); renderBody(); toast('已导入 '+loaded+' 张'); } }; r.readAsDataURL(f); }); });
+on('#stickerFile','change',function(){ const files=[...this.files]; this.value=''; if(!files.length) return; const sc=getStickerCats(); const c=sc.find(x=>x.name===curStickerCat); if(!c){ toast('请先选择分类'); return; } let loaded=0; files.forEach(f=>{ importStickerFile(f, function(src){ if(src){ c.list.push(src); } loaded++; if(loaded===files.length){ setStickerCats(sc); persistStickers(); renderBody(); toast('已导入 '+loaded+' 张'); } }); }); });
 let roleCatType='emoji';
 function openRoleCats(type){ roleCatType=type; $('#mRoleCatsTitle').textContent=type==='emoji'?'可用分类（表情）':'可用分类（颜文字）'; renderRoleCatChips(); $('#mRoleCats').classList.add('show'); }
 function renderRoleCatChips(){
@@ -9906,7 +9961,8 @@ function renderApplyStickersList(){
     box.innerHTML = '<div class="role-list-empty">暂无其它角色<br>去好友页增加一个吧</div>';
     return;
   }
-  const avRadius = (beautyCfg.avatarShape === 'circle') ? '50%' : '12px';
+  /* ★ 跟随全局头像形状（CSS 变量） */
+  const avRadius = 'var(--avatar-radius,12%)';
   box.innerHTML = others.map(f => {
     const on = applyStickersSelected.includes(f.id);
     return '<div class="apply-role-row ' + (on?'on':'') + '" data-id="' + f.id + '">' +
@@ -10038,7 +10094,8 @@ function renderApplyRoleList(){
   }
   $('#applyConfirm').style.opacity = '';
   $('#applyConfirm').style.pointerEvents = '';
-  const avRadius = (beautyCfg.avatarShape === 'circle') ? '50%' : '12px';
+  /* ★ 跟随全局头像形状（CSS 变量） */
+  const avRadius = 'var(--avatar-radius,12%)';
   box.innerHTML = others.map(f => {
     const on = applySelected.includes(f.id);
     return `<div class="apply-role-row ${on?'on':''}" data-id="${f.id}">` +
@@ -13775,21 +13832,14 @@ document.addEventListener('change', function(e){
 
   var pending = files.length;
   files.forEach(function(file){
-    var reader = new FileReader();
-    reader.onload = function(ev){
-      var src = ev.target && ev.target.result;
-      if(src){
-        cat.list.push(src);
-        setStickerBucket('mine', cats);
-      }
+    importStickerFile(file, function(src){
+      if(src){ cat.list.push(src); setStickerBucket('mine', cats); }
       pending--;
       if(pending === 0){
         gchRenderDrawer();
         toast('已导入 ' + files.length + ' 张表情图');
       }
-    };
-    reader.onerror = function(){ pending--; if(pending === 0){ gchRenderDrawer(); } };
-    reader.readAsDataURL(file);
+    });
   });
 }, true);
 
@@ -18423,23 +18473,12 @@ document.addEventListener('click', function(e){
     }
     else if(key === 'wipe')    wipeAllData();
     else if(key === 'backup-export'){
-      if(window.ChocoBackup) window.ChocoBackup.exportAll();
-      else toast('备份模块未加载');
+      /* ★ 导出入口合并：点「导出备份」先弹选项（完整备份 / 聊天记录 TXT·MD·JSON） */
+      openExportMenu();
     }
     else if(key === 'backup-import'){
       if(window.ChocoBackup) window.ChocoBackup.pickImport();
       else toast('备份模块未加载');
-    }
-    else if(key === 'export-chat'){
-      try{ exportChatDialog(); }catch(e){ console.error('导出失败', e); toast('导出失败：' + e.message); }
-    }
-    else if(key === 'letter'){
-      if(typeof window.openLetterSettings === 'function') window.openLetterSettings();
-      else toast('写信模块还没加载好');
-    }
-    else if(key === 'pat'){
-      if(typeof window.openPatSettings === 'function') window.openPatSettings();
-      else toast('拍一拍模块还没加载好');
     }
     return;
   }
@@ -18470,7 +18509,7 @@ function openHiddenList(kind){
   } else {
     itemsHTML = list.map(f => {
       return '<div class="hh-row" data-id="' + f.id + '" style="display:flex;align-items:center;gap:12px;padding:12px;border-radius:12px;background:#fff;border:0.7px solid #e8e8e8;margin-bottom:8px;cursor:pointer">'
-        + '<div style="width:40px;height:40px;border-radius:50%;overflow:hidden;background:#f0f0f0;flex:none;position:relative">' + avatarHTML(f.avatar) + '</div>'
+        + '<div style="width:40px;height:40px;border-radius:var(--avatar-radius,12%);overflow:hidden;background:#f0f0f0;flex:none;position:relative">' + avatarHTML(f.avatar) + '</div>'
         + '<div style="flex:1;min-width:0">'
         +   '<div style="font-size:14px;color:#1a1a1a;font-weight:500">' + escapeHTML(f.name) + '</div>'
         +   '<div style="font-size:11px;color:#999;margin-top:3px">' + escapeHTML(getRoleSign(f)) + '</div>'
@@ -18896,7 +18935,7 @@ function renderBuiltinList(){
     box.innerHTML = '<div class="nf-empty">还没有内置角色<br>去「建立内置角色」创建一个吧</div>';
     return;
   }
-  const shape = (beautyCfg.avatarShape === 'circle') ? '50%' : '12%';
+  const shape = 'var(--avatar-radius,12%)';
   box.innerHTML = list.map(function(f){
     return '<div class="nf-item" data-bid="' + f.id + '">' +
       '<div class="nf-av" style="border-radius:' + shape + ';cursor:pointer" data-bl-av="' + f.id + '">' + avatarHTML(f.avatar) + '</div>' +
@@ -18948,7 +18987,7 @@ function renderBlEditAvatar(){
   box.innerHTML = blEditAvatarTmp
     ? '<img src="' + blEditAvatarTmp + '">'
     : '<svg viewBox="0 0 100 100"><circle class="silhouette" cx="50" cy="38" r="19"/><path class="silhouette" d="M12 100 C12 74 28 62 50 62 C72 62 88 74 88 100 Z"/></svg>';
-  const shape = (beautyCfg.avatarShape === 'circle') ? '50%' : '16px';
+  const shape = 'var(--avatar-radius,12%)';
   box.style.borderRadius = shape;
 }
 
@@ -18961,7 +19000,7 @@ function renderBlEditFriendList(){
     box.innerHTML = '<div style="text-align:center;color:#bbb;font-size:12.5px;padding:20px 0">没有可以建立关系的角色</div>';
     return;
   }
-  const shape = (beautyCfg.avatarShape === 'circle') ? '50%' : '10px';
+  const shape = 'var(--avatar-radius,12%)';
   box.innerHTML = all.map(function(f){
     const on = blEditSelected.has(f.id);
     return '<div class="ef-friend-row" data-id="' + f.id + '" style="display:flex;align-items:center;gap:12px;padding:11px 4px;border-bottom:0.6px dashed rgba(0,0,0,.06);cursor:pointer">' +
@@ -19840,7 +19879,8 @@ function bindDeskApps(){
         setGlobalDnd(false);
       }
       window.__deskMode = true;  // 标记：从功能页打开，走内联模式
-      if(k==='letter'){ if(typeof openLetterScreen === 'function') openLetterScreen(); else { toast('写信功能正在准备中～'); window.__deskMode=false; } return; }
+      /* ★ 写信：功能页打开新的写信页（右上角 ⚙ 就是写信设置） */
+      if(k==='letter'){ if(typeof window.openLettersPage === 'function') window.openLettersPage(); else { toast('写信模块还没加载好'); } window.__deskMode = false; return; }
       if(k==='beauty'){ openBeauty(); }
       else if(k==='divine'){
         renderDivineRecords();
@@ -19910,6 +19950,7 @@ function bindDeskApps(){
       else if(k==='dream'){ openDreamScreen(); }
       else if(k==='carddemand'){ openCardDemandScreen(); }
       else if(k==='words'){ if(typeof openWordsScreen === 'function') openWordsScreen(); }
+      else if(k==='pat'){ if(typeof window.openPatSettings === 'function') window.openPatSettings(); else toast('拍一拍模块还没加载好'); }
     };
   });
 }
@@ -21121,6 +21162,13 @@ function openCardLib(){
        导致顶部栏没重建、静态的 ‹（clBack）也没人绑定 → 退不出去 */
     host: 'utopHost',
     title: '字 卡',
+    /* ★ 个签切换入口：所有字卡页都能直接打开，不再只藏在个签字卡分组的 ⋯ 菜单里 */
+    act: '个签切换',
+    actCls: 'txt',
+    onAct: function(){
+      if(typeof openSignSwitchSetting === 'function') openSignSwitchSetting();
+      else toast('个签模块还没加载好');
+    },
     onBack: function(){
       closeScreen();
       cdHisClose();
@@ -24853,8 +24901,7 @@ function renderBiAvatar(){
   box.innerHTML = biAvatarTmp
     ? `<img src="${biAvatarTmp}">`
     : `<svg viewBox="0 0 100 100"><circle class="silhouette" cx="50" cy="38" r="19"/><path class="silhouette" d="M12 100 C12 74 28 62 50 62 C72 62 88 74 88 100 Z"/></svg>`;
-  const shape = (beautyCfg.avatarShape === 'circle') ? '50%' : '16px';
-  box.style.borderRadius = shape;
+  box.style.borderRadius = 'var(--avatar-radius,12%)';
 }
 
 
@@ -24864,8 +24911,7 @@ function renderNfAvatar(){
   box.innerHTML = nfAvatarTmp
     ? `<img src="${nfAvatarTmp}">`
     : `<svg viewBox="0 0 100 100"><circle class="silhouette" cx="50" cy="38" r="19"/><path class="silhouette" d="M12 100 C12 74 28 62 50 62 C72 62 88 74 88 100 Z"/></svg>`;
-  const shape = (beautyCfg.avatarShape === 'circle') ? '50%' : '16px';
-  box.style.borderRadius = shape;
+  box.style.borderRadius = 'var(--avatar-radius,12%)';
 }
 
 function renderNfGroupList(){
@@ -25148,13 +25194,12 @@ function openNewGroup(){
   $('#ngName').value = '';
   const friends = getFriends();
   const groups = getGroups();
-  const shape = (beautyCfg.avatarShape === 'circle') ? '50%' : '10px';
   const ungrouped = friends.filter(f => !f.group || !groups.includes(f.group));
   const ungroupedIds = ungrouped.map(f => f.id);
   $('#ngPick').innerHTML = friends.map(f=>{
     const isUngrouped = ungroupedIds.includes(f.id);
     return `<div class="pick ${isUngrouped?'on':''}" data-id="${f.id}">
-      <div class="pick-av" style="border-radius:${shape}">${avatarHTML(f.avatar)}</div>
+      <div class="pick-av" style="border-radius:var(--avatar-radius,12%)">${avatarHTML(f.avatar)}</div>
       <div class="pick-name">${escapeHTML(f.name)}</div>
       <div class="pick-chk">✓</div>
     </div>`;
@@ -25871,54 +25916,100 @@ document.addEventListener('click', function(e){
 	on('#cipAutoAddSw','change',function(){ setRoleAutoAdd(getCurrentRoleId(), this.checked); toast(this.checked?'已开启自主加好友':'已关闭自主加好友'); });
 
 /* ★ 导出聊天记录：TXT / Markdown / JSON */
-function exportChatDialog(){
-  const rid = getCurrentRoleId();
-  const role = getRoleById(rid) || {};
-  const list = (typeof loadMsgs === 'function') ? loadMsgs() : (window.msgs || []);
-  if(!list || !list.length){ toast('没有可导出的消息'); return; }
-  const fmt = (function(){
-    const c = prompt('选择导出格式：\n1 = TXT（纯文本）\n2 = Markdown\n3 = JSON（含时间戳）', '1');
-    return c;
-  })();
-  if(fmt === null) return;
-  let content = '', ext = 'txt', mime = 'text/plain';
-  const name = (role.name || 'chat') + '_' + new Date().toISOString().slice(0,10);
+/* ★ 导出聊天记录：不再用 prompt 让用户输入数字，
+   从「导出备份」入口打开一个选项面板（完整备份 / TXT / MD / JSON），
+   聊天记录默认导出所有角色。 */
+function exportChatDialog(fmt){
+  fmt = String(fmt || 'txt');
+  const ids = (typeof getAllRoleIds === 'function') ? getAllRoleIds() : [getCurrentRoleId()].filter(Boolean);
+  const data = ids.map(function(rid){
+    const role = getRoleById(rid) || { name: '角色' };
+    const list = lsGet('mj_msgs_' + rid, null);
+    return { role: role, list: Array.isArray(list) ? list : [] };
+  }).filter(function(x){ return x.list.length; });
+  if(!data.length){ toast('没有可导出的消息'); return; }
+
   const fmtTime = t => { try{ return new Date(t).toLocaleString('zh-CN'); }catch(e){ return String(t); } };
-  if(fmt === '3'){
-    content = JSON.stringify(list, null, 2);
+  const bodyOf = m => {
+    if(m.text) return m.text;
+    if(m.sticker) return '[图片]';
+    if(m.voice) return '[语音]';
+    if(m.videoCard) return '[视频] ' + (m.videoCard.title || '');
+    if(m.letterCard) return '[来信] ' + (m.letterCard.title || '');
+    return '[消息]';
+  };
+  const stamp = new Date().toISOString().slice(0, 10);
+  let content = '', ext = 'txt', mime = 'text/plain';
+
+  if(fmt === 'json'){
+    content = JSON.stringify(data.map(function(x){
+      return { role: displayName(x.role), roleId: x.role.id, messages: x.list };
+    }), null, 2);
     ext = 'json'; mime = 'application/json';
-  } else if(fmt === '2'){
+  } else if(fmt === 'md'){
     ext = 'md'; mime = 'text/markdown';
-    content = '# 与 ' + (role.name || 'TA') + ' 的聊天记录\n\n导出时间：' + fmtTime(Date.now()) + '\n\n';
-    list.forEach(m => {
-      const who = (m.role === 'user') ? '我' : (role.name || 'TA');
-      let body = '';
-      if(m.text) body = m.text;
-      else if(m.sticker) body = '[图片]';
-      else if(m.voice) body = '[语音]';
-      else if(m.videoCard) body = '[视频] ' + (m.videoCard.title || '');
-      else body = '[消息]';
-      content += '**' + who + '** `' + fmtTime(m.time) + '`\n\n' + body + '\n\n---\n\n';
+    content = '# choco 聊天记录\n\n导出时间：' + fmtTime(Date.now()) + '\n\n';
+    data.forEach(function(x){
+      content += '## 与 ' + displayName(x.role) + ' 的聊天记录\n\n';
+      x.list.forEach(function(m){
+        const who = (m.role === 'user') ? '我' : displayName(x.role);
+        content += '**' + who + '** `' + fmtTime(m.time) + '`\n\n' + bodyOf(m) + '\n\n---\n\n';
+      });
     });
   } else {
-    list.forEach(m => {
-      const who = (m.role === 'user') ? '我' : (role.name || 'TA');
-      let body = '';
-      if(m.text) body = m.text;
-      else if(m.sticker) body = '[图片]';
-      else if(m.voice) body = '[语音]';
-      else if(m.videoCard) body = '[视频] ' + (m.videoCard.title || '');
-      else body = '[消息]';
-      content += '[' + fmtTime(m.time) + '] ' + who + '：' + body + '\n';
+    content = 'choco 聊天记录 · 导出时间 ' + fmtTime(Date.now()) + '\n\n';
+    data.forEach(function(x){
+      content += '===== ' + displayName(x.role) + ' =====\n';
+      x.list.forEach(function(m){
+        const who = (m.role === 'user') ? '我' : displayName(x.role);
+        content += '[' + fmtTime(m.time) + '] ' + who + '：' + bodyOf(m) + '\n';
+      });
+      content += '\n';
     });
   }
+
   const blob = new Blob([content], {type: mime + ';charset=utf-8'});
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = url; a.download = name + '.' + ext;
+  a.href = url; a.download = 'choco_chat_' + stamp + '.' + ext;
   document.body.appendChild(a); a.click();
   setTimeout(() => { a.remove(); URL.revokeObjectURL(url); }, 1000);
-  toast('已导出 ' + list.length + ' 条消息');
+  const total = data.reduce(function(n, x){ return n + x.list.length; }, 0);
+  toast('已导出 ' + total + ' 条消息');
+}
+
+/* ★ 导出备份入口的选项面板 */
+function openExportMenu(){
+  const layer = document.createElement('div');
+  layer.style.cssText = 'position:fixed;inset:0;z-index:2147483640;background:rgba(0,0,0,.35);display:flex;align-items:flex-end;justify-content:center';
+  const btn = (act, title, sub) =>
+    '<div data-act="' + act + '" style="padding:15px 18px;border-bottom:0.7px solid #f1f1f1;cursor:pointer">' +
+      '<div style="font-size:13px;color:#1a1a1a;letter-spacing:1px">' + title + '</div>' +
+      '<div style="font-size:11px;color:#999;margin-top:4px">' + sub + '</div>' +
+    '</div>';
+  layer.innerHTML =
+    '<div style="width:100%;max-width:520px;background:#fff;border-radius:18px 18px 0 0;padding:6px 0 calc(10px + env(safe-area-inset-bottom));animation:wwIn .22s ease">' +
+      '<div style="text-align:center;font-size:14px;letter-spacing:4px;text-indent:4px;padding:16px 0 10px;color:#1a1a1a">导 出</div>' +
+      btn('full', '完整备份', '角色 / 字卡 / 设置 全部存成 JSON') +
+      btn('chat-txt', '聊天记录 · TXT', '纯文本，包含所有角色') +
+      btn('chat-md', '聊天记录 · Markdown', '带时间戳，方便存档') +
+      btn('chat-json', '聊天记录 · JSON', '保留原始字段，方便再导入') +
+      '<div data-act="cancel" style="text-align:center;padding:16px;font-size:13px;color:#999;letter-spacing:2px;cursor:pointer">取 消</div>' +
+    '</div>';
+  document.body.appendChild(layer);
+  layer.addEventListener('click', function(e){ if(e.target === layer) layer.remove(); });
+  layer.querySelectorAll('[data-act]').forEach(function(el){
+    el.onclick = function(){
+      const act = el.dataset.act;
+      layer.remove();
+      if(act === 'full'){
+        if(window.ChocoBackup) window.ChocoBackup.exportAll();
+        else toast('备份模块未加载');
+      } else if(act === 'chat-txt') exportChatDialog('txt');
+      else if(act === 'chat-md') exportChatDialog('md');
+      else if(act === 'chat-json') exportChatDialog('json');
+    };
+  });
 }
 
 /* 点聊天信息面板大头像 → 直接上传
