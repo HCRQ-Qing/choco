@@ -1398,7 +1398,7 @@ function pickCard(roleId){
   /* 策略 A：群聊字卡 + 当前时段字卡 + 天气字卡，等权混池 */
   if(strategy === 'A'){
     const gc = groupchatOf(rid);
-    const pool = gc.concat(_getTimedSegPool(), _getWeatherPool());
+    const pool = gc.concat(_getTimedSegPool(), _getWeatherPool(), (typeof _getWordPool === 'function') ? _getWordPool() : []);
     return _pickOrFallback(pool);
   }
 
@@ -1412,11 +1412,11 @@ function pickCard(roleId){
     } else {
       base = gc.length ? gc : own;
     }
-    const pool = base.concat(_getTimedSegPool(), _getWeatherPool());
+    const pool = base.concat(_getTimedSegPool(), _getWeatherPool(), (typeof _getWordPool === 'function') ? _getWordPool() : []);
     return _pickOrFallback(pool);
   }
 
-  /* 策略 C（默认）：公用 + 角色专属按比例混，再并入当前时段字卡 + 天气字卡 */
+  /* 策略 C（默认）：公用 + 角色专属按比例混，再并入当前时段字卡 + 天气字卡 + 单词字卡 */
   const pub = getAllNormalCards('public');
   const role = getAllNormalCards(rid);
   const pubRate = poolRate.public ?? 0.7;
@@ -1426,7 +1426,7 @@ function pickCard(roleId){
   } else {
     base = pub.length ? pub : role;
   }
-  const pool = base.concat(_getTimedSegPool(), _getWeatherPool());
+  const pool = base.concat(_getTimedSegPool(), _getWeatherPool(), (typeof _getWordPool === 'function') ? _getWordPool() : []);
   return _pickOrFallback(pool);
 }
 
@@ -1735,16 +1735,12 @@ const REL_STATES = {
   stranger:  { id:'stranger',  name:'陌生',       cls:'neutral',  love:false, bad:false },
   normal:    { id:'normal',    name:'普通',       cls:'neutral',  love:false, bad:false },
   friendly:  { id:'friendly',  name:'友善',       cls:'good',     love:false, bad:false },
-  crush:     { id:'crush',     name:'单方面暗恋', cls:'love',     love:true,  bad:false },
-  ambiguous: { id:'ambiguous', name:'暧昧',       cls:'love',     love:true,  bad:false },
-  intimate:  { id:'intimate',  name:'亲密',       cls:'love',     love:true,  bad:false },
   quarrel:   { id:'quarrel',   name:'吵架',       cls:'bad',      love:false, bad:true  },
   awkward:   { id:'awkward',   name:'别扭',       cls:'bad',      love:false, bad:true  },
   coldwar:   { id:'coldwar',   name:'冷战',       cls:'bad',      love:false, bad:true  },
   hostile:   { id:'hostile',   name:'针锋相对',   cls:'bad',      love:false, bad:true  },
   broken:    { id:'broken',    name:'决裂',       cls:'bad',      love:false, bad:true  },
-  mending:   { id:'mending',   name:'和好中',     cls:'mend',     love:false, bad:false },
-  rival:     { id:'rival',     name:'情敌',       cls:'bad',      love:true,  bad:true  }
+  mending:   { id:'mending',   name:'和好中',     cls:'mend',     love:false, bad:false }
 };
 const REL_DEFAULT_POOL = ['stranger', 'normal', 'friendly'];
 
@@ -2663,10 +2659,27 @@ function renderChatFull(forceBottom){
 	  } else {
 		rawText = String(t || '');
 	  }
-	  // 显示时把所有 [xxx] 都剥成 xxx，只在气泡里生效，不改存储
-	  /* ★ 保留换行排版，防止图片挤在一起 */
-	  /* ★ 如果文字里含有 [图片]，就把它变成真正的图片 */
-	  if(rawText === '[图片]'){
+	  /* ★ 单词 / 句子字卡：标记 {{WORD:id}} 渲染成英语卡片气泡 */
+	  const wm = rawText.match(/^\{\{WORD:([^}]+)\}\}$/);
+	  if(wm){
+		const wData = (typeof getWordById === 'function') ? getWordById(wm[1]) : null;
+		if(wData){
+		  const isSent = wData.type === 'sentence';
+		  const head = isSent ? '句 子' : '单 词';
+		  const main = isSent ? (wData.word || '') : (wData.word || '');
+		  const sub = isSent ? (wData.meaning || '') : (wData.meaning || '');
+		  body = `<div class="bubble word-bubble" data-word-id="${escapeHTML(wm[1])}">` +
+		    '<span class="wb-tag">' + head + '</span>' +
+		    '<div class="wb-main">' + escapeHTML(main) + '</div>' +
+		    (wData.phonetic ? '<div class="wb-phon">/' + escapeHTML(wData.phonetic) + '/</div>' : '') +
+		    (sub ? '<div class="wb-sub">' + escapeHTML(sub) + '</div>' : '') +
+		    (wData.example ? '<div class="wb-ex">📖 ' + escapeHTML(wData.example) + '</div>' : '') +
+		    '<div class="wb-hint">点一下听发音 🔊</div>' +
+		  '</div>';
+		} else {
+		  body = `<div class="bubble">${escapeHTML(rawText)}${failedMark}</div>`;
+		}
+	  } else if(rawText === '[图片]'){
 		/* 占位，避免崩坏，这里等会儿发真实图片时用 */
 		body = `<div class="bubble${m.sendFailed ? ' bubble-failed' : ''}">[图片]</div>`;
 	  } else {
@@ -4971,10 +4984,32 @@ function buildMemoryShot(){
   pv.style.display = 'flex';
   pv.querySelector('#memShotNo').onclick = function(){ pv.style.display = 'none'; };
   pv.querySelector('#memShotOk').onclick = function(){
-    pv.style.display = 'none';
-    addMemory(body);
-    exitMemorySelectMode();
-    toast('已保存到回忆');
+    var shotEl = pv.querySelector('.mem-shot');
+    var okBtn = pv.querySelector('#memShotOk');
+    if(okBtn){ okBtn.textContent = '生成中…'; okBtn.disabled = true; }
+    var finishSave = function(imgData){
+      pv.style.display = 'none';
+      addMemory(body, imgData);
+      exitMemorySelectMode();
+      toast('已保存到回忆');
+      if(okBtn){ okBtn.textContent = '保存到回忆'; okBtn.disabled = false; }
+    };
+    /* 真实截屏：用 html2canvas 把预览区截成图片 */
+    if(window.html2canvas && shotEl){
+      html2canvas(shotEl, { backgroundColor:'#ffffff', scale: 2, useCORS:true }).then(function(canvas){
+        try{
+          finishSave(canvas.toDataURL('image/png'));
+        }catch(e){
+          console.warn('截图转图片失败，降级保存', e);
+          finishSave(null);
+        }
+      }).catch(function(e){
+        console.warn('html2canvas 失败，降级保存', e);
+        finishSave(null);
+      });
+    } else {
+      finishSave(null);
+    }
   };
 }
 /* 回忆页：渲染 + 备注 */
@@ -5003,12 +5038,17 @@ function renderMemoryScreen(){
     const d = new Date(it.time);
     const stamp = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
     const snap = it.html || '';
+    const imgTag = it.img ? '<img class="mem-img" src="' + it.img + '" alt="回忆" style="width:100%;display:block;border-radius:4px">' : '';
+    const snapInner = it.img ? imgTag : snap;
+    const dlBtn = it.img
+      ? '<button class="dl-btn" data-dl="' + it.id + '" type="button" title="下载到本地"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3v12m0 0l-4-4m4 4l4-4"/><path d="M5 21h14"/></svg> 下载</button>'
+      : '';
     const noteLine = it.note
       ? '<div class="mem-note show" data-note-id="' + it.id + '">备注：' + escapeHTML(it.note) + '</div>'
       : '<div class="mem-note" data-note-id="' + it.id + '"></div>';
     return '<div class="mem-card">' +
-      '<div class="mem-snap">' + snap + '</div>' +
-      '<div class="mem-meta"><div class="date">' + stamp + ' · 已保存</div><button class="note-btn" data-note-btn="' + it.id + '" type="button">写备注</button></div>' +
+      '<div class="mem-snap">' + snapInner + '</div>' +
+      '<div class="mem-meta"><div class="date">' + stamp + ' · 已保存</div>' + dlBtn + '<button class="note-btn" data-note-btn="' + it.id + '" type="button">写备注</button></div>' +
       noteLine +
     '</div>';
   }).join('');
@@ -5035,11 +5075,26 @@ function renderMemoryScreen(){
       });
     };
   });
+  body.querySelectorAll('[data-dl]').forEach(function(btn){
+    btn.onclick = function(e){
+      e.stopPropagation();
+      const id = btn.dataset.dl;
+      const it = getMemories(rid).find(function(x){ return x.id === id; });
+      if(!it || !it.img){ toast('没有可下载的图片'); return; }
+      const a = document.createElement('a');
+      a.href = it.img;
+      a.download = 'memory_' + new Date(it.time).toISOString().slice(0,10) + '.png';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      toast('已保存到本地');
+    };
+  });
 }
-function addMemory(body){
+function addMemory(body, imgData){
   const rid = getCurrentRoleId();
   const arr = getMemories(rid);
-  arr.unshift({ id: uid(), html: body, time: Date.now(), note: '' });
+  arr.unshift({ id: uid(), html: body, img: imgData || '', time: Date.now(), note: '' });
   if(arr.length > 500) arr.length = 500;
   setMemories(rid, arr);
 }
@@ -7644,6 +7699,12 @@ $$('.func-item').forEach(item=>{ item.addEventListener('click',e=>{
   } else if(fn === 'truth'){
     closeAllThings('drawer');
     setTimeout(openTruthDare, 200);
+  } else if(fn === 'games'){
+    closeAllThings('drawer');
+    setTimeout(function(){
+      if(typeof openGameLobby === 'function') openGameLobby();
+      else toast('小游戏模块还没加载好');
+    }, 200);
   }
 }); });
 
@@ -11477,51 +11538,34 @@ function renderRelSetPanel(){
   if(!body) return;
   const cfg = getRelationCfg();
 
-  if(relSetTab === 'basic'){
-    const stateChips = Object.keys(REL_STATES).map(id => {
-      const s = REL_STATES[id];
-      return '<span class="cat-chip on" style="cursor:default">' + escapeHTML(s.name) + '</span>';
-    }).join('');
-    body.innerHTML =
-      '<div class="section"><div class="title">每日变化</div>' +
-        '<div class="s-row"><span class="tag">概率</span><input type="range" id="relDailyRate" min="0" max="100" value="' + Math.round(cfg.dailyRate*100) + '"><span class="num" id="relDailyRateVal">' + Math.round(cfg.dailyRate*100) + '%</span></div>' +
-        '<div class="desc">每天每段关系摇一次，摇中则当天内随机时刻切换状态。</div>' +
-      '</div>' +
-      '<div class="section"><div class="sw-row"><div class="sw-main"><div class="t1">恋爱感情</div><div class="t2">关闭后不会出现暧昧、亲密、单方面暗恋</div></div><label class="switch"><input type="checkbox" id="relLoveOn" ' + (cfg.loveOn?'checked':'') + '><span class="slider"></span></label></div></div>' +
-      '<div class="section"><div class="sw-row"><div class="sw-main"><div class="t1">负面关系</div><div class="t2">关闭后不会出现吵架、冷战、针锋相对、决裂</div></div><label class="switch"><input type="checkbox" id="relNegOn" ' + (cfg.negOn?'checked':'') + '><span class="slider"></span></label></div></div>' +
-      '<div class="section"><div class="title">状态全集</div><div class="punc-grid">' + stateChips + '</div></div>';
-
-    const dr = $('#relDailyRate');
-    if(dr) dr.oninput = function(){
-      const v = parseInt(this.value,10);
-      const c = getRelationCfg();
-      c.dailyRate = v/100;
-      saveRelationCfg(c);
-      $('#relDailyRateVal').textContent = v + '%';
-    };
-    const lo = $('#relLoveOn');
-    if(lo) lo.onchange = function(){
-      const c = getRelationCfg(); c.loveOn = this.checked; saveRelationCfg(c);
-    };
-    const no = $('#relNegOn');
-    if(no) no.onchange = function(){
-      const c = getRelationCfg(); c.negOn = this.checked; saveRelationCfg(c);
-    };
-    return;
-  }
-
-  /* OC 专用 */
-  const pairingCount = Object.keys(cfg.pairing || {}).length;
+  const stateChips = Object.keys(REL_STATES).map(id => {
+    const s = REL_STATES[id];
+    return '<span class="cat-chip on" style="cursor:default">' + escapeHTML(s.name) + '</span>';
+  }).join('');
   body.innerHTML =
-    '<div class="section"><div class="title">官配</div>' +
-      '<div class="desc">已设定 ' + pairingCount + ' 对官配。官配只是标记，不特殊影响关系摇摆。</div>' +
-      '<button class="primary-btn" id="relPairingBtn" type="button" style="margin-top:10px">管理官配</button>' +
+    '<div class="section"><div class="title">每日变化</div>' +
+      '<div class="s-row"><span class="tag">概率</span><input type="range" id="relDailyRate" min="0" max="100" value="' + Math.round(cfg.dailyRate*100) + '"><span class="num" id="relDailyRateVal">' + Math.round(cfg.dailyRate*100) + '%</span></div>' +
+      '<div class="desc">每天每段关系摇一次，摇中则当天内随机时刻切换状态。</div>' +
     '</div>' +
+    '<div class="section"><div class="sw-row"><div class="sw-main"><div class="t1">负面关系</div><div class="t2">关闭后不会出现吵架、冷战、针锋相对、决裂</div></div><label class="switch"><input type="checkbox" id="relNegOn" ' + (cfg.negOn?'checked':'') + '><span class="slider"></span></label></div></div>' +
     '<div class="section"><div class="title">决裂后重建</div>' +
       '<div class="s-row"><span class="tag">概率</span><input type="range" id="relReviveRate" min="0" max="100" value="' + Math.round(cfg.reviveRate*100) + '"><span class="num" id="relReviveRateVal">' + Math.round(cfg.reviveRate*100) + '%</span></div>' +
       '<div class="desc">关系差劲导致删好友后，介绍链仍有一定概率让他们重新成为好友。</div>' +
-    '</div>';
+    '</div>' +
+    '<div class="section"><div class="title">状态全集</div><div class="punc-grid">' + stateChips + '</div></div>';
 
+  const dr = $('#relDailyRate');
+  if(dr) dr.oninput = function(){
+    const v = parseInt(this.value,10);
+    const c = getRelationCfg();
+    c.dailyRate = v/100;
+    saveRelationCfg(c);
+    $('#relDailyRateVal').textContent = v + '%';
+  };
+  const no = $('#relNegOn');
+  if(no) no.onchange = function(){
+    const c = getRelationCfg(); c.negOn = this.checked; saveRelationCfg(c);
+  };
   const rr = $('#relReviveRate');
   if(rr) rr.oninput = function(){
     const v = parseInt(this.value,10);
@@ -11530,8 +11574,6 @@ function renderRelSetPanel(){
     saveRelationCfg(c);
     $('#relReviveRateVal').textContent = v + '%';
   };
-  const pb = $('#relPairingBtn');
-  if(pb) pb.onclick = function(){ openRelationPairing(); };
 }
 
 /* ============================================================
@@ -17789,6 +17831,9 @@ document.addEventListener('click', function(e){
     else if(key === 'backup-import'){
       if(window.ChocoBackup) window.ChocoBackup.pickImport();
       else toast('备份模块未加载');
+    }
+    else if(key === 'export-chat'){
+      try{ exportChatDialog(); }catch(e){ console.error('导出失败', e); toast('导出失败：' + e.message); }
     }
     return;
   }
