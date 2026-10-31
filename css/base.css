@@ -42,7 +42,14 @@ input,textarea,select,[contenteditable="true"]{
   -webkit-user-select:text !important;
   user-select:text !important;
   -webkit-touch-callout:default !important;
+  /* ★ 点击时不要出现黑色高亮/焦点黑边 */
+  -webkit-tap-highlight-color:transparent !important;
 }
+input:focus,textarea:focus,select:focus,[contenteditable="true"]:focus{outline:none !important}
+/* ★ 所有搜索框聚焦时都不加黑色描边 */
+.search-box:focus-within,.cd-search:focus-within,.nf-search:focus-within,
+.dr-search:focus-within,.bh-search:focus-within,.rel-search:focus-within,
+.cs-input:focus-within{outline:none !important}
 /* ★ 修复：部分安卓内核（雨见/夸克等）会在输入框旁画一根黑线
    根因是 caret-color 跟随主题时，细体字下的光标位置异常。
    这里只针对聊天输入框处理，其余输入框不动。 */
@@ -73,7 +80,7 @@ body{font-family:var(--app-font);background:var(--th-bg0,#0a0a0a);color:var(--th
    输入栏自然贴在键盘上方。这里只保证它不被聊天列表盖住。 */
 #app.kb-open-real .d-bar{position:relative;z-index:20;margin-bottom:0}
 #app.kb-open-real .gch-bar{position:relative;z-index:20;margin-bottom:0}
-/* 键盘弹起时，聊天区底部留出输入栏的空间，避免被盖住 */
-#app.kb-open-real #chatList{padding-bottom:80px}
-#app.kb-open-real .gch-list{padding-bottom:80px}
+/* 键盘弹起时，列表不需要额外底部留白（输入栏是 flex 兄弟项，不会被盖住） */
+#app.kb-open-real #chatList{padding-bottom:20px}
+#app.kb-open-real .gch-list{padding-bottom:20px}
 

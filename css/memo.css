@@ -5,6 +5,13 @@
   z-index:100;
 }
 #memoScreen.on{display:flex}
+/* ★ 回忆页：顶栏固定，只让内容区滚动，避免滚下去后找不到返回键 */
+#memoryScreen .memo-wrap{
+  display:flex;flex-direction:column;overflow:hidden;
+  padding-bottom:20px;
+}
+#memoryScreen #utopHostMemory{flex:none}
+#memoryScreen .mem-body{flex:1;min-height:0;overflow-y:auto}
 #memoScreen .memo-wrap{
   -webkit-overflow-scrolling:touch;
 }

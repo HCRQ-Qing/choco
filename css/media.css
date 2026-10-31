@@ -267,11 +267,11 @@
   font-family:inherit;
 }
 
-/* ===== 键盘弹起时：输入栏贴底 + 列表底部留白 ===== */
+/* ===== 键盘弹起时：输入栏贴底（列表无需额外大留白） ===== */
 #app.kb-open-real .d-bar{position:relative;z-index:20;margin-bottom:0}
 #app.kb-open-real .gch-bar{position:relative;z-index:20;margin-bottom:0}
-#app.kb-open-real #chatList{padding-bottom:80px}
-#app.kb-open-real .gch-list{padding-bottom:80px}
+#app.kb-open-real #chatList{padding-bottom:20px}
+#app.kb-open-real .gch-list{padding-bottom:20px}
 
 /* ===== 语音与视频合并页 · 宋体细体 ===== */
 .screen#mediaLibScreen{

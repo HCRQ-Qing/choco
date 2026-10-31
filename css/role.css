@@ -668,7 +668,7 @@
   border-bottom:0.7px solid #d8d8d8;
   transition:border-color .2s;
 }
-.nf-search:focus-within{border-bottom-color:#1a1a1a}
+.nf-search:focus-within{border-bottom-color:#d8d8d8}
 .nf-search svg{flex:none;stroke:#1a1a1a}
 .nf-search input{
   flex:1;border:none;background:transparent;outline:none;

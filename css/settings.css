@@ -209,7 +209,7 @@ body[data-bubble="custom"] .preview-bubble{
 #page-chat.minimal-mode .split-side{display:none}
 #page-chat.minimal-mode .chat-topbar{background:rgba(253,253,240,.35);backdrop-filter:blur(15px);-webkit-backdrop-filter:blur(15px);border-bottom:0.5px solid rgba(255,255,255,.5);padding:18px 22px 14px}
 #page-chat.minimal-mode .split-main{background:#FDFDF0}
-#page-chat.minimal-mode #chatList{padding:26px 22px 30px;gap:30px}
+#page-chat.minimal-mode #chatList{padding:26px 22px 20px;gap:30px}
 #page-chat.minimal-mode .msg{gap:0;align-items:flex-start}
 #page-chat.minimal-mode .msg .msg-av{display:none}
 #page-chat.minimal-mode .msg .msg-body{max-width:80%}

@@ -158,7 +158,7 @@
 }
 .gch-list{
   flex:1;overflow-y:auto;
-  padding:26px 16px;
+  padding:26px 16px 20px;
   display:flex;flex-direction:column;gap:26px;
   scrollbar-width:none;
 }
@@ -238,7 +238,7 @@ body[data-bubble="custom"] .gch-bubble{
 }
 /* ★ 群聊键盘弹起时：输入栏贴底、列表底部留白、抽屉收起 */
 #groupChatScreen.kb-open-real .gch-bar{position:relative;z-index:20;margin-bottom:0}
-#groupChatScreen.kb-open-real .gch-list{padding-bottom:80px}
+#groupChatScreen.kb-open-real .gch-list{padding-bottom:20px}
 #groupChatScreen.kb-open .gch-func{height:0;border-top-width:0}
 #groupChatScreen.kb-open .gch-drawer{height:0;border-top-width:0}
 .gch-bar textarea{
