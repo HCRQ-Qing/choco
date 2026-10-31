@@ -459,6 +459,18 @@
   padding: 0 !important;
   box-shadow: none !important;
 }
+/* ★ 上传图片/表情图永远不会套一层透明气泡：
+   统一 gray / bracket / custom 三套主题下都只显示图片本身 */
+.msg .bubble.sticker-bubble,
+body[data-bubble] .msg .bubble.sticker-bubble{
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+}
+body[data-bubble="bracket"] .msg .bubble.sticker-bubble::before,
+body[data-bubble="bracket"] .msg .bubble.sticker-bubble::after{ content: none !important; }
 .img-wrapper{
   width: 140px;
   height: 140px;

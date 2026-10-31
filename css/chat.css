@@ -426,7 +426,9 @@ body[data-bubble="bracket"] .msg.user .bubble::after{content:"」";color:#1a1a1a
 .ncard.xlong-name .nc-name{font-size:15px;letter-spacing:1px}
 .msg .bubble.wx-card-bubble{background:transparent!important;border:none!important;padding:0!important;box-shadow:none!important;margin-left:-2px}
 
-/* ===== 语音气泡 ===== */
+/* ===== 语音气泡 =====
+   ★ 语音气泡现在带 .bubble / .message-sent / .message-received，
+     自定义 CSS 里写 .bubble / .message-sent / .voice-bubble 都能命中。 */
 .voice-bubble{
   display:flex;align-items:center;gap:8px;
   padding:8px 12px;
@@ -434,10 +436,18 @@ body[data-bubble="bracket"] .msg.user .bubble::after{content:"」";color:#1a1a1a
   cursor:pointer;max-width:200px;
 }
 .msg.user .voice-bubble{
-  background:rgba(0,0,0,.06);
   border-radius:16px 16px 4px 16px;
 }
-.msg.char .voice-bubble{background:rgba(0,0,0,.04)}
+/* 非自定义模式：走内置灰底 */
+body:not([data-bubble="custom"]) .msg.user .voice-bubble{background:rgba(0,0,0,.06)}
+body:not([data-bubble="custom"]) .msg.char .voice-bubble{background:rgba(0,0,0,.04)}
+/* gray / bracket 主题下固定语音气泡底，别被通用 .bubble 规则吃掉深浅 */
+body[data-bubble="gray"] .msg.user .voice-bubble{background:rgba(0,0,0,.06) !important;padding:8px 12px !important}
+body[data-bubble="gray"] .msg.char .voice-bubble{background:rgba(0,0,0,.04) !important;padding:8px 12px !important}
+body[data-bubble="bracket"] .msg .voice-bubble{padding:6px 10px !important;background:transparent !important}
+/* 方括号主题不要给语音加「」 */
+body[data-bubble="bracket"] .msg .voice-bubble::before,
+body[data-bubble="bracket"] .msg .voice-bubble::after{content:none !important} 
 .voice-bubble .vb-play{width:18px;height:18px;flex:none;display:flex;align-items:center;justify-content:center}
 .voice-bubble .vb-play svg{width:12px;height:12px;fill:#1a1a1a;stroke:none;display:block}
 .voice-bubble .vb-play .icon-pause{display:none !important}

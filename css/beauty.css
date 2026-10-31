@@ -537,6 +537,7 @@ html[data-theme="bw"] .tarot .t-suit-en{
 .divine-card .dc-read-item .rn{display:inline-block;font-size:10px;color:#c0c0c0;letter-spacing:0;font-family:Georgia,serif;margin-right:4px;vertical-align:0.5px}
 .divine-card .dc-read-item .rt{font-size:9.5px;color:#c0c0c0;letter-spacing:1px;font-family:Georgia,serif}
 .divine-card .dc-read-item .rt::before{content:"·";margin:0 4px;color:#d0d0d0}
+.divine-card .dc-read-item .dc-acc{display:inline-block;margin-left:6px;padding:0 5px;border:0.7px solid #e0e0e0;border-radius:8px;font-size:9px;line-height:15px;color:#888;letter-spacing:.5px}
 
 /* ============================================================
    ★ 占卜卡「展开全部」修复
