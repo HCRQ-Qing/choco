@@ -3066,7 +3066,7 @@ function bindMsgLongPress(){
   list.oncontextmenu = e=>e.preventDefault();
   if(list._h){ const h=list._h; list.removeEventListener('touchstart',h.ts); list.removeEventListener('touchmove',h.tm); list.removeEventListener('touchend',h.te); list.removeEventListener('mousedown',h.md); list.removeEventListener('mousemove',h.mm); list.removeEventListener('mouseup',h.mu); }
   let timer=null,startX=0,startY=0,targetEl=null;
-  function onStart(e){ const msg=e.target.closest('.msg'); if(!msg) return; const p=e.touches?e.touches[0]:e; startX=p.clientX; startY=p.clientY; targetEl=msg; timer=setTimeout(()=>{ showMsgMenu(targetEl,p.clientX,p.clientY); if(navigator.vibrate) navigator.vibrate(15); },550); }
+  function onStart(e){ if(isMemMode) return; const msg=e.target.closest('.msg'); if(!msg) return; const p=e.touches?e.touches[0]:e; startX=p.clientX; startY=p.clientY; targetEl=msg; timer=setTimeout(()=>{ showMsgMenu(targetEl,p.clientX,p.clientY); if(navigator.vibrate) navigator.vibrate(15); },550); }
   function onMove(e){ if(!timer) return; const p=e.touches?e.touches[0]:e; if(Math.abs(p.clientX-startX)>8||Math.abs(p.clientY-startY)>8){ clearTimeout(timer); timer=null; } }
   function onEnd(){ if(timer){ clearTimeout(timer); timer=null; } }
   list.addEventListener('touchstart',onStart,{passive:true}); list.addEventListener('touchmove',onMove,{passive:true}); list.addEventListener('touchend',onEnd,{passive:true}); list.addEventListener('mousedown',onStart); list.addEventListener('mousemove',onMove); list.addEventListener('mouseup',onEnd);
@@ -4943,6 +4943,85 @@ let isMemMode = false;
 
 // 核心点击逻辑：彻底拦截点击
 
+/* ===== 截屏多选模式：补全实现（之前只有调用没有定义，导致点了没反应） ===== */
+function _memUpdateCount(){
+  const c = document.getElementById('memSelectCount');
+  if(c) c.textContent = '已选 ' + memSelected.size + ' 条';
+}
+function _memEnsureUI(){
+  const app = document.getElementById('app') || document.body;
+  if(!document.getElementById('memSelectHeader')){
+    const h = document.createElement('div');
+    h.id = 'memSelectHeader';
+    h.className = 'mem-select-header';
+    h.innerHTML = '<div class="m-sh-x" id="memSelectCancel" role="button">✕</div>' +
+      '<div><div class="m-sh-title">截 屏 模 式</div><div class="m-sh-sub" id="memSelectCount">已选 0 条</div></div>' +
+      '<div class="m-sh-right"></div>';
+    app.appendChild(h);
+  }
+  if(!document.getElementById('memSelectToolbar')){
+    const tb = document.createElement('div');
+    tb.id = 'memSelectToolbar';
+    tb.className = 'mem-select-toolbar';
+    tb.innerHTML = '<div class="tool-item" id="memSelectCancel2"><div class="tool-icon" style="background:#d9d9d9">✕</div><span>取消</span></div>' +
+      '<div class="tool-item" id="memSelectSave"><div class="tool-icon" style="background:#1a1a1a">✓</div><span>保存到回忆</span></div>';
+    app.appendChild(tb);
+  }
+  const c1 = document.getElementById('memSelectCancel');
+  const c2 = document.getElementById('memSelectCancel2');
+  if(c1) c1.onclick = exitMemorySelectMode;
+  if(c2) c2.onclick = exitMemorySelectMode;
+  const sv = document.getElementById('memSelectSave');
+  if(sv) sv.onclick = buildMemoryShot;
+}
+function enterMemorySelectMode(startId){
+  const list = document.getElementById('chatList');
+  if(!list) return;
+  isMemMode = true;
+  memSelectMode = true;
+  memSelected = new Set();
+  if(startId) memSelected.add(startId);
+  const app = document.getElementById('app');
+  if(app) app.classList.add('mem-dim');
+  _memEnsureUI();
+  _memUpdateCount();
+  document.querySelectorAll('#chatList .msg').forEach(function(el){
+    el.classList.toggle('memory-selected', memSelected.has(el.dataset.id));
+  });
+  /* 点消息切换选中；capture 阶段拦住长按菜单与气泡点击 */
+  list.onclick = function(e){
+    if(!isMemMode) return;
+    const msgEl = e.target && e.target.closest ? e.target.closest('.msg') : null;
+    if(!msgEl) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const id = msgEl.dataset.id;
+    if(!id) return;
+    if(memSelected.has(id)){ memSelected.delete(id); msgEl.classList.remove('memory-selected'); }
+    else { memSelected.add(id); msgEl.classList.add('memory-selected'); }
+    _memUpdateCount();
+  };
+  try{ if(navigator.vibrate) navigator.vibrate(10); }catch(e){}
+  if(startId){
+    setTimeout(function(){
+      const el = document.querySelector('#chatList .msg[data-id="' + startId + '"]');
+      if(el && el.scrollIntoView){ try{ el.scrollIntoView({block:'center'}); }catch(e){} }
+    }, 80);
+  }
+}
+function exitMemorySelectMode(){
+  isMemMode = false;
+  memSelectMode = false;
+  memSelected = new Set();
+  const app = document.getElementById('app');
+  if(app) app.classList.remove('mem-dim');
+  const list = document.getElementById('chatList');
+  if(list) list.onclick = null;
+  document.querySelectorAll('#chatList .msg').forEach(function(el){ el.classList.remove('memory-selected'); });
+  const h = document.getElementById('memSelectHeader'); if(h) h.remove();
+  const tb = document.getElementById('memSelectToolbar'); if(tb) tb.remove();
+}
+
 
 /* 生成黑白灰长图（盖头像：只留左右对白气泡） */
 function buildMemoryShot(){
@@ -4957,7 +5036,7 @@ function buildMemoryShot(){
   els.forEach(function(el){
     const c = el.cloneNode(true);
     c.classList.remove('memory-selected');
-    c.querySelectorAll('.mark, .react-bar, .memory-tag').forEach(function(x){ x.remove(); });
+    c.querySelectorAll('.mark, .react-bar, .memory-tag, .msg-av, .msg-status').forEach(function(x){ x.remove(); });
     body += c.outerHTML;
   });
   const shotHTML =
@@ -6991,13 +7070,10 @@ function isViewingRole(roleId){
   return true;
 }
 
-/* 从角色可用字卡池抽一句话 */
+/* 从角色可用字卡池抽一句话
+   ★ 主动消息也走统一混池：群聊/专属/公用 + 时间字卡 + 天气字卡 + 单词字卡 */
 function pickActiveCardText(roleId){
-  const pub = getAllNormalCards('public');
-  const own = getAllNormalCards(roleId);
-  const pool = own.concat(pub);
-  if(!pool.length) return '';
-  return pool[Math.floor(Math.random() * pool.length)];
+  try{ return pickCard(roleId); }catch(e){ return ''; }
 }
 
 /* 给某个角色发一条主动消息 */
@@ -14643,29 +14719,37 @@ document.addEventListener('input', function(e){
     }
   });
 
-  /* visualViewport 锁高度：防止键盘把群聊页顶飞 */
+  /* visualViewport 锁高度：防止键盘把群聊页顶飞
+     抖动修复：rAF 合并 + 高度阈值过滤，去掉 scrollTo */
   if(window.visualViewport){
     let baseH = window.innerHeight;
+    let lastH = -1, raf = null;
     function apply(){
+      raf = null;
       if(!gchScreen.classList.contains('on')) return;
       const vv = window.visualViewport;
-      const kh = Math.max(0, baseH - vv.height);
-      if(kh > 40){
+      const h = Math.round(vv.height);
+      const kh = Math.max(0, baseH - h);
+      if(kh > 60){
+        if(lastH >= 0 && Math.abs(h - lastH) < 24) return;
+        lastH = h;
         gchScreen.classList.add('kb-open-real');
-        gchScreen.style.height = vv.height + 'px';
+        gchScreen.style.height = h + 'px';
         gchScreen.style.top = '0';
-        try{ window.scrollTo(0, 0); }catch(e){}
       } else {
+        lastH = -1;
         gchScreen.classList.remove('kb-open-real');
         gchScreen.style.height = '';
         gchScreen.style.top = '';
       }
     }
-    window.visualViewport.addEventListener('resize', apply);
-    window.visualViewport.addEventListener('scroll', apply);
+    function schedule(){ if(raf === null) raf = requestAnimationFrame(apply); }
+    window.visualViewport.addEventListener('resize', schedule);
+    window.visualViewport.addEventListener('scroll', schedule);
     window.addEventListener('orientationchange', () => {
       baseH = window.innerHeight;
-      setTimeout(apply, 200);
+      lastH = -1;
+      schedule();
     });
   }
 })();
@@ -15019,7 +15103,8 @@ function openGroupList(){
     act: '＋',
     actId: 'gcAdd',
     onBack: function(){
-      document.querySelectorAll('.screen.on').forEach(function(s){ s.classList.remove('on'); });
+      if(typeof closeScreen === 'function') closeScreen();
+      else document.querySelectorAll('.screen.on').forEach(function(s){ s.classList.remove('on'); });
     },
     onAct: function(){
       if(typeof openGroupCreate === 'function') openGroupCreate();
@@ -17568,15 +17653,6 @@ function scheduleRoleSelfSetTick(){
       return;
     }
 
-    /* 点小菜单里的「角色自己设定回复设置」 */
-    if(t.closest('#rmRoleSelfSet')){
-      e.preventDefault();
-      e.stopPropagation();
-      closeReplyMenu();
-      openRoleSelfSetDialog();
-      return;
-    }
-
     /* 点小菜单里的「角色可调参数」 */
     if(t.closest('#rmRoleFloor')){
       e.preventDefault();
@@ -19182,9 +19258,15 @@ function closeDeskFeature(){
 const _origCloseScreen = (typeof closeScreen === 'function') ? closeScreen : null;
 const _origShowScreen = (typeof showScreen === 'function') ? showScreen : null;
 
+/* 这些页面永远全屏打开，不能塞进 #page-desk（否则会"退不出去/看不见"） */
+const FULLSCREEN_ONLY_SCREENS = {
+  groupListScreen:1, groupChatScreen:1, groupCreateScreen:1,
+  memoryScreen:1, memoScreen:1
+};
+
 function showScreen(id){
-  /* 从功能页打开的新功能：搬进 desk 内联打开 */
-  if(window.__deskMode && id !== 'deskScreen'){
+  /* 从功能页打开的新功能：搬进 desk 内联打开（群聊/回忆除外） */
+  if(window.__deskMode && id !== 'deskScreen' && !FULLSCREEN_ONLY_SCREENS[id]){
     openDeskFeature(id);
     return;
   }
@@ -19193,22 +19275,41 @@ function showScreen(id){
     closeDeskFeature();
     return;
   }
+  window.__deskMode = false;
   closeAllOverlays();
+  const sc = document.getElementById(id);
+  /* ★ 修复：如果这个屏幕之前被搬进 #page-desk，先搬回 body，
+     否则全屏打开后依然是 desk 的子节点，看起来像"打不开/退不出去" */
+  if(sc && sc.parentNode !== document.body){
+    sc.classList.remove('in-desk');
+    document.body.appendChild(sc);
+    _deskFeatureScreen = null;
+    if(_deskOrigHTML){
+      const desk = document.getElementById('page-desk');
+      if(desk){ desk.innerHTML = _deskOrigHTML; _deskOrigHTML = null; bindDeskApps(); }
+    }
+  }
   $$('.screen').forEach(s=>s.classList.toggle('on', s.id===id));
 }
 function closeScreen(){
-  /* 有功能页特性打开时，恢复功能页 */
-  if(_deskOrigHTML){
+  const current = document.querySelector('.screen.on');
+  /* 只有当前打开的正是被搬进 desk 的功能页时，才恢复功能页 */
+  if(_deskOrigHTML && _deskFeatureScreen && current === _deskFeatureScreen){
     closeDeskFeature();
     return;
   }
   $$('.screen').forEach(s=>s.classList.remove('on'));
+  /* 还有遗留的功能页被搬进 desk 时，一并恢复，避免整页空白 */
+  if(_deskOrigHTML){
+    closeDeskFeature();
+  }
 }
 
 /* 功能页图标点击绑定（closeDeskFeature 恢复后需要重新绑定） */
 function bindDeskApps(){
   $$('#page-desk .desk-app').forEach(el=>{
-    el.addEventListener('click', function(){
+    /* ★ 用 onclick 覆盖式绑定，避免 closeDeskFeature 重绑后监听器越积越多（多次触发） */
+    el.onclick = function(){
       const k = el.dataset.open;
       /* 离开一起看/梦境时，若不是在睡觉则关闭全局免打扰，避免 DND 泄漏 */
       if(k !== 'watch' && k !== 'dream' && !getDreamSleep()){
@@ -19276,76 +19377,102 @@ function bindDeskApps(){
       else if(k==='friends'){ window.__deskMode=false; if(window.__goPage) window.__goPage(0); }
       else if(k==='videopool'){ openVideoPool(); }
       else if(k==='forcevideo'){ forceSendVideo(); window.__deskMode=false; }
-      else if(k==='memory'){ openMemoryScreen(); }
-      else if(k==='groupchat'){ openGroupList(); }
+      else if(k==='memory'){ window.__deskMode=false; openMemoryScreen(); }
+      else if(k==='groupchat'){ window.__deskMode=false; openGroupList(); }
       else if(k==='calendar'){ window.__deskMode=false; openDeskCalendar(); }
       else if(k==='msgstat'){ if(typeof openStatsScreen === 'function') openStatsScreen(); }
+      else if(k==='gameres'){ if(typeof window.openGameLobby === 'function') window.openGameLobby(); }
       else if(k==='watch'){ openWatchScreen(); }
       else if(k==='dream'){ openDreamScreen(); }
       else if(k==='carddemand'){ openCardDemandScreen(); }
       else if(k==='words'){ if(typeof openWordsScreen === 'function') openWordsScreen(); }
-    });
+    };
   });
 }
 /* 初始绑定功能页图标 */
 bindDeskApps();
 
 /* ============================================================
-   字卡需求功能
-   - localStorage: mj_card_demand_v1 = { refreshAt, type, count, deleteList:[], enableCombine, enablePunct, maxCount }
-   - 1~10 天随机刷新一次
-   - type: 从「角色需求」分组抽一个类型，或 null（无）
-   - count: 1~maxCount 随机，或 null（无想法）
-   - deleteList: 1~10 张随机字卡名，或 []（无）
+   字卡需求功能（按角色独立）
+   - localStorage: mj_card_demand_v1 = { [roleId]: { type, count, deleteList, enableCombine, enablePunct, maxCount, demands } }
+   - 每个角色各自维护上限（1~6）、字卡需求与随机小要求，互不影响
+   - 不再显示"几天后刷新"，刷新由页面上的「刷新需求」手动触发
    ============================================================ */
 const CARD_DEMAND_KEY = 'mj_card_demand_v1';
-function getCardDemand(){
-  let d = lsGet(CARD_DEMAND_KEY, null);
-  const now = Date.now();
-  if(!d || typeof d !== 'object' || typeof d.refreshAt !== 'number' || now >= d.refreshAt){
-    d = refreshCardDemand(d);
-  }
-  if(typeof d.maxCount !== 'number' || d.maxCount < 1) d.maxCount = 10;
+
+/* ★ 数据结构改为按角色独立：{ [roleId]: {...} }
+   旧的单对象结构（顶层 refreshAt / deleteList）自动丢弃 */
+function _cardDemandMap(){
+  let m = lsGet(CARD_DEMAND_KEY, null);
+  if(!m || typeof m !== 'object' || Array.isArray(m) || typeof m.refreshAt === 'number' || Array.isArray(m.deleteList)) m = {};
+  return m;
+}
+function saveCardDemandMap(m){ lsSet(CARD_DEMAND_KEY, m); }
+
+function getCardDemand(roleId){
+  const rid = roleId || getCurrentRoleId();
+  const all = _cardDemandMap();
+  let d = all[rid];
+  if(!d || typeof d !== 'object' || !Array.isArray(d.demands)) d = refreshCardDemand(d, rid);
+  if(typeof d.maxCount !== 'number' || d.maxCount < 1) d.maxCount = 6;
+  if(d.maxCount > 6) d.maxCount = 6;
   return d;
 }
-function saveCardDemand(d){ lsSet(CARD_DEMAND_KEY, d); }
+function saveCardDemand(d, roleId){
+  const rid = roleId || getCurrentRoleId();
+  const all = _cardDemandMap();
+  all[rid] = d;
+  saveCardDemandMap(all);
+}
 
-function refreshCardDemand(prev){
-  const maxCount = (prev && typeof prev.maxCount === 'number') ? prev.maxCount : 10;
-  /* 1~10 天后刷新 */
-  const days = 1 + Math.floor(Math.random() * 10);
-  const refreshAt = Date.now() + days * 24 * 3600 * 1000;
+/* 随机摇一批「小要求」：可以同时出现多条；秒数上限 5000 */
+function _rollCardDemandItems(maxCount){
+  const out = [];
+  if(Math.random() < 0.60) out.push({ kind:'noReply' });
+  if(Math.random() < 0.75) out.push({ kind:'cards', n: 1 + Math.floor(Math.random() * Math.min(6, maxCount)) });
+  if(Math.random() < 0.50) out.push({ kind:'slowDelay', sec: 1 + Math.floor(Math.random() * 5000) });
+  if(Math.random() < 0.50) out.push({ kind:'fastDelay', sec: 1 + Math.floor(Math.random() * 5000) });
+  if(!out.length) out.push({ kind:'cards', n: 1 + Math.floor(Math.random() * Math.min(6, maxCount)) });
+  out.forEach(function(it){
+    it.id = 'cdq' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    it.done = false;
+  });
+  return out;
+}
+
+function refreshCardDemand(prev, roleId){
+  const rid = roleId || getCurrentRoleId();
+  /* 上限固定 1~6，默认 6；刷新不再改写上限 */
+  let maxCount = (prev && typeof prev.maxCount === 'number') ? prev.maxCount : 6;
+  maxCount = Math.max(1, Math.min(6, maxCount));
 
   /* 类型：从「角色需求」分组抽 */
   let type = null;
   try{
     const demandCards = (typeof getCardsFromGroup === 'function') ? getCardsFromGroup('public', 'g-demand') : [];
     if(demandCards && demandCards.length){
-      /* 50% 概率有需求 */
       if(Math.random() < 0.5){
         type = demandCards[Math.floor(Math.random() * demandCards.length)];
       }
     }
   }catch(e){}
 
-  /* 数量：1~maxCount，或 40% 无想法 */
+  /* 数量：1~maxCount，或 30% 无想法 */
   let count = null;
-  if(Math.random() < 0.6){
+  if(Math.random() < 0.7){
     count = 1 + Math.floor(Math.random() * maxCount);
   }
 
-  /* 想删掉的字卡：从所有普通字卡里抽 1~10 张，或 30% 无 */
+  /* 想删掉的字卡 */
   let deleteList = [];
   if(Math.random() < 0.7){
     try{
       const allNormal = (typeof getAllNormalCards === 'function') ? getAllNormalCards('public') : [];
-      const rid = getCurrentRoleId();
       let pool = allNormal.slice();
       if(rid){
         const roleCards = getAllNormalCards(rid);
         pool = pool.concat(roleCards);
       }
-      /* 去重 */
       pool = Array.from(new Set(pool));
       if(pool.length){
         const n = Math.min(pool.length, 1 + Math.floor(Math.random() * 10));
@@ -19356,15 +19483,15 @@ function refreshCardDemand(prev){
   }
 
   const d = {
-    refreshAt,
     type,
     count,
     deleteList,
     enableCombine: Math.random() < 0.5,
     enablePunct: Math.random() < 0.5,
-    maxCount
+    maxCount,
+    demands: _rollCardDemandItems(maxCount)
   };
-  saveCardDemand(d);
+  saveCardDemand(d, rid);
   return d;
 }
 
@@ -19375,17 +19502,41 @@ function openCardDemandScreen(){
   renderTopBar({
     host: 'utopHostCardDemand',
     title: '字 卡 需 求',
-    onBack: function(){ closeDeskFeature ? closeDeskFeature() : closeScreen(); }
+    onBack: function(){ closeScreen(); }
   });
+}
+
+/* 把一条随机需求写回该角色的回复设置 */
+function _applyCardDemandItem(roleId, it){
+  const r = getReply(roleId);
+  if(it.kind === 'noReply'){
+    r.noReplyOn = false;
+  } else if(it.kind === 'slowDelay'){
+    const sec = Math.max(1, Math.min(5000, it.sec || 1));
+    r.maxDelay = sec * 1000;
+    if(r.minDelay > r.maxDelay) r.minDelay = r.maxDelay;
+  } else if(it.kind === 'fastDelay'){
+    const sec = Math.max(1, Math.min(5000, it.sec || 1));
+    r.minDelay = sec * 1000;
+    if(r.maxDelay < r.minDelay) r.maxDelay = r.minDelay;
+  }
+  saveReply();
+}
+
+function _demandItemText(it){
+  if(it.kind === 'noReply') return '想让 Ta 关掉「已读不回」';
+  if(it.kind === 'cards')   return '想要 ' + it.n + ' 张字卡';
+  if(it.kind === 'slowDelay') return '想把回复最慢延迟调到 ' + it.sec + ' 秒';
+  if(it.kind === 'fastDelay') return '想把回复最快延迟调到 ' + it.sec + ' 秒';
+  return '一个小心愿';
 }
 
 function renderCardDemand(d){
   const wrap = document.getElementById('cardDemandWrap');
   if(!wrap) return;
-
-  const refreshIn = Math.max(0, d.refreshAt - Date.now());
-  const refreshDays = Math.ceil(refreshIn / (24*3600*1000));
-  const refreshText = refreshDays > 0 ? (refreshDays + ' 天后刷新') : '即将刷新';
+  const rid = getCurrentRoleId();
+  let roleName = '';
+  try{ const r = getRoleById(rid); roleName = r ? r.name : ''; }catch(e){}
 
   const typeHTML = d.type
     ? '<div class="cd-value">' + escapeHTML(d.type) + '</div>'
@@ -19403,18 +19554,29 @@ function renderCardDemand(d){
       '</div>'
     : '<div class="cd-value none">无</div>';
 
+  const demands = Array.isArray(d.demands) ? d.demands : [];
+  const demandHTML = demands.length
+    ? demands.map(function(it){
+        return '<div class="cd-demand-item' + (it.done ? ' done' : '') + '">' +
+          '<span class="cd-demand-txt">' + escapeHTML(_demandItemText(it)) + '</span>' +
+          (it.done
+            ? '<span class="cd-demand-done">已完成</span>'
+            : '<button class="cd-demand-btn" data-demand="' + escapeHTML(it.id) + '" type="button">满足</button>') +
+        '</div>';
+      }).join('')
+    : '<div class="cd-value none">暂时没有</div>';
+
   wrap.innerHTML =
     '<div class="cd-hero">' +
       '<div class="cd-title">字 卡 需 求</div>' +
-      '<div class="cd-sub">CARD DEMAND</div>' +
-      '<div class="cd-refresh"><span>' + refreshText + '</span>' +
-        '<button class="cd-refresh-btn" id="cdRefreshNow" type="button">立即刷新</button>' +
-      '</div>' +
+      '<div class="cd-sub">' + (roleName ? escapeHTML(roleName) + ' · ' : '') + 'CARD DEMAND</div>' +
+      '<div class="cd-refresh"><button class="cd-refresh-btn" id="cdRefreshNow" type="button">刷新需求</button></div>' +
     '</div>' +
+    '<div class="cd-card"><div class="cd-label">现在的需求</div>' + demandHTML + '</div>' +
     '<div class="cd-card"><div class="cd-label">想要的字卡类型</div>' + typeHTML + '</div>' +
     '<div class="cd-card"><div class="cd-label">想要的字卡数量</div>' + countHTML +
       '<div class="cd-max-row"><span>上限</span>' +
-        '<input type="number" id="cdMaxCount" min="1" max="99" value="' + d.maxCount + '"><span>张</span>' +
+        '<input type="number" id="cdMaxCount" min="1" max="6" value="' + d.maxCount + '"><span>张</span>' +
       '</div>' +
     '</div>' +
     '<div class="cd-card"><div class="cd-label">想删掉的字卡</div>' + deleteHTML + '</div>' +
@@ -19427,38 +19589,57 @@ function renderCardDemand(d){
       '<label class="cd-switch"><input type="checkbox" id="cdEnablePunct" ' + (d.enablePunct?'checked':'') + '><span class="cd-sw-slider"></span></label>' +
     '</div>';
 
-  /* 立即刷新 */
+  /* 刷新需求（只重摇需求与字卡内容，不动上限） */
   const rb = document.getElementById('cdRefreshNow');
   if(rb) rb.onclick = function(){
-    const nd = refreshCardDemand(d);
+    const nd = refreshCardDemand(d, rid);
     renderCardDemand(nd);
     toast('已刷新需求');
   };
 
-  /* 上限 */
+  /* 满足随机需求 */
+  wrap.querySelectorAll('[data-demand]').forEach(function(btn){
+    btn.onclick = function(){
+      const id = btn.dataset.demand;
+      const cur = getCardDemand(rid);
+      const it = (cur.demands || []).find(function(x){ return x.id === id; });
+      if(!it || it.done) return;
+      _applyCardDemandItem(rid, it);
+      it.done = true;
+      saveCardDemand(cur, rid);
+      renderCardDemand(cur);
+      toast('已满足 Ta 的需求');
+    };
+  });
+
+  /* 上限：只改上限，不再整体重摇 */
   const mc = document.getElementById('cdMaxCount');
   if(mc) mc.onchange = function(){
-    const v = Math.max(1, Math.min(99, parseInt(mc.value)||10));
+    const v = Math.max(1, Math.min(6, parseInt(mc.value, 10) || 6));
     mc.value = v;
-    const cur = getCardDemand();
+    const cur = getCardDemand(rid);
     cur.maxCount = v;
-    saveCardDemand(cur);
+    if(cur.count !== null && cur.count !== undefined && cur.count > v){
+      cur.count = 1 + Math.floor(Math.random() * v);
+    }
+    saveCardDemand(cur, rid);
+    renderCardDemand(cur);
   };
 
   /* 拼字卡开关 */
   const cb = document.getElementById('cdEnableCombine');
   if(cb) cb.onchange = function(){
-    const cur = getCardDemand();
+    const cur = getCardDemand(rid);
     cur.enableCombine = cb.checked;
-    saveCardDemand(cur);
+    saveCardDemand(cur, rid);
   };
 
   /* 标点开关 */
   const pb = document.getElementById('cdEnablePunct');
   if(pb) pb.onchange = function(){
-    const cur = getCardDemand();
+    const cur = getCardDemand(rid);
     cur.enablePunct = pb.checked;
-    saveCardDemand(cur);
+    saveCardDemand(cur, rid);
   };
 }
 
@@ -24953,8 +25134,8 @@ document.addEventListener('click', function(e){
 	setTimeout(function(){
 	  try{ if(typeof startCallModule === 'function'){ startCallModule(); } }catch(e){ console.error('通话模块启动失败', e); }
 	}, 0);
-	/* ★ 启动「角色自己调回复设置」调度 */
-	try{ scheduleRoleSelfSetTick(); }catch(e){ console.error('角色自调调度启动失败', e); }
+	/* ★ 角色不再自行修改回复设置（已移到「字卡需求」页，以随机需求的形式出现） */
+	try{ /* scheduleRoleSelfSetTick(); */ }catch(e){}
 
 
 
@@ -25073,28 +25254,24 @@ document.addEventListener('click', function(e){
 	}
 
 	/* ★ 键盘弹出适配：用 visualViewport 检测键盘高度，
-	   自动把聊天列表滚到底部，避免输入框被键盘遮挡 */
+	   自动把聊天列表滚到底部，避免输入框被键盘遮挡
+	   抖动修复：rAF 合并事件，只在聊天输入框聚焦时滚底 */
 	(function bindKeyboardAdapt(){
 	  if(!window.visualViewport) return;
-	  let lastBottom = 0;
-	  window.visualViewport.addEventListener('resize', function(){
+	  let raf = null;
+	  function apply(){
+		raf = null;
 		const vv = window.visualViewport;
 		const kbHeight = window.innerHeight - vv.height - vv.offsetTop;
-		if(kbHeight > 50){
-		  /* 键盘弹出：滚到底部 */
-		  const box = document.getElementById('chatList');
-		  if(box){
-			setTimeout(function(){ box.scrollTop = box.scrollHeight; }, 100);
-		  }
-		}
-	  });
-	  window.visualViewport.addEventListener('scroll', function(){
-		/* 键盘弹起时视口滚动，保持底部可见 */
 		const box = document.getElementById('chatList');
-		if(box && document.activeElement && document.activeElement.id === 'chatInput'){
+		const active = document.activeElement;
+		if(kbHeight > 50 && box && active && active.id === 'chatInput'){
 		  box.scrollTop = box.scrollHeight;
 		}
-	  });
+	  }
+	  function schedule(){ if(raf === null) raf = requestAnimationFrame(apply); }
+	  window.visualViewport.addEventListener('resize', schedule);
+	  window.visualViewport.addEventListener('scroll', schedule);
 	})();
 
 	/* 跳到底部按钮：点击 + 滚动监听 */
@@ -25310,42 +25487,41 @@ function exportChatDialog(){
 
 		/* ★ 用 visualViewport 锁住 app 高度，避免输入法把整个页面往上推
 		   注意：不要动 #app 的 transform，也不要动 html/body 的高度，
-		   否则安卓浏览器会把整个页面往上顶。 */
+		   否则安卓浏览器会把整个页面往上顶。
+		   抖动修复：rAF 合并事件 + 高度阈值过滤，且不再调用 window.scrollTo */
 		(function lockViewportForKeyboard(){
 		  if(!window.visualViewport) return;
 		  var baseHeight = window.innerHeight;
 		  var appEl = document.getElementById('app');
+		  var lastH = -1, raf = null;
 
 		  function apply(){
+			raf = null;
 			var vv = window.visualViewport;
-			var keyboardH = Math.max(0, baseHeight - vv.height);
-
-			if(keyboardH > 40){
-			  /* 键盘弹起：把 #app 高度锁到可视高度，顶部不动 */
+			var h = Math.round(vv.height);
+			var keyboardH = Math.max(0, baseHeight - h);
+			if(keyboardH > 60){
+			  /* 高度变化小于 24px 视为抖动，直接忽略 */
+			  if(lastH >= 0 && Math.abs(h - lastH) < 24) return;
+			  lastH = h;
 			  appEl.classList.add('kb-open-real');
-			  appEl.style.height = vv.height + 'px';
+			  appEl.style.height = h + 'px';
 			  appEl.style.top = '0';
-			  /* 防安卓把整个页面往上推：只在没有输入框聚焦时滚顶 */
-			  var _active = document.activeElement;
-			  var _isInput = _active && (_active.tagName === 'INPUT' || _active.tagName === 'TEXTAREA');
-			  if(!_isInput){
-			    try{ window.scrollTo(0, 0); }catch(e){}
-			    try{ document.documentElement.scrollTop = 0; }catch(e){}
-			    try{ document.body.scrollTop = 0; }catch(e){}
-			  }
 			}else{
+			  lastH = -1;
 			  appEl.classList.remove('kb-open-real');
 			  appEl.style.height = '';
 			  appEl.style.top = '';
 			}
 		  }
+		  function schedule(){ if(raf === null) raf = requestAnimationFrame(apply); }
 
-		  window.visualViewport.addEventListener('resize', apply);
-		  window.visualViewport.addEventListener('scroll', apply);
-
+		  window.visualViewport.addEventListener('resize', schedule);
+		  window.visualViewport.addEventListener('scroll', schedule);
 		  window.addEventListener('orientationchange', function(){
 			baseHeight = window.innerHeight;
-			setTimeout(apply, 200);
+			lastH = -1;
+			schedule();
 		  });
 		})();
 	  })();
