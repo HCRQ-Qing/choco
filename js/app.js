@@ -24,6 +24,16 @@ function toast(msg){ const t=$('#toast'); if(!t) return; t.textContent=msg; t.cl
 function copyText(text, okMsg){ if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(text).then(()=>toast(okMsg||'已复制'),()=>fallbackCopy(text,okMsg)); }else fallbackCopy(text,okMsg); }
 function fallbackCopy(text, okMsg){ const ta=document.createElement('textarea'); ta.value=text; ta.style.position='fixed'; ta.style.left='-9999px'; document.body.appendChild(ta); ta.select(); try{ document.execCommand('copy'); toast(okMsg||'已复制'); }catch(e){ toast('复制失败'); } document.body.removeChild(ta); }
 function on(sel, ev, fn){ const el = typeof sel==='string'?$(sel):sel; if(!el) return null; el.addEventListener(ev, fn); return el; }
+document.addEventListener('click', function(e){
+  if(e.target && e.target.tagName === 'IFRAME') return;
+  if(e.target && e.target.style && e.target.style.display === 'none') return;
+  var topEl = document.elementFromPoint(e.clientX, e.clientY);
+  if(topEl && topEl.tagName === 'IFRAME' && topEl.style.display !== 'none'){
+    topEl.style.pointerEvents = 'none';
+    topEl.style.visibility = 'hidden';
+    topEl.style.zIndex = '-1';
+  }
+}, true);
 
 /* ★ 定时任务接入 keepalive 调度器
    keepalive.js 在 app.js 之后加载，所以这里先等它就绪再转交；
@@ -150,6 +160,7 @@ function applyBeautyCfg(){
 	pageChat.classList.toggle('split-mode', (beautyCfg.layout||'default')==='split');
 	pageChat.classList.toggle('minimal-mode', (beautyCfg.layout||'default')==='minimal');
   }
+  try{ refreshChatCustomLineInput(); }catch(e){}
   // 新的朋友页头像方圆
   const nfScr = document.getElementById('newFriendsScreen');
   if(nfScr) nfScr.setAttribute('data-avatar-shape', shape === 'circle' ? 'circle' : 'square');
@@ -165,6 +176,46 @@ function applyBeautyCfg(){
 
 /* ★ 顶部栏排版逻辑 */
 const TOPBAR_LAYOUT_KEY = 'mj_topbar_layout_v1';
+
+const CHAT_CUSTOM_LINE_KEY = 'mj_chat_custom_line_v1';
+function getChatCustomLineMap(){
+  let m = lsGet(CHAT_CUSTOM_LINE_KEY, null);
+  if(!m || typeof m !== 'object') m = {};
+  return m;
+}
+function saveChatCustomLineMap(m){ lsSet(CHAT_CUSTOM_LINE_KEY, m); }
+function getChatCustomLine(roleId){
+  if(!roleId) roleId = getCurrentRoleId();
+  const m = getChatCustomLineMap();
+  return typeof m[roleId] === 'string' ? m[roleId] : '';
+}
+function setChatCustomLine(roleId, val){
+  if(!roleId) roleId = getCurrentRoleId();
+  const m = getChatCustomLineMap();
+  m[roleId] = String(val || '').trim();
+  saveChatCustomLineMap(m);
+}
+function refreshChatCustomLineInput(){
+  const el = document.getElementById('chatCustomLine');
+  if(el){
+    const cur = getChatCustomLine();
+    el.textContent = cur || '';
+  }
+  const inp = document.getElementById('centerCustomLineInput');
+  if(inp && document.activeElement !== inp){
+    inp.value = getChatCustomLine() || '';
+  }
+}
+(function bindCenterCustomLineEvents(){
+  if(window.__centerCustomLineBound) return;
+  window.__centerCustomLineBound = true;
+  document.addEventListener('input', function(e){
+    const t = e.target;
+    if(!t || t.id !== 'centerCustomLineInput') return;
+    setChatCustomLine(getCurrentRoleId(), t.value);
+    refreshChatCustomLineInput();
+  }, true);
+})();
 
 function applyTopbarLayout() {
   const style = lsGet(TOPBAR_LAYOUT_KEY, 'default');
@@ -198,6 +249,7 @@ function applyTopbarLayout() {
     if (valEl) valEl.textContent = '默认';
     if (switchBtn && actions) actions.appendChild(switchBtn);
   }
+  refreshChatCustomLineInput();
 }
 
 function renderTopbarLayoutUI() {
@@ -2827,7 +2879,9 @@ function renderChatFull(forceBottom){
 	const quote = m.quote ? `<div class="quote-block" data-quote-id="${m.quote.msgId||''}"><b>${esc(m.quote.name)}：</b>${esc(m.quote.text)}</div>` : '';
 	let body = '';
 	if(m.kind === 'pinyin'){
-	  body = `<div class="bubble">${esc(m.pinyin||'')}</div><div class="py-tag"><span class="pfx">单字字卡：</span><b><span class="py-word">${esc(m.han||'')}</span></b></div>`;
+	  const _pyCls = isUser ? 'bubble text-bubble message-sent msg-out message-bubble-user' : 'bubble text-bubble message-received msg-in message-bubble-char';
+	  const _pySide = isUser ? 'user' : 'char';
+	  body = `<div class="${_pyCls}" data-side="${_pySide}">${esc(m.pinyin||'')}</div><div class="py-tag"><span class="pfx">单字字卡：</span><b><span class="py-word">${esc(m.han||'')}</span></b></div>`;
 	}else if(m.voice){
 	  const vBubbleCls = isUser ? 'message-sent msg-out message-bubble-user' : 'message-received msg-in message-bubble-char';
 	  body = `<div class="voice-bubble bubble ${vBubbleCls}" data-side="${isUser?'user':'char'}" data-url="${m.voiceUrl||''}" data-dur="${m.voice}" data-idbkey="${m.voiceIdbKey||''}"><div class="vb-play"><svg class="icon-play" viewBox="0 0 12 12"><path d="M3 1.5 L10 6 L3 10.5 Z"/></svg><svg class="icon-pause" viewBox="0 0 12 12"><rect x="3" y="2" width="2.5" height="8" rx="1"/><rect x="6.5" y="2" width="2.5" height="8" rx="1"/></svg></div><div class="vb-wave"><span></span><span></span><span></span><span></span><span></span><span></span></div><span class="vb-dur">${m.voice}"</span></div>`;
@@ -7408,7 +7462,14 @@ function showSystemNotify(title, body){
     /* 只在页面不可见时才弹系统通知（前台判断交给上层总闸） */
     if(!isPageInBackground()) return;
 
-    const finalTitle = String(title || '角色').trim() || '角色';
+    let finalTitle = String(title || '角色').trim() || '角色';
+    try {
+      const rid = window.__lastNotifyRoleId || getCurrentRoleId();
+      const r = getRoleById(rid);
+      if (r && typeof displayName === 'function') {
+        finalTitle = displayName(r);
+      }
+    } catch(e){}
     const finalBody  = String(body || '').trim();
 
     /* 构造基础 options */
@@ -12734,6 +12795,13 @@ function applyMyFont(){
         var s5 = document.getElementById('spCall');
         if(s5) s5.classList.add('show');
       }
+      else if(p2 === 'tarot'){
+        var s6 = document.getElementById('spTarotImg');
+        if(s6){
+          if(typeof window.renderTarotGrid === 'function') window.renderTarotGrid();
+          s6.classList.add('show');
+        }
+      }
     }
     
     // ★ 在「上传背景」里点击去设置图标
@@ -12938,27 +13006,12 @@ function openBeauty(mode){
     document.addEventListener('click', function(e){
       var t = e.target;
       if(!t || !t.closest) return;
-      if(t.closest('#tarotUploadBack')){
-        e.preventDefault(); e.stopPropagation();
-        __tarotPickKey = 'back';
-        __tarotFileInput.value = '';
-        __tarotFileInput.click();
-        return;
-      }
       if(t.closest('#tarotResetAll')){
         e.preventDefault(); e.stopPropagation();
         __tarotImgCache = {};
         lsSet('mj_tarot_imgs_v1', {});
-        if(typeof renderTarotGrid === 'function') renderTarotGrid();
+        if(typeof window.renderTarotGrid === 'function') window.renderTarotGrid();
         toast('已清空所有塔罗图片');
-        return;
-      }
-      var cell = t.closest('[data-tarot-key]');
-      if(cell){
-        e.preventDefault(); e.stopPropagation();
-        __tarotPickKey = cell.dataset.tarotKey;
-        __tarotFileInput.value = '';
-        __tarotFileInput.click();
         return;
       }
     }, true);
@@ -12980,23 +13033,124 @@ function openBeauty(mode){
              : '<span style="font-size:9px;color:#bbb;text-align:center;padding:4px;line-height:1.3">' + it.label + '</span>') +
       '</div>';
     }).join('');
+
+    grid.querySelectorAll('[data-tarot-key]').forEach(function(cell){
+      cell.onclick = function(e){
+        e.preventDefault();
+        e.stopPropagation();
+        var inp = document.getElementById('tarotImgFilePicker');
+        if(!inp){
+          inp = document.createElement('input');
+          inp.type = 'file';
+          inp.accept = 'image/*';
+          inp.id = 'tarotImgFilePicker';
+          inp.style.display = 'none';
+          document.body.appendChild(inp);
+          inp.addEventListener('change', function(){
+            var f = inp.files && inp.files[0];
+            inp.value = '';
+            var key = inp.dataset.pickKey || '';
+            if(!f || !key) return;
+            var fr = new FileReader();
+            fr.onload = function(){
+              var img = new Image();
+              img.onload = function(){
+                var MAX = 320;
+                var w = img.naturalWidth || img.width || MAX;
+                var h = img.naturalHeight || img.height || MAX;
+                if(w > MAX || h > MAX){
+                  var k = Math.min(MAX / w, MAX / h);
+                  w = Math.max(1, Math.round(w * k));
+                  h = Math.max(1, Math.round(h * k));
+                }
+                var cv = document.createElement('canvas');
+                cv.width = w; cv.height = h;
+                cv.getContext('2d').drawImage(img, 0, 0, w, h);
+                var url = cv.toDataURL('image/jpeg', 0.82);
+                __tarotImgCache[key] = url;
+                lsSet('mj_tarot_imgs_v1', __tarotImgCache);
+                window.renderTarotGrid();
+                toast('已更新');
+              };
+              img.onerror = function(){ toast('图片解析失败'); };
+              img.src = fr.result;
+            };
+            fr.readAsDataURL(f);
+          });
+        }
+        inp.dataset.pickKey = cell.dataset.tarotKey;
+        inp.value = '';
+        inp.click();
+      };
+    });
+
+    var backBtn = document.getElementById('tarotUploadBack');
+    if(backBtn){
+      backBtn.onclick = function(e){
+        e.preventDefault();
+        e.stopPropagation();
+        var inp = document.getElementById('tarotImgFilePicker');
+        if(!inp){
+          inp = document.createElement('input');
+          inp.type = 'file';
+          inp.accept = 'image/*';
+          inp.id = 'tarotImgFilePicker';
+          inp.style.display = 'none';
+          document.body.appendChild(inp);
+          inp.addEventListener('change', function(){
+            var f = inp.files && inp.files[0];
+            inp.value = '';
+            var key = inp.dataset.pickKey || '';
+            if(!f || !key) return;
+            var fr = new FileReader();
+            fr.onload = function(){
+              var img = new Image();
+              img.onload = function(){
+                var MAX = 320;
+                var w = img.naturalWidth || img.width || MAX;
+                var h = img.naturalHeight || img.height || MAX;
+                if(w > MAX || h > MAX){
+                  var k = Math.min(MAX / w, MAX / h);
+                  w = Math.max(1, Math.round(w * k));
+                  h = Math.max(1, Math.round(h * k));
+                }
+                var cv = document.createElement('canvas');
+                cv.width = w; cv.height = h;
+                cv.getContext('2d').drawImage(img, 0, 0, w, h);
+                var url = cv.toDataURL('image/jpeg', 0.82);
+                __tarotImgCache[key] = url;
+                lsSet('mj_tarot_imgs_v1', __tarotImgCache);
+                window.renderTarotGrid();
+                toast('已更新');
+              };
+              img.onerror = function(){ toast('图片解析失败'); };
+              img.src = fr.result;
+            };
+            fr.readAsDataURL(f);
+          });
+        }
+        inp.dataset.pickKey = 'back';
+        inp.value = '';
+        inp.click();
+      };
+    }
   };
   if(typeof window.renderTarotGrid === 'function') window.renderTarotGrid();
 
-  // 找到美化面板里的插入位置（在布局 06 后面加一项塔罗）
-  let tarotRow = document.querySelector('#beautyPanel .bp-row[data-panel="tarot"]');
-  if(!tarotRow) {
+  var tarotRow = document.querySelector('#beautyPanel .bp-row[data-panel="tarot"]');
+  if(!tarotRow){
     tarotRow = document.createElement('div');
     tarotRow.className = 'bp-row';
     tarotRow.dataset.panel = 'tarot';
     tarotRow.innerHTML = '<span class="num">07</span><div class="r-name">塔罗图片</div><span class="r-arr">›</span>';
-    document.querySelector('#beautyPanel .bp-body').appendChild(tarotRow);
-    
-    tarotRow.addEventListener('click', function(){
-      document.getElementById('spTarotImg').classList.add('show');
-      renderTarotGrid();
-    });
+    var bpBody = document.querySelector('#beautyPanel .bp-body');
+    if(bpBody) bpBody.appendChild(tarotRow);
   }
+  tarotRow.onclick = function(){
+    var sub = document.getElementById('spTarotImg');
+    if(sub) sub.classList.add('show');
+    if(typeof window.renderTarotGrid === 'function') window.renderTarotGrid();
+  };
 
   /* ============================================================
      ★ 关键修复：强制重新走一次进入动画
@@ -26876,9 +27030,9 @@ document.addEventListener('click', function(e){
 }
 	const chatInput = $('#chatInput');
 	if(chatInput){
-	  /* 不再默认 readonly；让输入框永远保持可编辑状态，
-	     键盘只在用户主动关闭时才落下 */
+	  // 确保输入框完全可编辑，移除任何可能残留的死锁属性
 	  chatInput.removeAttribute('readonly');
+	  chatInput.readOnly = false;
 
 	  /* 点击输入框：主动 focus 一次 + 延时兜底一次 */
 	  chatInput.addEventListener('click', function(){
@@ -30064,9 +30218,11 @@ function goToPage(name){
   }
 
   function renderDrawerBgPanel(){
-    var prev = document.getElementById('drawerBgPreview');
     var c = getBgCfg();
-    if(prev){
+    var mainPrev = document.getElementById('drawerBgPreview');
+    var subPrev = document.getElementById('spDrawerBgPreview');
+    function paint(prev){
+      if(!prev) return;
       if(c.key){
         __idb.toURL(c.key).then(function(u){
           if(u) prev.innerHTML = '<img src="' + u + '" style="width:100%;height:100%;object-fit:cover;display:block;border-radius:10px">';
@@ -30075,6 +30231,8 @@ function goToPage(name){
         prev.innerHTML = '<span class="ph">还没上传</span>';
       }
     }
+    paint(mainPrev);
+    paint(subPrev);
     var op = document.getElementById('drawerBgOpacity'); if(op) op.value = c.opacity;
     var opv = document.getElementById('drawerBgOpacityVal'); if(opv) opv.textContent = c.opacity + '%';
     var bl = document.getElementById('drawerBgBlur'); if(bl) bl.value = c.blur;
@@ -30249,6 +30407,18 @@ function goToPage(name){
   document.addEventListener('click', function(e){
     var t = e.target;
     if(!t || !t.closest) return;
+
+    if(t.closest('#spDrawerIconBack')){
+      e.preventDefault(); e.stopPropagation();
+      var spIcon = document.getElementById('spDrawerIcon');
+      var spBg = document.getElementById('spBgImg');
+      if(spIcon) spIcon.classList.remove('show');
+      if(spBg){
+        spBg.classList.add('show');
+        if(typeof window.__drawerBg !== 'undefined' && window.__drawerBg.render) window.__drawerBg.render();
+      }
+      return;
+    }
 
     if(t.closest('#beautyPanel .bp-row[data-panel="drawericon"]')){
       e.preventDefault(); e.stopPropagation();

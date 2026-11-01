@@ -27,61 +27,10 @@
   var CATCHUP_GAP = 60000;    /* 回前台时，冻结超过 1 分钟才补跑 */
   var CATCHUP_KEY = 'mj_ka_catchup_v1';
 
-  /* ---------- 多标签页 leader 选举 ----------
-     同一域名开多个标签时，只让一个标签跑后台调度 / 定时任务，
-     避免重复发消息、重复发通知。租约写 localStorage，12 秒过期。 */
-  var LEADER_KEY = 'mj_ka_leader_v1';
-  var LEADER_TTL = 12000;
-  var LEADER_BEAT = 3000;
-  var tabId = 'ka_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
-  var isLeaderTab = false;
-  var lastLeaderBeat = 0;
-
-  function readLeader(){
-    try{
-      var raw = localStorage.getItem(LEADER_KEY);
-      if(!raw) return null;
-      var o = JSON.parse(raw);
-      return (o && o.id) ? o : null;
-    }catch(e){ return null; }
-  }
-  function writeLeader(){
-    try{
-      localStorage.setItem(LEADER_KEY, JSON.stringify({ id: tabId, ts: Date.now() }));
-      return true;
-    }catch(e){ return false; }
-  }
-  function takeLeadership(reason){
-    isLeaderTab = true;
-    lastLeaderBeat = Date.now();
-    if(writeLeader()){ /* 租约写成功 */ }
-    console.log('[KA] 成为主标签（' + tabId + '）' + (reason ? '：' + reason : ''));
-  }
-  function leaderTick(now){
-    var cur = readLeader();
-    var beat = cur ? (Number(cur.ts) || 0) : 0;
-    var fresh = cur && (now - beat < LEADER_TTL);
-
-    if(isLeaderTab){
-      /* 别的标签写了比我更新的租约 → 说明我休眠太久被接管了，让位 */
-      if(cur && cur.id !== tabId && fresh){
-        isLeaderTab = false;
-        console.log('[KA] 让出主标签（被 ' + cur.id + ' 接管）');
-        return;
-      }
-      if(now - lastLeaderBeat >= LEADER_BEAT){
-        lastLeaderBeat = now;
-        writeLeader();
-      }
-      return;
-    }
-
-    /* 跟随者：租约过期（或本标签在前台且租约已明显变旧）才抢 */
-    var ttl = isHidden() ? LEADER_TTL : 6000;
-    if(!fresh || (now - beat) >= ttl){
-      takeLeadership('租约过期');
-    }
-  }
+  // 废除了多标签页抢夺逻辑，直接默认当前标签为主标签
+  var isLeaderTab = true;
+  function takeLeadership(reason){}
+  function leaderTick(now){ return true; }
 
   var tasks = [];
   var lastTick = Date.now();
