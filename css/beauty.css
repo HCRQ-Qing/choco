@@ -18,7 +18,8 @@
 /* 我的美化 · 子页共用样式 */
 #mySpBg,#mySpTxt{position:fixed;inset:0;z-index:110;max-width:520px;margin:0 auto;background:#fff;display:none;flex-direction:column}
 #mySpBg.show,#mySpTxt.show{display:flex}
-.sub-panel.show{display:flex !important; transform:translateX(0) !important; visibility:visible !important}
+.sub-panel{display:none;flex-direction:column}
+.sub-panel.show{display:flex}
 #mySpBg .bp-head,#mySpTxt .bp-head{flex:none;display:flex;align-items:center;gap:12px;padding:20px 22px 12px;background:#fff}
 #mySpBg .bp-back,#mySpTxt .bp-back{width:38px;height:38px;flex:none;border:none;background:transparent;color:#1a1a1a;font-size:22px;line-height:1;display:flex;align-items:center;justify-content:center;padding:0 0 4px;font-family:inherit;cursor:pointer;opacity:.55}
 #mySpBg .bp-back:active,#mySpTxt .bp-back:active{opacity:1}

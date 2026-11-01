@@ -684,7 +684,24 @@ body[data-bubble="bracket"] .msg .voice-bubble::after{content:none !important}
 .chat-topbar.layout-center .chat-info { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; gap: 4px; }
 .chat-topbar.layout-center .chat-name { font-size: 16.5px; font-weight: 500; margin: 0; line-height: 1.2; white-space: nowrap; }
 .chat-topbar.layout-center .chat-status { display: flex; margin-top: 0; font-size: 11px; }
-.chat-topbar.layout-center .chat-status .seg { padding: 2px 8px; background: rgba(255,255,255,0.5); border-radius: 10px; }
+.chat-topbar.layout-center .chat-status { display: none; }
+.chat-custom-line { display: none; }
+.chat-topbar.layout-center .chat-custom-line {
+  display: block;
+  width: 100%;
+  max-width: 220px;
+  margin: 4px auto 0;
+  text-align: center;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 300;
+  letter-spacing: .8px;
+  color: #888;
+  padding: 0;
+  line-height: 1.4;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
 .chat-topbar.layout-center .chat-status .seg + .seg::before { display: none; }
 .chat-topbar.layout-center .avatar-wrap { position: absolute; right: 46px; top: 50%; transform: translateY(-50%); width: 36px; height: 36px; margin: 0; z-index: 5; }
 .chat-topbar.layout-center.hide-center-avatar .avatar-wrap { display: none !important; }
