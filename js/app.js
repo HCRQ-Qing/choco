@@ -1440,27 +1440,25 @@ function pickCard(roleId){
     let mix;
     if(gc.length && normalBase.length) mix = gc.concat(normalBase);
     else mix = gc.length ? gc : normalBase;
-    return _pickOrFallback([_pickEqualPools(
-      mix,
-      _getTimedSegPool(),
-      _getWeatherPool(),
-      (typeof _getWordPool === 'function') ? _getWordPool() : []
-    )]);
+    const timedPool = _getTimedSegPool();
+    const weatherPool = _getWeatherPool();
+    const wordPool = (typeof _getWordPool === 'function') ? _getWordPool() : [];
+    const merged = mix.concat(timedPool, weatherPool, wordPool);
+    return _pickOrFallback([merged]);
   }
 
 
-  /* 策略 A：群聊字卡 + 当前时段字卡 + 天气字卡，等权重 */
+  const timedPool = _getTimedSegPool();
+  const weatherPool = _getWeatherPool();
+  const wordPool = (typeof _getWordPool === 'function') ? _getWordPool() : [];
+
+  /* 策略 A：群聊字卡 + 当前时段字卡 + 天气字卡 + 单词字卡，合并按数量随机 */
   if(strategy === 'A'){
     const gc = groupchatOf(rid);
-    return _pickOrFallback([_pickEqualPools(
-      gc,
-      _getTimedSegPool(),
-      _getWeatherPool(),
-      (typeof _getWordPool === 'function') ? _getWordPool() : []
-    )]);
+    return _pickOrFallback([gc.concat(timedPool, weatherPool, wordPool)]);
   }
 
-  /* 策略 B：群聊字卡 + 角色专属字卡 + 当前时段字卡 + 天气字卡，等权重 */
+  /* 策略 B：群聊字卡 + 角色专属字卡 + 时段 + 天气 + 单词，合并按数量随机 */
   if(strategy === 'B'){
     const gc = groupchatOf(rid);
     const own = getAllNormalCards(rid);
@@ -1470,15 +1468,10 @@ function pickCard(roleId){
     } else {
       base = gc.length ? gc : own;
     }
-    return _pickOrFallback([_pickEqualPools(
-      base,
-      _getTimedSegPool(),
-      _getWeatherPool(),
-      (typeof _getWordPool === 'function') ? _getWordPool() : []
-    )]);
+    return _pickOrFallback([base.concat(timedPool, weatherPool, wordPool)]);
   }
 
-  /* 策略 C（默认）：公用 + 角色专属按比例混，再并入当前时段字卡 + 天气字卡 + 单词字卡（等权重） */
+  /* 策略 C（默认）：公用 + 角色专属按比例混，再并入时段 + 天气 + 单词，合并按数量随机 */
   const pub = getAllNormalCards('public');
   const role = getAllNormalCards(rid);
   const pubRate = poolRate.public ?? 0.7;
@@ -1488,12 +1481,7 @@ function pickCard(roleId){
   } else {
     base = pub.length ? pub : role;
   }
-  return _pickOrFallback([_pickEqualPools(
-    base,
-    _getTimedSegPool(),
-    _getWeatherPool(),
-    (typeof _getWordPool === 'function') ? _getWordPool() : []
-  )]);
+  return _pickOrFallback([base.concat(timedPool, weatherPool, wordPool)]);
 }
 
 /* ===== 时间字卡 ===== */
@@ -2154,7 +2142,7 @@ function settleQuizCards(){
   return changed;
 }
 /* 每分钟跑一次：聊天开着盯着看的时候，也能到点自动变 */
-setInterval(function(){
+kaSchedule('settle-quiz', function(){
   try{
     if(settleQuizCards()){
       renderChat();
@@ -7768,7 +7756,9 @@ function triggerReply(onFinish){
      正确做法：把 onFinish 挂起，等当前链真正跑完，再统一触发。 */
   if(ReplyRunner.isRunning(roleId)){
     pendingReply[roleId] = true;
- 
+    if(typeof onFinish === 'function'){
+      try{ setTimeout(onFinish, 0); }catch(e){}
+    }
     return;
   }
 
@@ -17310,6 +17300,15 @@ document.addEventListener('touchend', function(e){
    - 只在这个面板里显示，不弹开屏、不影响别的地方
    ============================================================ */
 const UPDATE_LIST = [
+  {
+    ver: '0.2.1',
+    date: '2026-11-01',
+    items: [
+      '调整：时间段字卡 / 天气字卡 / 单词字卡改为并入普通字卡池，按数量随机抽取（普通字卡越多，占比越高）',
+      '修复：角色回复队列在「已在回复中」时未释放锁，导致同一条消息被反复回复的问题',
+      '修复：消息结算定时器未纳入主标签管控，多开标签页时重复触发的问题'
+    ]
+  },
   {
     ver: '0.2.0',
     date: '2026-11-01',
