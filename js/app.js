@@ -156,7 +156,90 @@ function applyBeautyCfg(){
 
   // ★ 刷新气泡预览区
   refreshBubblePreview();
+  
+  // ★ 应用顶部栏排版
+  if(typeof window.applyTopbarLayout === 'function'){
+    window.applyTopbarLayout();
+  }
 }
+
+/* ★ 顶部栏排版逻辑 */
+const TOPBAR_LAYOUT_KEY = 'mj_topbar_layout_v1';
+
+function applyTopbarLayout() {
+  const style = lsGet(TOPBAR_LAYOUT_KEY, 'default');
+  const bar = document.getElementById('chatTopbar');
+  const valEl = document.getElementById('topbarLayoutVal');
+  if(!bar) return;
+
+  // 移除旧类名
+  bar.classList.remove('layout-left', 'layout-center');
+
+  const switchBtn = document.getElementById('roleSwitchBtn');
+  const topbarRow = document.querySelector('.chat-topbar .topbar-row');
+  const actions = document.querySelector('.chat-topbar .topbar-actions');
+
+  // 应用新类名
+  if (style === 'left') {
+    bar.classList.add('layout-left');
+    if (valEl) valEl.textContent = '靠左极简';
+    if (switchBtn && topbarRow) topbarRow.appendChild(switchBtn);
+  } else if (style === 'center') {
+    bar.classList.add('layout-center');
+    if (valEl) valEl.textContent = '居中显示';
+    if (switchBtn && topbarRow) topbarRow.appendChild(switchBtn);
+    
+    if (lsGet('mj_center_show_avatar', true) === false) {
+      bar.classList.add('hide-center-avatar');
+    } else {
+      bar.classList.remove('hide-center-avatar');
+    }
+  } else {
+    if (valEl) valEl.textContent = '默认';
+    if (switchBtn && actions) actions.appendChild(switchBtn);
+  }
+}
+
+function renderTopbarLayoutUI() {
+  const current = lsGet(TOPBAR_LAYOUT_KEY, 'default');
+  const avatarSw = document.getElementById('centerShowAvatarSw');
+  if (avatarSw) avatarSw.checked = lsGet('mj_center_show_avatar', true) !== false;
+  document.querySelectorAll('#spTopbarLayout .topbar-layout-card').forEach(el => {
+    const on = el.dataset.toplayout === current;
+    el.style.background = on ? '#fff' : '#fafafa';
+    el.style.borderColor = on ? '#1a1a1a' : '#eee';
+    el.querySelector('.chk').style.borderColor = on ? '#1a1a1a' : '#ccc';
+    el.querySelector('.chk div').style.display = on ? 'block' : 'none';
+  });
+}
+
+// 绑定事件
+document.addEventListener('change', function(e) {
+  if (e.target && e.target.id === 'centerShowAvatarSw') {
+    const checked = e.target.checked;
+    lsSet('mj_center_show_avatar', checked);
+    applyTopbarLayout();
+  }
+});
+
+document.addEventListener('change', function(e) {
+  if (e.target && e.target.id === 'centerShowAvatarSw') {
+    lsSet('mj_center_show_avatar', e.target.checked);
+    applyTopbarLayout();
+  }
+});
+
+document.addEventListener('click', function(e) {
+  const opt = e.target.closest('#spTopbarLayout .topbar-layout-card');
+  if (opt) {
+    e.preventDefault(); e.stopPropagation();
+    const layout = opt.dataset.toplayout;
+    lsSet(TOPBAR_LAYOUT_KEY, layout);
+    applyTopbarLayout();
+    renderTopbarLayoutUI();
+    toast('已切换：' + (layout === 'default' ? '默认' : (layout === 'left' ? '靠左极简' : '居中显示')));
+  }
+}, true);
 
 /* ★ 刷新气泡预览 */
 function refreshBubblePreview(){
@@ -7636,7 +7719,8 @@ function pickDivineQuestion(roleId){
   const pool = [];
   g.cats.forEach(c => (c.list || []).forEach(line => {
     const t = String(cardText(line)).trim();
-    if(t) pool.push(t);
+    /* ★ 核心修复：剔除被遗弃的特定字卡（如🍎） */
+    if(t && t !== '🍎' && t !== '🍏') pool.push(t);
   }));
   if(!pool.length) return '我对你的感情';
   return pool[Math.floor(Math.random() * pool.length)];
@@ -12628,11 +12712,19 @@ function applyMyFont(){
       }
       else if(p2 === 'bgimg'){
         var sb2 = document.getElementById('spBgImg');
-        if(sb2){ renderBgImgPanel(); sb2.classList.add('show'); }
+        if(sb2){ 
+          renderBgImgPanel(); 
+          if(typeof window.__drawerBg !== 'undefined' && window.__drawerBg.render) window.__drawerBg.render();
+          sb2.classList.add('show'); 
+        }
       }
       else if(p2 === 'titletext'){
         var st2 = document.getElementById('spTitleText');
         if(st2){ renderTitleTextPanel(); st2.classList.add('show'); }
+      }
+      else if(p2 === 'topbar'){
+        var sTop = document.getElementById('spTopbarLayout');
+        if(sTop) { renderTopbarLayoutUI(); sTop.classList.add('show'); }
       }
       else if(p2 === 'layout'){
         var s4 = document.getElementById('spLayout');
@@ -12642,6 +12734,19 @@ function applyMyFont(){
         var s5 = document.getElementById('spCall');
         if(s5) s5.classList.add('show');
       }
+    }
+    
+    // ★ 在「上传背景」里点击去设置图标
+    if(t.closest('#btnGoDrawerIcon')){
+      e.preventDefault(); e.stopPropagation();
+      var spBg = document.getElementById('spBgImg');
+      if(spBg) spBg.classList.remove('show');
+      var spIcon = document.getElementById('spDrawerIcon');
+      if(spIcon){ 
+        if(typeof window.__drawerIcons !== 'undefined' && window.__drawerIcons.render) window.__drawerIcons.render();
+        spIcon.classList.add('show'); 
+      }
+      return;
     }
   }, true);
 })();
@@ -19142,6 +19247,14 @@ document.addEventListener('click', function(e){
     else if(key === 'blocked') openHiddenList('blocked');
     else if(key === 'update')  openUpdatePanel();
     else if(key === 'refresh') forceRefreshApp();
+    else if(key === 'diagnose'){
+      if(typeof window.runDiagnose === 'function') window.runDiagnose();
+      else toast('诊断模块未加载，请检查index.html');
+    }
+    else if(key === 'diagnose'){
+      if(typeof window.runDiagnose === 'function') window.runDiagnose();
+      else toast('诊断模块未加载，请检查index.html');
+    }
     else if(key === 'about'){
       showScreen('aboutScreen');
       renderTopBar({
@@ -21924,7 +22037,11 @@ var GROUP_RENDER_ORDER = [
 
 function renderGroupList(){
   const box = $('#groupList'); if(!box) return;
-  const groups = getGroupsByOwner(curOwner);
+  let groups = getGroupsByOwner(curOwner);
+  /* ★ 核心修复：公用字卡（public）绝对不显示个签（g-sign）分组 */
+  if(curOwner === 'public'){
+    groups = groups.filter(g => g && g.id !== 'g-sign');
+  }
   if(!groups.length){ box.innerHTML = `<div class="cl-empty">这里还没有分组</div>`; return; }
 
   /* ★ 按 GROUP_RENDER_ORDER 重排一次（只影响本次渲染，不改存储） */
