@@ -205,35 +205,32 @@ body[data-bubble="gray"] .msg.user .bubble{
   background:#ebebeb;
   border-radius:16px 16px 4px 16px;
 }
-/* ★ 修复气泡形状溢出与嵌套问题 */
-body[data-bubble="gray"] .msg .text-bubble,
+/* ★ 彻底剥离外层容器，只针对真正的文字气泡进行渲染 */
 body[data-bubble="gray"] .msg .bubble {
-  background: #f3f3f3 !important;
+  background: transparent !important;
   border: none !important;
   box-shadow: none !important;
+  padding: 0 !important;
+}
+
+body[data-bubble="gray"] .msg .text-inner {
+  background: #f3f3f3 !important;
   color: #1a1a1a !important;
   padding: 8px 13px !important;
   display: inline-block !important;
   max-width: 100% !important;
   box-sizing: border-box !important;
+  line-height: 1.5 !important;
+  border: none !important;
+  box-shadow: none !important;
 }
 
-body[data-bubble="gray"] .msg.char .bubble,
-body[data-bubble="gray"] .msg.char .text-bubble {
+body[data-bubble="gray"] .msg.char .text-inner {
   border-radius: 16px 16px 16px 4px !important;
 }
 
-body[data-bubble="gray"] .msg.user .bubble,
-body[data-bubble="gray"] .msg.user .text-bubble {
+body[data-bubble="gray"] .msg.user .text-inner {
   border-radius: 16px 16px 4px 16px !important;
-}
-
-/* 内层文字容器彻底透明，不留痕迹 */
-body[data-bubble="gray"] .msg .text-bubble .text-inner {
-  background: transparent !important;
-  border: none !important;
-  padding: 0 !important;
-  margin: 0 !important;
 }
 
 /* 方括号 —— 尺寸写死，不受滑杆影响 */
