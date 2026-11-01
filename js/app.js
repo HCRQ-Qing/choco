@@ -178,7 +178,7 @@ function refreshBubblePreview(){
 }
 
 const SIGN_PLACEHOLDER = '这个人很懒，什么都没有留下。';
-const OLD_SIGN_PLACEHOLDERS = ['你的专属梦角','这个人很懒，还没有留下介绍'];
+const OLD_SIGN_PLACEHOLDERS = ['你的专属角色','这个人很懒，还没有留下介绍'];
 
 const DEFAULT_CARD_GROUPS = [
   { id:'g-normal', name:'普通字卡', icon:'doc', sub:'日常回复用', cats:[
@@ -267,8 +267,7 @@ const DEFAULT_CARD_GROUPS = [
 	  '我对你的感情',
 	  '我身边的环境',
 	  '我想对你说的话',
-	  '我希望你可以对我做什么',
-	  '我们怎么吃🍎'
+	  '我希望你可以对我做什么'
 	] }
   ]},
   { id:'g-timed', name:'时间字卡', icon:'clock', sub:'按时间段自动触发的字卡（只可关分类）', cats:[
@@ -840,20 +839,30 @@ function saveMoodState(ms){
 const FRIENDS_KEY = 'mj_friends';
 const ROLE_KEY = 'mj_current_role_id';
 const GROUPS_KEY = 'mj_groups';
-function getFriends(){ let f=lsGet(FRIENDS_KEY,[]); if(!f.length) f=[{id:'r1',name:'梦角',avatar:'',sub:SIGN_PLACEHOLDER,group:'',shape:'square',topbarBg:'',star:false,pinned:false}]; return f; }
+function getFriends(){ let f=lsGet(FRIENDS_KEY,[]); if(!f.length) f=[{id:'r1',name:'角色',avatar:'',sub:SIGN_PLACEHOLDER,group:'',shape:'square',topbarBg:'',star:false,pinned:false}]; return f; }
 function saveFriends(f){ lsSet(FRIENDS_KEY, f); }
 function getGroups(){ const g=lsGet(GROUPS_KEY, []); return Array.isArray(g)?g:[]; }
 function saveGroupsArr(g){ lsSet(GROUPS_KEY, g); }
 function getCurrentRoleId(){ return lsGet(ROLE_KEY,'r1'); }
 function setCurrentRoleId(id){ lsSet(ROLE_KEY,id); }
-function getCurrentRoleName(){ const f = getFriends().find(x=>x.id===getCurrentRoleId()); return f?f.name:'梦角'; }
-function getRole(){ const f = getFriends().find(x=>x.id===getCurrentRoleId()); return f || {id:'r1',name:'梦角',avatar:'',sub:SIGN_PLACEHOLDER,topbarBg:'',shape:'square',star:false,pinned:false}; }
+function getCurrentRoleName(){ const f = getFriends().find(x=>x.id===getCurrentRoleId()); return f?displayName(f):'角色'; }
+function getRole(){ const f = getFriends().find(x=>x.id===getCurrentRoleId()); return f || {id:'r1',name:'角色',avatar:'',sub:SIGN_PLACEHOLDER,topbarBg:'',shape:'square',star:false,pinned:false}; }
 function getRoleSign(role){ const s = role && role.sub ? String(role.sub).trim() : ''; if(!s || OLD_SIGN_PLACEHOLDERS.includes(s)) return SIGN_PLACEHOLDER; return s; }
 function saveRoleField(id, key, val){ const friends=getFriends(); const f=friends.find(x=>x.id===id); if(!f) return; f[key]=val; saveFriends(friends); }
 function getRoleById(id){ const f = getFriends().find(x=>x.id===id); return f || null; }
 function getRoleNameById(id){ const f = getFriends().find(x=>x.id===id); return f ? displayName(f) : '?'; }
 /* 显示名：优先备注，没有备注就用原名。被删/拉黑时，调用方会先清空 remark，自动回退到原名 */
-function displayName(role){ if(!role) return '?'; const r = role.remark; return (r && String(r).trim()) ? String(r).trim() : role.name; }
+function displayName(role){
+  if(!role) return '角色';
+  /* 1. 如果备注有值，返回备注 */
+  var remark = String(role.remark || '').trim();
+  if(remark) return remark;
+  /* 2. 如果没有备注，返回名字。如果名字也没有，返回默认值 */
+  var name = String(role.name || '').trim();
+  if(name) return name;
+  /* 3. 如果连名字都没有，可能是被错误覆盖了，返回个兜底 */
+  return '角色';
+}
 /* 统一改备注入口：所有地方改备注都调这个，写完全站刷新 */
 function openEditRemark(roleId){
   var rid = roleId || getCurrentRoleId();
@@ -12778,17 +12787,96 @@ function openBeauty(mode){
       </div>
     `;
     document.body.appendChild(sub);
+  }
+
+  // 塔罗图片：点击卡牌上传 / 点牌背上传统一背面 / 全部清空
+  if(!window.__tarotImgBound){
+    window.__tarotImgBound = true;
+    var __tarotFileInput = document.createElement('input');
+    __tarotFileInput.type = 'file';
+    __tarotFileInput.accept = 'image/*';
+    __tarotFileInput.style.display = 'none';
+    document.body.appendChild(__tarotFileInput);
+    var __tarotPickKey = '';
+
+    __tarotFileInput.addEventListener('change', function(){
+      var f = __tarotFileInput.files && __tarotFileInput.files[0];
+      __tarotFileInput.value = '';
+      if(!f || !__tarotPickKey) return;
+      var fr = new FileReader();
+      fr.onload = function(){
+        var img = new Image();
+        img.onload = function(){
+          var MAX = 320;
+          var w = img.naturalWidth || img.width || MAX;
+          var h = img.naturalHeight || img.height || MAX;
+          if(w > MAX || h > MAX){
+            var k = Math.min(MAX / w, MAX / h);
+            w = Math.max(1, Math.round(w * k));
+            h = Math.max(1, Math.round(h * k));
+          }
+          var cv = document.createElement('canvas');
+          cv.width = w; cv.height = h;
+          cv.getContext('2d').drawImage(img, 0, 0, w, h);
+          var url = cv.toDataURL('image/jpeg', 0.82);
+          __tarotImgCache[__tarotPickKey] = url;
+          lsSet('mj_tarot_imgs_v1', __tarotImgCache);
+          if(typeof renderTarotGrid === 'function') renderTarotGrid();
+          toast('已更新');
+        };
+        img.onerror = function(){ toast('图片解析失败'); };
+        img.src = fr.result;
+      };
+      fr.readAsDataURL(f);
+    });
 
     document.addEventListener('click', function(e){
-      if(e.target.closest('#tarotImgResetBtn')) {
+      var t = e.target;
+      if(!t || !t.closest) return;
+      if(t.closest('#tarotUploadBack')){
+        e.preventDefault(); e.stopPropagation();
+        __tarotPickKey = 'back';
+        __tarotFileInput.value = '';
+        __tarotFileInput.click();
+        return;
+      }
+      if(t.closest('#tarotResetAll')){
         e.preventDefault(); e.stopPropagation();
         __tarotImgCache = {};
         lsSet('mj_tarot_imgs_v1', {});
-        renderTarotGrid();
+        if(typeof renderTarotGrid === 'function') renderTarotGrid();
         toast('已清空所有塔罗图片');
+        return;
       }
-    });
+      var cell = t.closest('[data-tarot-key]');
+      if(cell){
+        e.preventDefault(); e.stopPropagation();
+        __tarotPickKey = cell.dataset.tarotKey;
+        __tarotFileInput.value = '';
+        __tarotFileInput.click();
+        return;
+      }
+    }, true);
   }
+
+  // 渲染塔罗图片网格（每次打开 / 上传后都调一次）
+  window.renderTarotGrid = function(){
+    var grid = document.getElementById('tarotImgGrid');
+    if(!grid) return;
+    var keys = [];
+    MAJOR.forEach(function(c){ keys.push({ k: 'm_' + c.num, label: c.name }); });
+    Object.keys(SUITS).forEach(function(suit){
+      RANKS.forEach(function(r){ keys.push({ k: suit + '_' + r.num, label: SUITS[suit].name + r.name }); });
+    });
+    grid.innerHTML = keys.map(function(it){
+      var img = __tarotImgCache[it.k];
+      return '<div data-tarot-key="' + it.k + '" style="cursor:pointer;border:0.6px solid #ececec;border-radius:6px;overflow:hidden;aspect-ratio:2/3;background:#fafafa;display:flex;align-items:center;justify-content:center;position:relative">' +
+        (img ? '<img src="' + img + '" style="width:100%;height:100%;object-fit:cover;display:block">'
+             : '<span style="font-size:9px;color:#bbb;text-align:center;padding:4px;line-height:1.3">' + it.label + '</span>') +
+      '</div>';
+    }).join('');
+  };
+  if(typeof window.renderTarotGrid === 'function') window.renderTarotGrid();
 
   // 找到美化面板里的插入位置（在布局 06 后面加一项塔罗）
   let tarotRow = document.querySelector('#beautyPanel .bp-row[data-panel="tarot"]');
@@ -13081,8 +13169,6 @@ document.addEventListener('click', function(e){
   if(t.closest('#btnTopbarBgUpload')){ e.preventDefault(); _bgUploadTarget='topbar'; var f2=document.getElementById('bgImgPicker'); if(f2){f2.value='';f2.click();} return; }
   if(t.closest('#btnChatBgReset')){ e.preventDefault(); var c=getChatBgCfg(); if(c.key){__idb.del(c.key).catch(function(){});} c.key=''; saveChatBgCfg(c); applyChatBg(); renderBgImgPanel(); toast('已恢复默认'); return; }
   if(t.closest('#btnTopbarBgReset')){ e.preventDefault(); var c2=getTopbarBgCfg(); if(c2.key){__idb.del(c2.key).catch(function(){});} c2.key=''; saveTopbarBgCfg(c2); applyTopbarBg2(); renderBgImgPanel(); toast('已恢复默认'); return; }
-  var ab = t.closest('.align-btn');
-  if(ab){ e.preventDefault(); var c3=getChatBgCfg(); c3.align=ab.dataset.align; saveChatBgCfg(c3); renderBgImgPanel(); applyChatBg(); return; }
 }, true);
 document.addEventListener('change', function(e){
   var t = e.target;
@@ -14680,7 +14766,7 @@ function gchShowMenu(msgEl, x, y){
       } else if(act === 'quote'){
         setGchQuote({
           msgId: m.id,
-          name: m.role === 'user' ? userName() : ((getRoleById(m.roleId) || {}).name || '?'),
+          name: m.role === 'user' ? userName() : (displayName(getRoleById(m.roleId)) || '?'),
           text: m.text || ''
         });
 
@@ -14698,7 +14784,7 @@ function gchShowMenu(msgEl, x, y){
           if(!t2){ toast('内容不能为空'); return; }
           window.__gchQuote = {
             msgId: m.id,
-            name: m.role === 'user' ? userName() : ((getRoleById(m.roleId) || {}).name || '?'),
+            name: m.role === 'user' ? userName() : (displayName(getRoleById(m.roleId)) || '?'),
             text: t2
           };
           toast('已引用，去输入框写点什么吧');
@@ -14716,7 +14802,7 @@ function gchShowMenu(msgEl, x, y){
         const text = 'Q：' + (d.q || '') + (cards ? '\n牌面：' + cards : '');
         setGchQuote({
           msgId: m.id,
-          name: (getRoleById(m.roleId) || {}).name || '?',
+          name: displayName(getRoleById(m.roleId)) || '?',
           text: text
         });
 
@@ -19222,7 +19308,7 @@ function pushApply(roleId, opts){
   const apply = {
     id: uid(),
     roleId: roleId,
-    name: f.name,
+    name: displayName(f),
     avatar: f.avatar,
     sub: line,
     time: Date.now(),
@@ -21793,17 +21879,8 @@ function iconSVG(key){ return ICONS[key] || ICONS.doc; }
 function openCardLib(){
   showScreen('cardLibScreen');
   renderTopBar({
-    /* ★ 修复：原来写的是 utopHostCardLib，页面里根本没有这个容器，
-       导致顶部栏没重建、静态的 ‹（clBack）也没人绑定 → 退不出去 */
     host: 'utopHost',
     title: '字 卡',
-    /* ★ 个签切换入口：所有字卡页都能直接打开，不再只藏在个签字卡分组的 ⋯ 菜单里 */
-    act: '个签切换',
-    actCls: 'txt',
-    onAct: function(){
-      if(typeof openSignSwitchSetting === 'function') openSignSwitchSetting();
-      else toast('个签模块还没加载好');
-    },
     onBack: function(){
       closeScreen();
       cdHisClose();
@@ -22655,6 +22732,10 @@ function toggleCdMenu(){
     const _spd = document.getElementById('cdSpecialDivider');
     if(_spg) _spg.style.display = 'none';
     if(_spd) _spd.style.display = 'none';
+  }
+  const _signIt = cdMenu.querySelector('[data-act="sign-switch"]');
+  if(_signIt){
+    _signIt.style.display = (g && g.id === 'g-sign') ? '' : 'none';
   }
   /* ★ 每次打开菜单，同步「只移动到该分组」开关的文字 */
   const _mvLabel = document.getElementById('cdMoveOnlyLabel');
@@ -24457,7 +24538,7 @@ function renderReplyPanel(tab){
 		  <div class="sound-name" data-name="outMsg">未设置</div>
 		</div>
 		<div class="sound-row" data-sound="ring">
-		  <div class="sound-info"><div class="sound-tt">来电铃声</div><div class="sound-sub">梦角打来时循环播放</div></div>
+		  <div class="sound-info"><div class="sound-tt">来电铃声</div><div class="sound-sub">角色打来时循环播放</div></div>
 		  <div class="sound-acts">
 			<button class="sound-btn play" data-play="ring" type="button">▶</button>
 			<button class="sound-btn upload" data-upload="ring" type="button">上 传</button>
@@ -26644,18 +26725,33 @@ document.addEventListener('click', function(e){
      - touchstart 不 preventDefault（否则安卓会把 click 一起吞掉），
        而是在触摸前把输入框的焦点"锁"住，交给 sendMessage 之后处理 */
   sendBtn.addEventListener('mousedown', function(e){ e.preventDefault(); });
-  sendBtn.addEventListener('touchstart', function(){
+  sendBtn.addEventListener('touchstart', function(e){
     var ta = document.getElementById('chatInput');
     if(ta && document.activeElement === ta){
       sendBtn._keepFocus = true;   /* 标记：这次发送是"正在打字时发的" */
     } else {
       sendBtn._keepFocus = false;
     }
+    /* ★ 增加防连点锁，防止 via 内核模拟出两次 click */
+    e.stopPropagation(); 
   }, {passive:true});
-  sendBtn.onclick = function(){
+  sendBtn.onclick = function(e){
+    if(e) e.stopPropagation();
     var ta = document.getElementById('chatInput');
     var wasFocused = (document.activeElement === ta) || sendBtn._keepFocus;
-    sendMessage();
+    
+    /* ★ 核心修复：防止某些浏览器（如 via）在触发 touchstart 后，又补发 click，导致连发两条 */
+    if (sendBtn._sendingLock) return;
+    sendBtn._sendingLock = true;
+    setTimeout(() => { sendBtn._sendingLock = false; }, 300);
+
+    try {
+      sendMessage();
+    } catch(err) {
+      console.error("发送出错:", err);
+      toast("发送失败");
+    }
+
     if(wasFocused && ta){
       try{ ta.focus(); }catch(err){}
     }
@@ -28962,13 +29058,13 @@ function playQueueItem(item){
 /* ============ 来电 / 呼叫 UI ============ */
 /* ===== 缩小到小窗（还没接通的状态） ===== */
 function shrinkToMini(pendingKind, roleId){
-  /* pendingKind: 'incoming'（梦角打来，等待接听） 或 'outgoing'（我方打出去，等待对方接听） */
+  /* pendingKind: 'incoming'（角色打来，等待接听） 或 'outgoing'（我方打出去，等待对方接听） */
   const role = getRoleById(roleId) || {};
   const mini = document.getElementById('callMini');
   if(!mini) return;
   renderCallAvatar(document.getElementById('callMiniAvatar'), role);
   const nameEl = document.getElementById('callMiniName');
-  if(nameEl) nameEl.textContent = role.name || '梦角';
+  if(nameEl) nameEl.textContent = role.name || '角色';
   const timeEl = document.getElementById('callMiniTime');
   if(timeEl) timeEl.textContent = (pendingKind === 'incoming') ? '来电中…' : '正在呼叫…';
   /* 显示接听按钮？只有 incoming 才需要 */
@@ -29019,7 +29115,7 @@ function triggerIncomingCall(forceRoleId){
   const scr = document.getElementById('callIncoming');
   if(!scr) return;
   renderCallAvatar(document.getElementById('callIncomingAvatar'), role);
-  document.getElementById('callIncomingName').textContent = role.name || '梦角';
+  document.getElementById('callIncomingName').textContent = role.name || '角色';
   document.getElementById('callIncomingSub').textContent = '邀 请 你 通 话';
   document.getElementById('callIncomingType').textContent = (callState.mode === 'video') ? '📹' : '📞';
   const bg = document.getElementById('callIncomingBg');
@@ -29053,7 +29149,7 @@ function missedIncomingCall(){
   appendMsgToRole(callState.roleId, {
     id: uid(),
     time: Date.now(),
-    sys: '<b>' + escapeHTML(role.name || '梦角') + '</b> 的来电未接听'
+    sys: '<b>' + escapeHTML(role.name || '角色') + '</b> 的来电未接听'
   });
   const scr = document.getElementById('callIncoming');
   if(scr) scr.classList.remove('show');
@@ -29069,7 +29165,7 @@ function rejectIncomingCall(){
   appendMsgToRole(callState.roleId, {
     id: uid(),
     time: Date.now(),
-    sys: '你挂断了 <b>' + escapeHTML(role.name || '梦角') + '</b> 的来电'
+    sys: '你挂断了 <b>' + escapeHTML(role.name || '角色') + '</b> 的来电'
   });
   const scr = document.getElementById('callIncoming');
   if(scr) scr.classList.remove('show');
@@ -29094,7 +29190,7 @@ function acceptCall(skipIncoming){
   const role = getRoleById(callState.roleId) || {};
   const mini = document.getElementById('callMini');
   renderCallAvatar(document.getElementById('callMiniAvatar'), role);
-  document.getElementById('callMiniName').textContent = role.name || '梦角';
+  document.getElementById('callMiniName').textContent = role.name || '角色';
   document.getElementById('callMiniTime').textContent = '00:00';
   if(!mini.dataset.inited){
     mini.style.left = (window.innerWidth - 200) + 'px';
@@ -29119,7 +29215,7 @@ function hangupCall(fromWho){
   const ss = String(dur%60).padStart(2,'0');
 
   const whoText = fromWho === 'role'
-    ? '<b>' + escapeHTML(role.name || '梦角') + '</b> 挂断了通话'
+    ? '<b>' + escapeHTML(role.name || '角色') + '</b> 挂断了通话'
     : '你挂断了通话';
   appendMsgToRole(callState.roleId, {
     id: uid(),
@@ -29242,7 +29338,7 @@ function userCall(mode){
   const scr = document.getElementById('callOutgoing');
   if(!scr) return;
   renderCallAvatar(document.getElementById('callOutgoingAvatar'), role);
-  document.getElementById('callOutgoingName').textContent = role.name || '梦角';
+  document.getElementById('callOutgoingName').textContent = role.name || '角色';
   document.getElementById('callOutgoingSub').textContent = '正 在 呼 叫…';
   document.getElementById('callOutgoingType').textContent = (mode === 'video') ? '📹' : '📞';
   const bg = document.getElementById('callOutgoingBg');
@@ -29279,7 +29375,7 @@ function userCall(mode){
 
       const mini = document.getElementById('callMini');
       renderCallAvatar(document.getElementById('callMiniAvatar'), role);
-      document.getElementById('callMiniName').textContent = role.name || '梦角';
+      document.getElementById('callMiniName').textContent = role.name || '角色';
       document.getElementById('callMiniTime').textContent = '00:00';
       if(!mini.dataset.inited){
         mini.style.left = (window.innerWidth - 200) + 'px';
@@ -29307,7 +29403,7 @@ function userCall(mode){
       scr.classList.remove('show');
       appendMsgToRole(roleId, {
         id: uid(), time: Date.now(),
-        sys: '<b>' + escapeHTML(role.name || '梦角') + '</b> 已拒接'
+        sys: '<b>' + escapeHTML(role.name || '角色') + '</b> 已拒接'
       });
       resetCallCycle();
 
@@ -29801,5 +29897,308 @@ function goToPage(name){
   } else {
     window.addEventListener('load', checkVersion);
   }
+})();
+
+/* ============================================================
+   抽屉美化 · 背景
+   - 背景 Blob 存 IndexedDB（key: drawer_bg_xxx）
+   - 配置存 localStorage: mj_drawer_bg_v1 = {key,opacity,blur}
+   - 应用位置：#drawerContent / #drawerFunc
+   ============================================================ */
+(function(){
+  if(window.__drawerBgReady) return;
+  window.__drawerBgReady = true;
+
+  var BG_CFG_KEY = 'mj_drawer_bg_v1';
+
+  function getBgCfg(){
+    var c = lsGet(BG_CFG_KEY, null);
+    if(!c || typeof c !== 'object') c = {};
+    if(typeof c.key !== 'string') c.key = '';
+    if(typeof c.opacity !== 'number') c.opacity = 100;
+    if(typeof c.blur !== 'number') c.blur = 0;
+    return c;
+  }
+  function saveBgCfg(c){ lsSet(BG_CFG_KEY, c); }
+
+  function applyDrawerBg(){
+    var c = getBgCfg();
+    var targets = [document.getElementById('drawerContent'), document.getElementById('drawerFunc')];
+    if(!c.key){
+      targets.forEach(function(el){
+        if(!el) return;
+        el.style.setProperty('--drawer-bg-img', 'none');
+        el.style.setProperty('--drawer-bg-opacity', '0');
+        el.style.setProperty('--drawer-bg-blur', '0px');
+        el.classList.remove('has-drawer-bg');
+      });
+      return;
+    }
+    __idb.toURL(c.key).then(function(url){
+      if(!url) return;
+      targets.forEach(function(el){
+        if(!el) return;
+        el.classList.add('has-drawer-bg');
+        el.style.setProperty('--drawer-bg-img', 'url(' + url + ')');
+        el.style.setProperty('--drawer-bg-opacity', String(c.opacity / 100));
+        el.style.setProperty('--drawer-bg-blur', (c.blur || 0) + 'px');
+      });
+    }).catch(function(){});
+  }
+
+  function renderDrawerBgPanel(){
+    var prev = document.getElementById('drawerBgPreview');
+    var c = getBgCfg();
+    if(prev){
+      if(c.key){
+        __idb.toURL(c.key).then(function(u){
+          if(u) prev.innerHTML = '<img src="' + u + '" style="width:100%;height:100%;object-fit:cover;display:block;border-radius:10px">';
+        });
+      } else {
+        prev.innerHTML = '<span class="ph">还没上传</span>';
+      }
+    }
+    var op = document.getElementById('drawerBgOpacity'); if(op) op.value = c.opacity;
+    var opv = document.getElementById('drawerBgOpacityVal'); if(opv) opv.textContent = c.opacity + '%';
+    var bl = document.getElementById('drawerBgBlur'); if(bl) bl.value = c.blur;
+    var blv = document.getElementById('drawerBgBlurVal'); if(blv) blv.textContent = c.blur + 'px';
+  }
+
+  var bgFileInput = null;
+  function ensureBgInput(){
+    if(bgFileInput) return bgFileInput;
+    bgFileInput = document.createElement('input');
+    bgFileInput.type = 'file';
+    bgFileInput.accept = 'image/*';
+    bgFileInput.style.display = 'none';
+    document.body.appendChild(bgFileInput);
+    bgFileInput.addEventListener('change', function(){
+      var f = bgFileInput.files && bgFileInput.files[0];
+      bgFileInput.value = '';
+      if(!f) return;
+      var key = 'drawer_bg_' + Date.now().toString(36);
+      __idb.set(key, f).then(function(){
+        var c = getBgCfg();
+        if(c.key) __idb.del(c.key).catch(function(){});
+        c.key = key;
+        saveBgCfg(c);
+        applyDrawerBg();
+        renderDrawerBgPanel();
+        if(typeof toast === 'function') toast('已上传抽屉背景');
+      }).catch(function(e){
+        console.error('抽屉背景保存失败', e);
+        if(typeof toast === 'function') toast('保存失败');
+      });
+    });
+    return bgFileInput;
+  }
+
+  document.addEventListener('click', function(e){
+    var t = e.target;
+    if(!t || !t.closest) return;
+
+    if(t.closest('#beautyPanel .bp-row[data-panel="drawerbg"]')){
+      e.preventDefault(); e.stopPropagation();
+      var sb = document.getElementById('spDrawerBg');
+      if(sb){ renderDrawerBgPanel(); sb.classList.add('show'); }
+      return;
+    }
+    if(t.closest('#btnDrawerBgUpload')){
+      e.preventDefault(); e.stopPropagation();
+      ensureBgInput().click();
+      return;
+    }
+    if(t.closest('#btnDrawerBgReset')){
+      e.preventDefault(); e.stopPropagation();
+      var c = getBgCfg();
+      if(c.key) __idb.del(c.key).catch(function(){});
+      c.key = ''; c.opacity = 100; c.blur = 0;
+      saveBgCfg(c);
+      applyDrawerBg();
+      renderDrawerBgPanel();
+      if(typeof toast === 'function') toast('已恢复默认');
+      return;
+    }
+  }, true);
+
+  document.addEventListener('input', function(e){
+    var t = e.target;
+    if(!t || !t.id) return;
+    if(t.id === 'drawerBgOpacity'){
+      var c = getBgCfg(); c.opacity = parseInt(t.value, 10) || 0; saveBgCfg(c);
+      var v = document.getElementById('drawerBgOpacityVal'); if(v) v.textContent = c.opacity + '%';
+      applyDrawerBg();
+    }
+    if(t.id === 'drawerBgBlur'){
+      var c2 = getBgCfg(); c2.blur = parseInt(t.value, 10) || 0; saveBgCfg(c2);
+      var v2 = document.getElementById('drawerBgBlurVal'); if(v2) v2.textContent = c2.blur + 'px';
+      applyDrawerBg();
+    }
+  }, true);
+
+  setTimeout(function(){
+    try{ applyDrawerBg(); }catch(e){}
+  }, 800);
+
+  window.__drawerBg = {
+    apply: applyDrawerBg,
+    render: renderDrawerBgPanel
+  };
+})();
+
+/* ============================================================
+   抽屉美化 · 图标（上）
+   - 常量 + 读存储 + 应用到 #drawerFunc .func-item
+   ============================================================ */
+(function(){
+  if(window.__drawerIconReady) return;
+  window.__drawerIconReady = true;
+
+  var ICON_KEY = 'mj_drawer_icons_v1';
+
+  window.__drawerIconItems = [
+    { key:'choice',    name:'选择',     svg:'<path d="M12 3v18"/><path d="M5 8l7-5 7 5"/><path d="M5 16l7 5 7-5"/>' },
+    { key:'divine',    name:'占卜',     svg:'<path d="M2.5 12 C5 7.5 8.5 5.5 12 5.5 C15.5 5.5 19 7.5 21.5 12 C19 16.5 15.5 18.5 12 18.5 C8.5 18.5 5 16.5 2.5 12 Z"/><circle cx="12" cy="12" r="3.2"/>' },
+    { key:'quiz',      name:'问卷',     svg:'<path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.8.4-1 .9-1 1.7"/><circle cx="12" cy="17" r="0.8" fill="currentColor" stroke="none"/>' },
+    { key:'card',      name:'名片',     svg:'<rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 9h18"/>' },
+    { key:'uploadimg', name:'图片',     svg:'<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="M3.5 17l5-5 4 4 3-3 5 5"/>' },
+    { key:'voicecall', name:'语音通话', svg:'<path d="M21 16.5v2.4a1.6 1.6 0 0 1-1.7 1.6 15.5 15.5 0 0 1-6.7-2.4 15 15 0 0 1-4.6-4.6A15.5 15.5 0 0 1 5.5 6.7 1.6 1.6 0 0 1 7.1 5h2.4a1.6 1.6 0 0 1 1.6 1.4c.1.9.3 1.7.6 2.5a1.6 1.6 0 0 1-.4 1.7l-1 1a12 12 0 0 0 4.6 4.6l1-1a1.6 1.6 0 0 1 1.7-.4c.8.3 1.6.5 2.5.6A1.6 1.6 0 0 1 21 16.5z"/>' },
+    { key:'videocall', name:'视频通话', svg:'<rect x="3" y="6" width="13" height="12" rx="2"/><path d="M16 10l5-3v10l-5-3"/>' },
+    { key:'reply',     name:'回复设置', svg:'<path d="M21 11.5a8.4 8.4 0 0 1-8.5 8.3 9 9 0 0 1-3.6-.7L4 20.5l1.4-4.1a8.1 8.1 0 0 1-1.3-4.4A8.4 8.4 0 0 1 12.5 3.2 8.4 8.4 0 0 1 21 11.5z"/>' },
+    { key:'beauty',    name:'美化',     svg:'<path d="M12 3l2 5 5 .5-4 3.5 1.3 5L12 14.5 7.7 17l1.3-5-4-3.5L10 8z"/>' },
+    { key:'truth',     name:'真心话',   svg:'<path d="M3 5h18v12H3z"/><path d="M8 21l4-4 4 4"/><circle cx="9" cy="10" r="1" fill="currentColor" stroke="none"/><circle cx="15" cy="10" r="1" fill="currentColor" stroke="none"/>' },
+    { key:'games',     name:'小游戏',   svg:'<rect x="2" y="7" width="20" height="11" rx="5"/><path d="M7 11v4"/><path d="M5 13h4"/><circle cx="16" cy="12" r="1" fill="currentColor" stroke="none"/><circle cx="18.5" cy="14" r="1" fill="currentColor" stroke="none"/>' },
+    { key:'pat',       name:'拍一拍',   svg:'<path d="M8 11V5.5a1.5 1.5 0 0 1 3 0V11"/><path d="M11 10.5V4.5a1.5 1.5 0 0 1 3 0V11"/><path d="M14 11V6.5a1.5 1.5 0 0 1 3 0V13"/><path d="M17 12.5v-2a1.5 1.5 0 0 1 3 0V16a5 5 0 0 1-5 5h-2a6 6 0 0 1-6-6v-4"/>' }
+  ];
+
+  window.__drawerGetIcons = function(){
+    var m = lsGet(ICON_KEY, null);
+    if(!m || typeof m !== 'object') m = {};
+    return m;
+  };
+  window.__drawerSaveIcons = function(m){ lsSet(ICON_KEY, m); };
+
+  window.__drawerApplyIcons = function(){
+    var m = window.__drawerGetIcons();
+    var items = window.__drawerIconItems;
+    document.querySelectorAll('#drawerFunc .func-item').forEach(function(item){
+      var k = item.dataset.func;
+      var box = item.querySelector('.fi-box');
+      if(!box) return;
+      var url = m[k];
+      if(url){
+        box.innerHTML = '<img src="' + url + '" style="width:100%;height:100%;object-fit:cover;border-radius:18px;display:block">';
+      } else {
+        var it = items.find(function(x){ return x.key === k; });
+        if(it) box.innerHTML = '<svg viewBox="0 0 24 24">' + it.svg + '</svg>';
+      }
+    });
+  };
+
+  setTimeout(function(){
+    try{ window.__drawerApplyIcons(); }catch(e){}
+  }, 800);
+})();
+
+/* ============================================================
+   抽屉美化 · 图标（下）
+   - 列表渲染 + 换图 + 恢复默认
+   - 依赖上半挂的 window.__drawerIconItems / __drawerGetIcons / __drawerSaveIcons / __drawerApplyIcons
+   ============================================================ */
+(function(){
+  if(window.__drawerIconUiReady) return;
+  window.__drawerIconUiReady = true;
+
+  function renderDrawerIconList(){
+    var box = document.getElementById('drawerIconList');
+    if(!box) return;
+    var m = window.__drawerGetIcons();
+    var items = window.__drawerIconItems || [];
+    box.innerHTML = items.map(function(it){
+      var inner = m[it.key]
+        ? '<img src="' + m[it.key] + '">'
+        : '<svg viewBox="0 0 24 24" style="width:18px;height:18px;stroke:#1a1a1a;fill:none;stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round">' + it.svg + '</svg>';
+      return '<div style="display:flex;align-items:center;gap:10px;padding:10px 4px;border-bottom:0.6px dashed #f0f0f0">' +
+        '<div style="width:36px;height:36px;flex:none;border-radius:10px;background:#fafafa;border:0.6px solid #ececec;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden">' + inner + '</div>' +
+        '<div style="flex:1;font-size:13px;color:#1a1a1a;letter-spacing:.5px">' + it.name + '</div>' +
+        '<button type="button" data-dicon-up="' + it.key + '" style="padding:6px 12px;border-radius:10px;border:0.7px solid rgba(0,0,0,.14);background:#fff;font-family:inherit;font-size:12px;color:#1a1a1a;cursor:pointer">换图</button>' +
+        (m[it.key] ? '<button type="button" data-dicon-del="' + it.key + '" style="padding:6px 12px;border-radius:10px;border:0.7px solid rgba(0,0,0,.14);background:#fff;font-family:inherit;font-size:12px;color:#999;cursor:pointer">恢复</button>' : '') +
+      '</div>';
+    }).join('');
+  }
+
+  var curIconKey = '';
+
+  document.addEventListener('click', function(e){
+    var t = e.target;
+    if(!t || !t.closest) return;
+
+    if(t.closest('#beautyPanel .bp-row[data-panel="drawericon"]')){
+      e.preventDefault(); e.stopPropagation();
+      var si = document.getElementById('spDrawerIcon');
+      if(si){ renderDrawerIconList(); si.classList.add('show'); }
+      return;
+    }
+
+    var up = t.closest('[data-dicon-up]');
+    if(up){
+      e.preventDefault(); e.stopPropagation();
+      curIconKey = up.dataset.diconUp;
+      var fi = document.getElementById('drawerIconFile');
+      if(fi){ fi.value = ''; fi.click(); }
+      return;
+    }
+    var del = t.closest('[data-dicon-del]');
+    if(del){
+      e.preventDefault(); e.stopPropagation();
+      var m = window.__drawerGetIcons();
+      delete m[del.dataset.diconDel];
+      window.__drawerSaveIcons(m);
+      window.__drawerApplyIcons();
+      renderDrawerIconList();
+      return;
+    }
+  }, true);
+
+  document.addEventListener('change', function(e){
+    var t = e.target;
+    if(!t || t.id !== 'drawerIconFile') return;
+    var f = t.files && t.files[0];
+    t.value = '';
+    if(!f || !curIconKey) return;
+    var fr = new FileReader();
+    fr.onload = function(){
+      var img = new Image();
+      img.onload = function(){
+        var MAX = 200;
+        var w = img.naturalWidth || img.width || MAX;
+        var h = img.naturalHeight || img.height || MAX;
+        if(w > MAX || h > MAX){
+          var k = Math.min(MAX / w, MAX / h);
+          w = Math.max(1, Math.round(w * k));
+          h = Math.max(1, Math.round(h * k));
+        }
+        var cv = document.createElement('canvas');
+        cv.width = w; cv.height = h;
+        cv.getContext('2d').drawImage(img, 0, 0, w, h);
+        var url = cv.toDataURL('image/jpeg', 0.85);
+        var m = window.__drawerGetIcons();
+        m[curIconKey] = url;
+        window.__drawerSaveIcons(m);
+        window.__drawerApplyIcons();
+        renderDrawerIconList();
+        if(typeof toast === 'function') toast('图标已更新');
+      };
+      img.onerror = function(){ if(typeof toast === 'function') toast('图片解析失败'); };
+      img.src = fr.result;
+    };
+    fr.onerror = function(){ if(typeof toast === 'function') toast('读取失败'); };
+    fr.readAsDataURL(f);
+  }, true);
+
+  window.__drawerIcons = {
+    apply: window.__drawerApplyIcons,
+    render: renderDrawerIconList
+  };
 })();
  
