@@ -4620,7 +4620,44 @@
   left:3px !important;
   transform:translateX(16px) !important;
 }
-/* ===== 聊天图片：无气泡 + 褪潮加载效果 ===== */
+#page-chat {
+  position: relative;
+  background-color: #ffffff;
+  overflow: hidden;
+}
+#page-chat::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background-image: var(--chat-bg-img, none);
+  background-size: cover;
+  background-position: var(--chat-bg-pos, center center);
+  background-repeat: no-repeat;
+  opacity: var(--chat-bg-opacity, 1);
+  filter: blur(var(--chat-bg-blur, 0px));
+  pointer-events: none;
+  transition: opacity 0.2s ease, filter 0.2s ease;
+}
+#page-chat::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: #ffffff;
+  opacity: calc(1 - var(--chat-bg-opacity, 1));
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+#page-chat .split-side,
+#page-chat .split-main,
+#page-chat .chat-topbar,
+#page-chat #chatList,
+#page-chat .d-bar {
+  position: relative;
+  z-index: 2;
+}
+
 .msg-image-bubble{
   background: transparent !important;
   border: none !important;
