@@ -1444,7 +1444,7 @@ function pickCard(roleId){
     const weatherPool = _getWeatherPool();
     const wordPool = (typeof _getWordPool === 'function') ? _getWordPool() : [];
     const merged = mix.concat(timedPool, weatherPool, wordPool);
-    return _pickOrFallback([merged]);
+    return _pickOrFallback(merged);
   }
 
 
@@ -1452,13 +1452,11 @@ function pickCard(roleId){
   const weatherPool = _getWeatherPool();
   const wordPool = (typeof _getWordPool === 'function') ? _getWordPool() : [];
 
-  /* 策略 A：群聊字卡 + 当前时段字卡 + 天气字卡 + 单词字卡，合并按数量随机 */
   if(strategy === 'A'){
     const gc = groupchatOf(rid);
-    return _pickOrFallback([gc.concat(timedPool, weatherPool, wordPool)]);
+    return _pickOrFallback(gc.concat(timedPool, weatherPool, wordPool));
   }
 
-  /* 策略 B：群聊字卡 + 角色专属字卡 + 时段 + 天气 + 单词，合并按数量随机 */
   if(strategy === 'B'){
     const gc = groupchatOf(rid);
     const own = getAllNormalCards(rid);
@@ -1468,10 +1466,9 @@ function pickCard(roleId){
     } else {
       base = gc.length ? gc : own;
     }
-    return _pickOrFallback([base.concat(timedPool, weatherPool, wordPool)]);
+    return _pickOrFallback(base.concat(timedPool, weatherPool, wordPool));
   }
 
-  /* 策略 C（默认）：公用 + 角色专属按比例混，再并入时段 + 天气 + 单词，合并按数量随机 */
   const pub = getAllNormalCards('public');
   const role = getAllNormalCards(rid);
   const pubRate = poolRate.public ?? 0.7;
@@ -1481,7 +1478,7 @@ function pickCard(roleId){
   } else {
     base = pub.length ? pub : role;
   }
-  return _pickOrFallback([base.concat(timedPool, weatherPool, wordPool)]);
+  return _pickOrFallback(base.concat(timedPool, weatherPool, wordPool));
 }
 
 /* ===== 时间字卡 ===== */
@@ -1955,17 +1952,24 @@ function genReply(useTimed, roleId){
 		}
 		parts.push({type:'pinyin', text:joined, han:hanOnly});
 	  } else if(selectedType === 'emoji'){
-		parts.push({type:'emoji', text: pickRoleEmoji(_rid)});
+		const _e = String(pickRoleEmoji(_rid) || '').trim();
+		if(_e) parts.push({type:'emoji', text:_e});
 	  } else if(selectedType === 'kao'){
-		parts.push({type:'kao', text: pickRoleKao(_rid)});
+		const _k = String(pickRoleKao(_rid) || '').trim();
+		if(_k) parts.push({type:'kao', text:_k});
 	  } else if(selectedType === 'sticker'){
-		if(blockCount > 1){
-		  parts.push({type:'sticker', text: pickRoleSticker(_rid), __inline:true});
-		} else {
-		  parts.push({type:'sticker', text: pickRoleSticker(_rid), __standalone:true});
+		const _s = String(pickRoleSticker(_rid) || '').trim();
+		if(_s){
+		  if(blockCount > 1){
+			parts.push({type:'sticker', text:_s, __inline:true});
+		  } else {
+			parts.push({type:'sticker', text:_s, __standalone:true});
+		  }
 		}
 	  } else {
-		parts.push({type:'card', text: pickCard(_rid)});
+		const _c = pickCard(_rid);
+		const _ct = String(cardText(_c) || '').trim();
+		if(_ct) parts.push({type:'card', text:_ct});
 	  }
 	}
 	bubbles.push({parts});
@@ -1994,12 +1998,24 @@ function buildMsgsFromBubbles(bubbles, roleId, quote){
        （字卡对象缺字段 / 表情库为空 / 精选池为空时，旧逻辑会拼出空字符串仍然发一条，
          看起来就是角色莫名其妙发了一个空气泡） */
     (bubble.parts || []).forEach(function(p){
-      const _raw = (p.type === 'card') ? cardText(p.text) : p.text;
-      const _hasSticker = (p.type === 'sticker');
-      if(!_hasSticker && !String(_raw == null ? '' : _raw).trim()) return;
-      const pp = Object.assign({}, p, { text: _raw });
-      if(p.type === 'sticker' && p.__standalone) standaloneParts.push(pp);
-      else inlineParts.push(pp);
+      if(!p) return;
+      if(p.type === 'card'){
+        const _ct = String(cardText(p.text) || '').trim();
+        if(!_ct) return;
+        inlineParts.push(Object.assign({}, p, { text: _ct }));
+        return;
+      }
+      if(p.type === 'sticker'){
+        const _st = String(p.text == null ? '' : p.text).trim();
+        if(!_st) return;
+        const pp = Object.assign({}, p, { text: _st });
+        if(p.__standalone) standaloneParts.push(pp);
+        else inlineParts.push(pp);
+        return;
+      }
+      const _tx = String(p.text == null ? '' : p.text);
+      if(!_tx.trim()) return;
+      inlineParts.push(Object.assign({}, p, { text: _tx }));
     });
 
     /* 先把独立表情图按顺序排好，跟内联消息共享时间戳递增 */
@@ -2076,16 +2092,13 @@ function dispatchUserMsg(msg){
     && (nowTs - window.__lastReadAt < 10000);
 
   if(inReadWindow){
-    msg.readState = 'unread';  // 先标未读，让推平函数统一处理
+    msg.readState = 'unread';
     msg.readNoReply = false;
     msgs.push(msg);
-    /* ★ 关键修复：用推平函数把这条及上方所有未读一次性落成 read，
-       避免「上面已读、中间未读、下面已读」的夹层状态 */
     _applyReadStateUpTo(msg, 'read');
     saveMsgs(); renderChat(true);
-    /* 窗口内进来的消息，也算「刚被读」，把窗口续上 */
     window.__lastReadAt = nowTs;
-    /* 不触发回复链，但排进队列，让队列开头自动跳过即可 */
+    try{ armReplyTimer(msg); }catch(e){}
     return;
   }
 
@@ -6126,7 +6139,6 @@ function armReadTimer(msg){
 function _drainReadQueue(){
   if(_readQueueRunning) return;
 
-  /* 清掉队首里已经被删 / 撤回 / 已是终态的 id */
   while(_readQueue.length){
     const id = _readQueue[0];
     const m = msgs.find(x => x.id === id);
@@ -6161,20 +6173,46 @@ function _drainReadQueue(){
   const delayMs = (_rdMin + Math.random() * (_rdRealMax - _rdMin)) * 1000;
 
   setTimeout(function(){
-    if(!_readQueueRunning) return;
+    let _released = false;
+    function _release(){
+      if(_released) return;
+      _released = true;
+      _readQueueRunning = false;
+      try{ _drainReadQueue(); }catch(e){ console.error('已读队列重入失败', e); }
+    }
+    if(!_readQueueRunning){ return; }
     try{
-      /* 这条如果已经被回复线处理掉了，跳过 */
       const now = msgs.find(x => x.id === id);
       if(!now || now.readState === 'read' || now.readState === 'noReply'){
-        _readQueueRunning = false;
-        _drainReadQueue();
+        _release();
         return;
       }
-      /* 从这条往上，把所有 unread 一起落 read */
       _applyReadStateUpTo(now, 'read');
-    }catch(e){}
-    _readQueueRunning = false;
-    _drainReadQueue();
+      try{
+        const _ai = msgs.findIndex(x => x.id === now.id);
+        if(_ai >= 0){
+          let _ch = false;
+          for(let _i = _ai + 1; _i < msgs.length; _i++){
+            const _m = msgs[_i];
+            if(!_m || _m.role !== 'user' || _m.recalled || _m.sys || _m.namecard) continue;
+            if(_m.readState === 'unread'){
+              _m.readState = 'read';
+              _m.readNoReply = false;
+              _m.readAt = Date.now();
+              _ch = true;
+            }
+          }
+          if(_ch){
+            window.__lastReadAt = Date.now();
+            saveMsgs();
+            try{ _refreshReadFlushText(); }catch(e){}
+          }
+        }
+      }catch(e){ console.error('锚点以下推平失败', e); }
+    }catch(e){
+      console.error('已读推平出错', e);
+    }
+    _release();
   }, delayMs);
 }
 
@@ -6221,27 +6259,30 @@ function _drainReplyQueue(){
   const delayMs = _calcDelayMs(r.minDelay, r.maxDelay, 1000, 10000, 1);
 
   setTimeout(function(){
+    let _released = false;
+    function _release(){
+      if(_released) return;
+      _released = true;
+      _replyQueueRunning = false;
+      try{ _drainReplyQueue(); }catch(e){ console.error('drain 重入失败', e); }
+    }
     try{
       const now = msgs.find(x => x.id === item.id);
       if(!now || now.recalled || now.sys || now.namecard){
-        _replyQueueRunning = false;
-        _drainReplyQueue();
+        _release();
         return;
       }
 
-      /* ① 回复线到点：先强制确保这条（及往上未读）落 read */
       if(now.readState === 'unread'){
         _applyReadStateUpTo(now, 'read');
       }
 
-      /* ② 摇 回复 / 已读不回 */
       const rr = getReply();
       const noReplyAllowed = (rr.noReplyOn !== false);
       const noReplyProb = (typeof rr.noReplyRate === 'number') ? rr.noReplyRate : 0.25;
       const isNoReply = noReplyAllowed && (Math.random() < noReplyProb);
 
       if(isNoReply){
-        /* 已读不回：这条落 noReply，跳过，轮到下一条 */
         const mNow = msgs.find(x => x.id === item.id);
         if(mNow){
           mNow.readState = 'noReply';
@@ -6254,25 +6295,32 @@ function _drainReplyQueue(){
             else if(typeof renderChat === 'function'){ renderChat(false); }
           }catch(e){}
         }
-        _replyQueueRunning = false;
-        _drainReplyQueue();
+        _release();
         return;
       }
 
-      /* ③ 摇中回复：进回复链，回完再轮到下一条 */
+      const _timeout = setTimeout(function(){
+        if(_released) return;
+        console.warn('[回复线] triggerReply 超时未回调，强制解锁');
+        if(window.ReplyRunner && window.ReplyRunner.release){
+          try{ window.ReplyRunner.release(getCurrentRoleId()); }catch(e){}
+        }
+        _release();
+      }, 30000);
+
       try{
         triggerReply(function(){
-          _replyQueueRunning = false;
-          _drainReplyQueue();
+          clearTimeout(_timeout);
+          _release();
         });
       }catch(e){
-        _replyQueueRunning = false;
-        _drainReplyQueue();
+        clearTimeout(_timeout);
+        console.error('triggerReply 抛错', e);
+        _release();
       }
     }catch(e){
       console.error('回复线出错', e);
-      _replyQueueRunning = false;
-      _drainReplyQueue();
+      _release();
     }
   }, delayMs);
 }
@@ -6350,6 +6398,7 @@ function _applyReadStateUpTo(anchorMsg, state){
 /* 就地刷新已读状态文字（不重建 DOM），供已读推平 / 增量渲染复用 */
 function _refreshReadFlushText(){
   const box = $('#chatList'); if(!box) return;
+  let changed = false;
   box.querySelectorAll('.msg.user').forEach(el=>{
     const id = el.dataset.id;
     const m = msgs.find(x => x.id === id);
@@ -6361,9 +6410,10 @@ function _refreshReadFlushText(){
     else if(m.readState === 'unread'){ cls = 'read-flush unread'; txt = '未读'; }
     else if(m.readState === 'read'){ cls = 'read-flush'; txt = '已读'; }
     else return;
-    if(flush.className !== cls) flush.className = cls;
-    if(flush.textContent !== txt) flush.textContent = txt;
+    if(flush.className !== cls){ flush.className = cls; changed = true; }
+    if(flush.textContent !== txt){ flush.textContent = txt; changed = true; }
   });
+  if(changed) updateScrollBottomBtn();
 }
 
  
@@ -7713,8 +7763,9 @@ var ReplyRunner = (function(){
     fn(function done(){ release(roleId); });
     return true;
   }
-  return { isRunning: isRunning, start: start };
+  return { isRunning: isRunning, start: start, release: release };
 })();
+window.ReplyRunner = ReplyRunner;
 
 /* ===== 已读状态机 =====
    1. 发出消息：80% 未读 / 20% 已读（掷骰子在 sendMessage/sendRecVoice 里做）
@@ -7757,7 +7808,7 @@ function triggerReply(onFinish){
   if(ReplyRunner.isRunning(roleId)){
     pendingReply[roleId] = true;
     if(typeof onFinish === 'function'){
-      try{ setTimeout(onFinish, 0); }catch(e){}
+      pendingReply[roleId + '__finish'] = onFinish;
     }
     return;
   }
