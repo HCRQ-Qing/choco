@@ -160,7 +160,7 @@
 		<div class="desk-app" data-open="calendar"><div class="da-ic"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18"/><path d="M8 3v4"/><path d="M16 3v4"/><circle cx="8" cy="14" r="1" fill="currentColor" stroke="none"/><circle cx="12" cy="14" r="1" fill="currentColor" stroke="none"/><circle cx="16" cy="14" r="1" fill="currentColor" stroke="none"/></svg></div><div class="da-name">日历</div></div>
 		<div class="desk-app" data-open="letter"><div class="da-ic"><svg viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="12" rx="2"/><path d="M3.5 7.8l8.5 6 8.5-6"/></svg></div><div class="da-name">写信</div></div>
 		<div class="desk-app" data-open="words"><div class="da-ic"><svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></div><div class="da-name">背单词</div></div>
-		<div class="desk-app" data-open="pat"><div class="da-ic"><svg viewBox="0 0 24 24"><path d="M8 11V5.5a1.5 1.5 0 0 1 3 0V11"/><path d="M11 10.5V4.5a1.5 1.5 0 0 1 3 0V11"/><path d="M14 11V6.5a1.5 1.5 0 0 1 3 0V13"/><path d="M17 12.5v-2a1.5 1.5 0 0 1 3 0V16a5 5 0 0 1-5 5h-2a6 6 0 0 1-6-6v-4"/></svg></div><div class="da-name">拍一拍</div></div>
+		 
 		<div class="desk-app" data-open="watch"><div class="da-ic"><svg viewBox="0 0 24 24"><rect x="2.5" y="6" width="19" height="13" rx="2.5"/><path d="M10 9.5l5 2.5-5 2.5z" fill="currentColor" stroke="none"/></svg></div><div class="da-name">一起看</div></div>
 		<div class="desk-app" data-open="dream"><div class="da-ic"><svg viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></div><div class="da-name">梦境</div></div>
 		<div class="desk-app" data-open="carddemand"><div class="da-ic"><svg viewBox="0 0 24 24"><path d="M4 4h12l4 4v12H4z"/><path d="M16 4v4h4"/><path d="M8 13h8"/><path d="M8 17h5"/></svg></div><div class="da-name">字卡需求</div></div>
@@ -587,6 +587,16 @@
 <div class="screen" id="groupCreateScreen">
   <div id="utopHostGroupCreate"></div>
   <div class="gcc-body">
+    <div class="nf-avatar-block" style="padding:18px 0">
+      <div class="nf-avatar-preview" id="gccAvatarPreview"></div>
+      <div class="nf-avatar-actions">
+        <div class="nf-hint">点击上传群头像或使用默认</div>
+        <div class="nf-mini-btns">
+          <button type="button" class="nf-mini-btn primary" id="gccAvatarUploadBtn">上传</button>
+          <button type="button" class="nf-mini-btn" id="gccAvatarClearBtn">默认</button>
+        </div>
+      </div>
+    </div>
     <div class="nf-form-row">
       <label>群名</label>
       <input type="text" id="gccName" placeholder="给这个群起个名字" maxlength="20">
@@ -1608,6 +1618,8 @@
 	  </div>
 	</div>
 	<div style="font-size:11.5px;color:var(--th-text-mute);padding:10px 0">分栏模式会在左侧显示角色快捷栏</div>
+
+ 
   </div>
 </div>
 
@@ -1648,6 +1660,27 @@
       <div class="op-row"><span class="op-lbl">透明度</span><input type="range" class="op-range" id="topbarBgOpacity" min="0" max="100" value="100"><span class="op-val" id="topbarBgOpacityVal">100%</span></div>
       <div class="op-row"><span class="op-lbl">虚化</span><input type="range" class="op-range" id="topbarBgBlur" min="0" max="20" value="0"><span class="op-val" id="topbarBgBlurVal">0px</span></div>
       <div class="up-desc" style="margin-top:6px">不传图片时，顶部栏默认透明，直接透出下面的聊天背景；「恢复默认」也是这个效果。</div>
+    </div>
+    
+    <!-- ★ 挪过来的输入栏透明度 -->
+    <div class="up-section">
+      <div class="up-title">聊天底部输入栏透明度</div>
+      <div class="up-desc">调整底部输入框那一条底色的透明度，透出聊天背景图。</div>
+      <div class="op-row">
+        <span class="op-lbl">透明</span>
+        <input type="range" class="op-range" id="chatBarOpacity" min="0" max="100" value="100">
+        <span class="op-val" id="chatBarOpacityVal">100%</span>
+      </div>
+      
+      <div class="preview-box" id="chatBarPreview" style="margin-top:12px;height:100px;border-radius:12px;background:#f8f8f8;">
+        <div class="preview-bg" id="chatBarPreviewBg" style="position:absolute;inset:0;background-size:cover;background-position:center;transition:background .2s;"></div>
+        <div class="preview-bar" id="chatBarPreviewBar" style="height:40px;padding:0 12px;position:absolute;bottom:0;left:0;right:0;display:flex;align-items:center;gap:8px;border-top:0.6px solid rgba(0,0,0,.06);transition:background .18s;">
+          <div class="pv-icon" style="width:20px;height:20px;border-radius:50%;background:rgba(0,0,0,.08);flex:none;"></div>
+          <div class="pv-icon" style="width:20px;height:20px;border-radius:50%;background:rgba(0,0,0,.08);flex:none;"></div>
+          <div class="pv-input" style="flex:1;height:24px;border-radius:12px;background:rgba(0,0,0,.04);border:0.6px solid rgba(0,0,0,.08);"></div>
+          <div class="pv-send" style="width:28px;height:24px;border-radius:12px;background:#1a1a1a;flex:none;"></div>
+        </div>
+      </div>
     </div>
   </div>
 </div>
