@@ -220,6 +220,32 @@
 .uni-mask .cancel:active{background:#fafafa}
 .uni-mask .ok{background:#1a1a1a;color:#fff;font-weight:400}
 .uni-mask .ok:active{opacity:.85}
+/* ===== 抽屉背景（#drawerContent / #drawerFunc 共用） ===== */
+.drawer.has-drawer-bg{position:relative;background:transparent}
+.drawer.has-drawer-bg::before{
+  content:"";
+  position:absolute;inset:0;
+  background-image:var(--drawer-bg-img, none);
+  background-size:cover;
+  background-position:center;
+  background-repeat:no-repeat;
+  opacity:var(--drawer-bg-opacity, 1);
+  filter:blur(var(--drawer-bg-blur, 0px));
+  pointer-events:none;
+  z-index:0;
+  border-radius:inherit;
+}
+.drawer.has-drawer-bg::after{
+  content:"";
+  position:absolute;inset:0;
+  background:#ffffff;
+  opacity:calc(1 - var(--drawer-bg-opacity, 1));
+  pointer-events:none;
+  z-index:0;
+  border-radius:inherit;
+}
+.drawer.has-drawer-bg > *{position:relative;z-index:1}
+
 /* ===== 抽屉 · 方案 B 浅灰底无边框 ===== */
 .func-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:22px 10px;padding:10px 0}
 .func-item{
