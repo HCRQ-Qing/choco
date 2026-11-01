@@ -15,7 +15,7 @@
    所以每个事件进来都先从 IndexedDB 读回排期再重新 arm 一次。
    ============================================================ */
 
-const CACHE_NAME = 'choco-v4';          /* ★ 改了 css/js 就把它 +1，用户下次刷新即更新 */
+const CACHE_NAME = 'choco-v5';          /* ★ 版本号 +1 强制全量清理旧缓存 */
 const DB_NAME = 'mj_big_files';
 const STORE = 'files';
 const SCHED_KEY = 'sw_ka_schedule_v1';
