@@ -25186,6 +25186,11 @@ on('#editAvFile','change',function(){
       var pAv2 = document.getElementById('profileAvatar');
       if(pAv2) pAv2.innerHTML = avatarHTML(freshDataCip);
 
+      /* ★ 新增：如果聊天信息面板正开着，同步刷新面板里的头像 */
+      if(document.getElementById('chatInfoPanel').classList.contains('show')){
+        if(typeof openChatInfo === 'function') openChatInfo();
+      }
+
       try { msgs = loadMsgs(); } catch(err){}
       try { refreshChatRole(); } catch(err){}
       
