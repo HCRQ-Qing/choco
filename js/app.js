@@ -109,29 +109,27 @@ function applyBeautyCfg(){
   // 一劳永逸：全站所有头像统一由 CSS 变量控制
   document.documentElement.style.setProperty('--avatar-radius', radius);
 
-  // ★ 只有形状真的变化时，才遍历 DOM 清 inline style / 设 mm-av-radius
-  //   否则每次渲染消息都会跑一遍 querySelectorAll，聊天记录长了会明显变慢
-  if(_lastAvatarShape !== shape){
-    _lastAvatarShape = shape;
-    document.querySelectorAll('.msg-av, .msg-av-inner, .f-av, .chat-avatar, #meAvatar, #profileAvatar, .cip-av, .nf-av, .mm-av, .mp-av, .nc-av, .bl-av, .pick-av, .pav, .ef-av, .gcc-av, .rel-av, .rel-detail-av, .gchd-mav, .bl-edit-av').forEach(el=>{
-      /* ★ 核心修复：彻底干掉旧代码里强加的边框、底色和圆角，全部交给内部统一处理 */
-      el.style.borderRadius = '';
-      el.style.background = 'transparent';
-      el.style.overflow = 'visible';
-      el.style.border = 'none';
-      const img = el.querySelector('img');
-      if(img){ 
-        img.style.borderRadius = '';
-        img.style.width = '100%';
-        img.style.height = '100%';
-      }
-    });
-    const mmRadius = (shape === 'circle') ? '50%' : '12%';
-    document.documentElement.style.setProperty('--mm-av-radius', mmRadius);
-    document.querySelectorAll('#momentsScreen .mm-av').forEach(el=>{
-      el.style.borderRadius = mmRadius;
-    });
-  }
+  // ★ 每次应用美化都清一次全站头像的 inline 残留
+  //   这样任何地方写过的 border-radius 都会被清掉，--avatar-radius 变量一改立刻生效
+  _lastAvatarShape = shape;
+  document.querySelectorAll('.msg-av, .msg-av-inner, .f-av, .chat-avatar, #meAvatar, #profileAvatar, .cip-av, .nf-av, .mm-av, .mp-av, .nc-av, .bl-av, .pick-av, .pav, .ef-av, .gcc-av, .rel-av, .rel-detail-av, .gchd-mav, .bl-edit-av, .gch-mav, .me-avatar').forEach(el=>{
+    el.style.borderRadius = '';
+    el.style.background = 'transparent';
+    el.style.overflow = 'hidden';
+    el.style.border = 'none';
+    const img = el.querySelector('img');
+    if(img){
+      img.style.borderRadius = '';
+      img.style.width = '100%';
+      img.style.height = '100%';
+    }
+  });
+  // 动态页的 mm-av 单独设（它的半径跟别的不一样，用 --mm-av-radius）
+  const mmRadius = (shape === 'circle') ? '50%' : '12%';
+  document.documentElement.style.setProperty('--mm-av-radius', mmRadius);
+  document.querySelectorAll('#momentsScreen .mm-av').forEach(el=>{
+    el.style.borderRadius = mmRadius;
+  });
 
   // 布局
   const pageChat = document.getElementById('page-chat');
@@ -2163,6 +2161,19 @@ setInterval(function(){
     }
   }catch(e){}
 }, 60 * 1000);
+
+/* 视频卡片平台样式的全局兜底函数 */
+if(typeof window.platformClass !== 'function'){
+  window.platformClass = function(platform){
+    var p = String(platform || '').toLowerCase();
+    if(p === 'douyin') return 'douyin';
+    if(p === 'xhs' || p === 'xiaohongshu') return 'xhs';
+    if(p === 'kuaishou') return 'kuaishou';
+    if(p === 'youtube') return 'youtube';
+    return '';
+  };
+}
+var platformClass = window.platformClass;
 function avatarHTML(a){ 
   /* ★ 统一头像生成入口：全站所有头像都走这里
      圆角不再写死成具体值（以前切换方/圆之后，顶部栏这类不重渲染的地方会一直是旧形状），
@@ -2532,7 +2543,42 @@ function renderChatFull(forceBottom){
 	  return `<div class="msg ${dirCls}" data-id="${m.id}">${av}<div class="msg-body"><div class="time-sep">${formatMsgTime(m.time)}</div><div class="${bubbleCls}" data-side="${sideAttr}">${innerHTML}</div></div></div>`;
 	}
 
- 	/* ★ 选择结果卡片 · 直接走气泡样式，跟随 data-bubble */
+   /* ★ 红包卡片 */
+  if(m.redPacket) {
+    const rp = m.redPacket;
+    const dirCls = isUser ? 'user' : 'char';
+    let coverStyle = 'background: linear-gradient(135deg, #f5a623, #d0021b);';
+    if(!isUser) {
+      const role = getRoleById(m.roleId || getCurrentRoleId());
+      if(role && role.rpCover) {
+        coverStyle = `background: url(${role.rpCover}) center/cover;`;
+      }
+    } else {
+      coverStyle = 'background: linear-gradient(135deg, #f5a623, #d0021b);'; 
+    }
+    const bubbleCls = isUser ? 'message-sent message-bubble-user' : 'message-received message-bubble-char';
+    return `<div class="msg ${dirCls}" data-id="${m.id}">
+      ${av}
+      <div class="msg-body">
+        ${timeSep}
+        <div class="rp-bubble ${bubbleCls}" data-rpid="${m.id}" style="width:220px;border-radius:10px;overflow:hidden;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.1)">
+          <div class="rp-cover" style="${coverStyle} height:130px;padding:20px 16px;display:flex;flex-direction:column;justify-content:space-between;">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <div style="width:32px;height:32px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;">🧧</div>
+              <div style="font-size:13px;color:#fff;font-weight:500;text-shadow:0 1px 2px rgba(0,0,0,0.3);">${esc(rp.note)}</div>
+            </div>
+            <div style="font-size:10.5px;color:rgba(255,255,255,0.8);">${rp.opened ? '已领取' : '点击拆开'}</div>
+          </div>
+          <div style="background:#fff;padding:8px 16px;font-size:10px;color:#999;display:flex;justify-content:space-between;">
+            <span>${isUser ? '你发出的红包' : '收到的红包'}</span>
+            <span>choco红包</span>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  }
+
+	/* ★ 选择结果卡片 · 直接走气泡样式，跟随 data-bubble */
 	if(m.choiceCard){
 	  const cc = m.choiceCard;
 	  const dirCls = isUser ? 'user' : 'char';
@@ -2612,14 +2658,15 @@ function renderChatFull(forceBottom){
 	if(m.videoCard && m.videoCard.url){
 	  const vc = m.videoCard;
 	  const dirCls = isUser ? 'user' : 'char';
+	  const _pc = (typeof platformClass === 'function') ? platformClass(vc.platform) : '';
 	  return `<div class="msg ${dirCls}" data-id="${m.id}">
 		${av}
 		<div class="msg-body" style="max-width:100%">
 		  ${timeSep}
-		  <div class="bubble wx-card-bubble">
+		  <div class="bubble wx-card-bubble message-sent">
 			<div class="video-card" data-vcurl="${esc(vc.url)}">
 			  <div class="vc-head">
-				<span class="vc-platform ${platformClass(vc.platform)}">${esc(vc.platformIcon||'🔗')} ${esc(vc.platformName||'链接')}</span>
+				<span class="vc-platform ${_pc}">${esc(vc.platformIcon||'🔗')} ${esc(vc.platformName||'链接')}</span>
 				<span>视频分享</span>
 			  </div>
 			  <div class="vc-title">${esc(vc.title||'')}</div>
@@ -2848,13 +2895,23 @@ function renderChatFull(forceBottom){
 	) : '';
 
 	const msgHTML = `<div class="msg ${isUser?'user':'char'}" data-id="${m.id}">${av}<div class="msg-body">${timeSep}${activeMark}${quote}${body}${readFlush}${reactHTML}</div></div>`;
-	// 给气泡本身补上通用别名：message-sent / message-received
-	// （放在这里是因为 bubble 是动态拼进去的，用字符串替换最稳）
-	if(isUser){
-	  return msgHTML.replace('class="bubble', 'class="bubble message-sent message-bubble-user" data-side="user"');
-	} else {
-	  return msgHTML.replace('class="bubble', 'class="bubble message-received message-bubble-char" data-side="char"');
+	const _side = isUser ? 'user' : 'char';
+	const _sideClasses = isUser
+	  ? 'message-sent msg-out message-bubble-user'
+	  : 'message-received msg-in message-bubble-char';
+	function _withSide(html, sideClasses, side){
+	  return html.replace(/<([a-zA-Z][\w-]*)([^>]*?)\sclass="([^"]*)"/, function(whole, tag, pre, cls){
+	    if(cls.indexOf('message-sent') >= 0 || cls.indexOf('message-received') >= 0){
+	      if(cls.indexOf('data-side') >= 0) return whole;
+	      return '<' + tag + pre + ' class="' + cls + '" data-side="' + side + '"';
+	    }
+	    return '<' + tag + pre + ' class="' + cls + ' ' + sideClasses + '" data-side="' + side + '"';
+	  });
 	}
+	const _msgBodyInner = `${timeSep}${activeMark}${quote}${body}${readFlush}${reactHTML}`;
+	const _bodyWrapped = `<div class="msg-body">${_msgBodyInner}</div>`;
+	const _bodyWithSide = _withSide(_bodyWrapped, _sideClasses, _side);
+	return `<div class="msg ${isUser?'user':'char'}" data-id="${m.id}">${av}${_bodyWithSide}</div>`;
   }).join('');
   /* 每次重建列表时，在末尾追加「输入中」尾巴。
      用函数开头记下的 _wasTypingShown 恢复显示状态，
@@ -3176,6 +3233,113 @@ function refreshMsgReactions(msgEl){
   }).join('');
   body.appendChild(box);
 }
+/* ============================================================
+   ★ 红包扩展逻辑：入口、点开、美化 UI
+   ============================================================ */
+function renderRpCoverUI() {
+  var box = document.getElementById('rpCoverPanel');
+  if(!box) {
+    box = document.createElement('div');
+    box.id = 'rpCoverPanel';
+    box.className = 'bp-row';
+    box.innerHTML = '<span class="num">06</span><div class="r-name">红包封面</div><span class="r-arr">›</span>';
+    var bpBody = document.querySelector('#beautyPanel .bp-body');
+    if(bpBody) bpBody.appendChild(box);
+    
+    var sub = document.createElement('div');
+    sub.className = 'sub-panel';
+    sub.id = 'spRpCover';
+    sub.innerHTML = `
+      <div class="bp-head">
+        <button class="bp-back" data-close type="button">‹</button>
+        <div class="bp-title">红 包 封 面</div>
+        <div class="bp-head-right"></div>
+      </div>
+      <div class="sp-body" style="padding:20px">
+        <div style="text-align:center;font-size:11.5px;color:#999;margin-bottom:20px;">当前角色专属封面（通用）</div>
+        <div id="rpCoverPreview" style="width:120px;height:160px;margin:0 auto 20px;background:#f5f5f5;border-radius:12px;background-size:cover;background-position:center;display:flex;align-items:center;justify-content:center;color:#bbb;font-size:12px;">默认封面</div>
+        <div style="display:flex;gap:10px;justify-content:center;">
+          <button class="up-btn primary" id="rpCoverEntry" type="button">上传封面</button>
+          <button class="up-btn ghost" id="rpCoverReset" type="button">恢复默认</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(sub);
+  }
+  var curRole = getRole();
+  var prev = document.getElementById('rpCoverPreview');
+  if(prev) {
+    if(curRole.rpCover) {
+      prev.style.backgroundImage = 'url(' + curRole.rpCover + ')';
+      prev.textContent = '';
+    } else {
+      prev.style.backgroundImage = '';
+      prev.textContent = '默认封面';
+    }
+  }
+}
+document.addEventListener('click', function(e){
+  if(e.target.closest('#rpCoverPanel')) {
+    e.preventDefault(); e.stopPropagation();
+    renderRpCoverUI();
+    document.getElementById('spRpCover').classList.add('show');
+  }
+}, true);
+
+/* 加号面板注入 */
+(function injectRpEntry(){
+  var grid = document.querySelector('#drawerFunc .func-grid');
+  if(grid && !document.querySelector('[data-func="rp"]')) {
+    var el = document.createElement('div');
+    el.className = 'func-item';
+    el.dataset.func = 'rp';
+    el.innerHTML = '<div class="fi-box"><svg viewBox="0 0 24 24"><rect x="4" y="6" width="16" height="14" rx="2"/><path d="M12 2v4M9 13h6M12 10v6"/></svg></div><span class="fi-label">红包</span>';
+    el.onclick = function() {
+      closeAllThings('drawer');
+      setTimeout(function(){
+        var rpInput = document.getElementById('rpAmount');
+        var rpNote = document.getElementById('rpNote');
+        if(rpInput) rpInput.value = '';
+        if(rpNote) rpNote.value = '';
+        document.getElementById('mSendRedPacket').classList.add('show');
+      }, 200);
+    };
+    grid.insertBefore(el, grid.querySelector('[data-func="voicecall"]') || null);
+  }
+})();
+
+/* 聊天列表点击红包领取 */
+document.addEventListener('click', function(e){
+  var rpBubble = e.target.closest('.rp-bubble');
+  if(!rpBubble) return;
+  e.preventDefault(); e.stopPropagation();
+  
+  var msgId = rpBubble.dataset.rpid;
+  var m = msgs.find(function(x){ return x.id === msgId; });
+  if(!m || !m.redPacket) return;
+  
+  if(m.role === 'user') {
+    toast('不能领取自己发的红包哦');
+    return;
+  }
+  if(m.redPacket.opened) {
+    toast('红包已被领完');
+    return;
+  }
+  
+  var amt = m.redPacket.amount.toFixed(2);
+  var statusEl = document.getElementById('rpOpenStatus');
+  var amtEl = document.getElementById('rpOpenAmount');
+  if(statusEl) statusEl.textContent = m.redPacket.note || '恭喜发财，大吉大利';
+  if(amtEl) amtEl.textContent = amt;
+  
+  m.redPacket.opened = true;
+  saveMsgs();
+  renderChat();
+  
+  document.getElementById('mOpenRedPacket').classList.add('show');
+}, true);
+
 /* 双击气泡 → 弹选择条（事件委托，聊天列表里任何气泡都管用） */
 (function bindReactionDblClick(){
   if(window.__reactionDblBound) return;
@@ -7374,6 +7538,46 @@ function scheduleActiveSend(){
   }, 60 * 1000);
 }
 
+/* 角色主动发红包：每小时 5% 概率，摇中后随机散落发 1~4 次 */
+let autoRpStarted = false;
+function scheduleAutoRedPacket(){
+  if(autoRpStarted) return;
+  autoRpStarted = true;
+  kaSchedule('auto-redpacket', function(){
+    const ids = getAllRoleIds();
+    ids.forEach(function(rid){
+      const role = getRoleById(rid);
+      if(!role || role.hidden) return;
+      if(isDndActive(rid)) return;
+      
+      // 每小时 5% 概率触发
+      if(Math.random() >= 0.05) return; 
+      
+      const count = 1 + Math.floor(Math.random() * 4); // 摇几条：1~4 次
+      const oneHourMs = 60 * 60 * 1000;
+      const segmentMs = oneHourMs / count; // 把一小时分成 N 段，避免挤在一起
+      
+      for(let i=0; i<count; i++){
+        const baseDelay = i * segmentMs;
+        const jitter = Math.random() * segmentMs; // 在当前段内随机散开
+        const finalDelay = baseDelay + jitter; 
+        
+        setTimeout(function(){
+          const amt = parseFloat((Math.random() * 20 + 1).toFixed(2)); // 1~20元
+          const note = ['恭喜发财', '大吉大利', '请你喝奶茶', '拿去花', '买点好吃的'][Math.floor(Math.random()*5)];
+          const rpMsg = {
+            id: uid(),
+            role: 'char',
+            time: Date.now(),
+            redPacket: { amount: amt, note: note, opened: false }
+          };
+          appendMsgToRole(rid, rpMsg);
+        }, finalDelay);
+      }
+    });
+  }, 60 * 60 * 1000);
+}
+
 /* ============================================================
    角色主动占卜
    - 每 30 分钟 tick 一次
@@ -10141,11 +10345,30 @@ const RANKS = [
   {num:'♕',name:'王后',en:'QUEEN'},{num:'♔',name:'国王',en:'KING'}
 ];
 const FULL_DECK = [...MAJOR.map(c=>({type:'major',num:c.num,name:c.name,en:c.en})), ...Object.keys(SUITS).flatMap(suit=>RANKS.map(r=>({type:'minor',suit,theme:SUITS[suit].theme,num:r.num,name:SUITS[suit].name+r.name,en:r.en,suitEn:SUITS[suit].en})))];
+let __tarotImgCache = lsGet('mj_tarot_imgs_v1', null) || {};
+
 function tarotHTML(card, reversed){
+  const key = card.type === 'major' ? ('m_' + card.num) : (card.suit + '_' + card.num);
+  const customImg = __tarotImgCache[key];
+  
+  if(customImg){
+    return `<div class="tarot ${reversed?'reversed':''}" style="background:none;border:none;overflow:hidden;border-radius:6px;box-shadow:0 2px 8px rgba(0,0,0,0.15);">
+      <img src="${customImg}" style="width:100%;height:100%;object-fit:cover;display:block;transform:${reversed?'rotate(180deg)':'none'};">
+      ${reversed?'<span class="t-rev-mark" style="z-index:2;">REV</span>':''}
+    </div>`;
+  }
+  
   if(card.type==='major') return `<div class="tarot ${reversed?'reversed':''}"><div class="t-rank-en">MAJOR</div><div class="t-rank-num">${card.num}</div><div class="t-name">${card.name}</div><div class="t-suit-en">${card.en}</div>${reversed?'<span class="t-rev-mark">REV</span>':''}</div>`;
   return `<div class="tarot ${card.theme} ${reversed?'reversed':''}"><div class="t-rank-en">${card.en}</div><div class="t-rank-num">${card.num}</div><div class="t-name">${card.name}</div><div class="t-suit-en">${card.en} of ${card.suitEn}</div>${reversed?'<span class="t-rev-mark">REV</span>':''}</div>`;
 }
+
 function tarotBackHTML(){
+  const customBack = __tarotImgCache['back'];
+  if(customBack){
+    return `<div class="tarot back" style="background:none;border:none;overflow:hidden;border-radius:6px;box-shadow:0 2px 8px rgba(0,0,0,0.15);">
+      <img src="${customBack}" style="width:100%;height:100%;object-fit:cover;display:block;">
+    </div>`;
+  }
   return `<div class="tarot back"><div class="pattern-inner"></div><div class="frame-dash"></div><div class="back-center">✦</div></div>`;
 }
 const DIVINE_RECORDS_KEY = 'mj_divine_records_v2';
@@ -12499,6 +12722,54 @@ function openBeauty(mode){
   document.querySelectorAll('#beautyPanel .bp-row[data-panel]').forEach(el=>el.style.display='');
   renderBeautyPanel();
 
+  // 初始化塔罗图片上传面板
+  if(!document.getElementById('spTarotImg')) {
+    const sub = document.createElement('div');
+    sub.className = 'sub-panel';
+    sub.id = 'spTarotImg';
+    sub.innerHTML = `
+      <div class="bp-head">
+        <button class="bp-back" data-close type="button">‹</button>
+        <div class="bp-title">塔 罗 图 片</div>
+        <div class="bp-head-right"></div>
+      </div>
+      <div class="sp-body" style="padding:16px">
+        <div style="font-size:11.5px;color:#999;margin-bottom:12px;text-align:center;">点击下方卡牌上传对应的图片<br>牌背为背面统一图</div>
+        <div style="display:flex;gap:10px;margin-bottom:16px;justify-content:center;">
+           <button class="up-btn primary" id="tarotUploadBack" type="button">上传牌背</button>
+           <button class="up-btn ghost" id="tarotResetAll" type="button">全部清空</button>
+        </div>
+        <div id="tarotImgGrid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;"></div>
+      </div>
+    `;
+    document.body.appendChild(sub);
+
+    document.addEventListener('click', function(e){
+      if(e.target.closest('#tarotImgResetBtn')) {
+        e.preventDefault(); e.stopPropagation();
+        __tarotImgCache = {};
+        lsSet('mj_tarot_imgs_v1', {});
+        renderTarotGrid();
+        toast('已清空所有塔罗图片');
+      }
+    });
+  }
+
+  // 找到美化面板里的插入位置（在布局 06 后面加一项塔罗）
+  let tarotRow = document.querySelector('#beautyPanel .bp-row[data-panel="tarot"]');
+  if(!tarotRow) {
+    tarotRow = document.createElement('div');
+    tarotRow.className = 'bp-row';
+    tarotRow.dataset.panel = 'tarot';
+    tarotRow.innerHTML = '<span class="num">07</span><div class="r-name">塔罗图片</div><span class="r-arr">›</span>';
+    document.querySelector('#beautyPanel .bp-body').appendChild(tarotRow);
+    
+    tarotRow.addEventListener('click', function(){
+      document.getElementById('spTarotImg').classList.add('show');
+      renderTarotGrid();
+    });
+  }
+
   /* ============================================================
      ★ 关键修复：强制重新走一次进入动画
      问题根因：抽屉刚关（.drawer 的 transition 是 .32s），
@@ -13253,6 +13524,103 @@ $$('#spLayout .layout-opt').forEach(btn=>{
 	toast('已切换：' + name);
   });
 });
+
+/* ★ 输入栏透明度 + 预览逻辑 */
+if(typeof beautyCfg.chatBarAlpha !== 'number') beautyCfg.chatBarAlpha = 100;
+
+let _barPreviewCssUrl = '';
+function updateChatBarStyle() {
+  const alpha = beautyCfg.chatBarAlpha;
+  const bgRgba = 'rgba(255,255,255,' + (alpha / 100) + ')';
+  
+  // 1. 把外层整个胶囊的底色调成可变透明
+  const dBar = document.querySelector('#page-chat .d-bar');
+  if(dBar) {
+    dBar.style.setProperty('background', bgRgba, 'important');
+    dBar.style.setProperty('box-shadow', alpha < 50 ? 'none' : '0 1px 5px rgba(0,0,0,.07)', 'important');
+  }
+  
+  // 2. 把里面的 textarea 本身强制清空白底
+  const ta = document.querySelector('#page-chat .d-bar textarea');
+  if(ta) {
+    ta.style.setProperty('background', 'transparent', 'important');
+    ta.style.setProperty('background-color', 'transparent', 'important');
+  }
+
+  // 2. 调整预览区
+  const input = document.getElementById('chatBarOpacity');
+  const val = document.getElementById('chatBarOpacityVal');
+  const pvBar = document.getElementById('chatBarPreviewBar');
+  const pvBg = document.getElementById('chatBarPreviewBg');
+
+  if(input) input.value = alpha;
+  if(val) val.textContent = alpha + '%';
+  if(pvBar) pvBar.style.background = 'rgba(255,255,255,' + (alpha / 100) + ')';
+
+  // 3. 读取并更新预览区的背景图
+  if(pvBg) {
+    const c = getChatBgCfg();
+    if(!c.key) {
+      pvBg.style.backgroundImage = '';
+      pvBg.style.backgroundColor = ''; // 默认是 CSS 里设的白色
+    } else if (_barPreviewCssUrl !== c.key) {
+      // 先转成 URL 再显示
+      _barPreviewCssUrl = c.key;
+      __idb.toURL(c.key).then(function(url){
+        if(!url) return;
+        // 防止中途又换了图，再检查一次
+        const currentC = getChatBgCfg();
+        if(currentC.key !== c.key) return;
+
+        const opacity = (100 - (typeof c.opacity === 'number' ? c.opacity : 85)) / 100;
+        pvBg.style.backgroundColor = 'rgba(255,255,255,' + opacity + ')';
+        pvBg.style.backgroundImage = 'url(' + url + ')';
+        pvBg.style.backgroundSize = 'cover';
+        pvBg.style.backgroundPosition = c.align === 'top' ? 'center top' : (c.align === 'bottom' ? 'center bottom' : 'center');
+      }).catch(function(){});
+    } else if (c.key) {
+      // 图没变，但透明度或对齐可能变了，重新算一下
+      const opacity = (100 - (typeof c.opacity === 'number' ? c.opacity : 85)) / 100;
+      pvBg.style.backgroundColor = 'rgba(255,255,255,' + opacity + ')';
+      pvBg.style.backgroundPosition = c.align === 'top' ? 'center top' : (c.align === 'bottom' ? 'center bottom' : 'center');
+    }
+  }
+}
+
+(function bindChatBarOpacity(){
+  // 初始化一次
+  updateChatBarStyle();
+
+  document.addEventListener('input', function(e){
+    if(e.target && e.target.id === 'chatBarOpacity'){
+      beautyCfg.chatBarAlpha = parseInt(e.target.value, 10);
+      saveBeautyCfg();
+      updateChatBarStyle();
+    }
+  }, true);
+
+  // 挂到 applyBeautyCfg 的后面，重绘时刷新
+  const origApplyBeautyCfg = window.applyBeautyCfg;
+  if(typeof origApplyBeautyCfg === 'function' && !window.__patchedBeautyCfgForBar) {
+    window.__patchedBeautyCfgForBar = true;
+    window.applyBeautyCfg = function(){
+      origApplyBeautyCfg.apply(this, arguments);
+      updateChatBarStyle();
+    };
+  }
+
+  // 挂到 applyChatBg 后面，背景换了的时候同步刷新预览
+  const origApplyChatBg = window.applyChatBg;
+  if(typeof origApplyChatBg === 'function' && !window.__patchedChatBgForBar) {
+    window.__patchedChatBgForBar = true;
+    window.applyChatBg = function(){
+      origApplyChatBg.apply(this, arguments);
+      // 换个 id 让它强制重新加载
+      _barPreviewCssUrl = ''; 
+      updateChatBarStyle();
+    };
+  }
+})();
 
 const cropState = { naturalW:0, naturalH:0, scale:1, baseScale:1, tx:0, ty:0, frameW:0, frameH:0, onDone:null };
 function openCrop(file, ratio, titleText, onDone){
@@ -14587,6 +14955,20 @@ function openGroupDetail(){
   if(sw) sw.checked = g.allowInvite !== false;
   const cnt = document.getElementById('gchdMemCount');
   if(cnt) cnt.textContent = (g.members || []).length;
+  
+  // ★ 渲染群头像
+  const avBox = document.getElementById('gchdAvatar');
+  if(avBox) {
+    if(g.avatarKey) {
+      avBox.innerHTML = '<img src="" data-gcavkey="' + g.avatarKey + '" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block">';
+      __idb.toURL(g.avatarKey).then(function(url){
+        if(url) avBox.querySelector('img').src = url;
+      }).catch(function(){});
+    } else {
+      avBox.innerHTML = '👥';
+    }
+  }
+
   renderGchdMems(g);
   const mask = document.getElementById('gchdMask');
   if(mask) mask.classList.add('show');
@@ -14684,6 +15066,64 @@ document.addEventListener('click', function(e){
     toast('已更新');
   });
 }, true);
+
+/* ★ 群聊详情 · 点头像换图 */
+(function bindGroupAvatarUpload(){
+  if(window.__gchAvatarBound) return;
+  window.__gchAvatarBound = true;
+
+  document.addEventListener('click', function(e){
+    const t = e.target;
+    if(!t || !t.closest) return;
+    if(!t.closest('#gchdAvatarRow')) return;
+    e.preventDefault(); e.stopPropagation();
+    
+    const g = getGroupById(window.__curGroupId);
+    if(!g) return;
+
+    if(!window.__gchdAvatarInput){
+      const inp = document.createElement('input');
+      inp.type = 'file';
+      inp.accept = 'image/*';
+      inp.style.display = 'none';
+      document.body.appendChild(inp);
+      window.__gchdAvatarInput = inp;
+      
+      inp.addEventListener('change', function(){
+        const file = inp.files && inp.files[0];
+        inp.value = '';
+        if(!file) return;
+        openCrop(file, 'square', function(dataUrl){
+          const blob = dataURLToBlob(dataUrl);
+          const key = 'gavatar_' + g.id + '_' + Date.now().toString(36);
+          __idb.set(key, blob).then(function(){
+            const oldKey = g.avatarKey;
+            g.avatarKey = key;
+            saveGroup(g);
+            if(oldKey) __idb.del(oldKey).catch(function(){});
+            
+            // 刷新详情页头像
+            const avBox = document.getElementById('gchdAvatar');
+            if(avBox) {
+              avBox.innerHTML = '<img src="" data-gcavkey="' + key + '" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block">';
+              __idb.toURL(key).then(function(url){
+                if(url) avBox.querySelector('img').src = url;
+              });
+            }
+            // 刷新群聊列表头像
+            renderGroupListPage();
+            toast('群头像已更新');
+          }).catch(function(err){
+            console.error('群头像保存失败', err);
+            toast('保存失败');
+          });
+        });
+      });
+    }
+    window.__gchdAvatarInput.value = '';
+    window.__gchdAvatarInput.click();
+  }, true);
+})();
 
 /* 同意拉好友开关 */
 document.addEventListener('change', function(e){
@@ -14945,7 +15385,7 @@ function renderGroupChat(){
         '<div class="gch-body"><div class="gch-name">' + escapeHTML(userName()) + '</div>' +
         timeSep +
         quoteHTML +
-        '<div class="gch-bubble message-sent msg-out msg-bubble" data-side="user">' + escapeHTML(m.text || '') + '</div></div>' +
+        '<div class="gch-bubble bubble message-sent msg-out message-bubble-user" data-side="user">' + escapeHTML(m.text || '') + '</div></div>' +
       '</div>';
     }
     const r = getRoleById(m.roleId) || {};
@@ -14954,7 +15394,7 @@ function renderGroupChat(){
       '<div class="gch-body"><div class="gch-name">' + escapeHTML(displayName(r) || '?') + '</div>' +
       timeSep +
       quoteHTML +
-      '<div class="gch-bubble message-received msg-in msg-bubble" data-side="char">' + escapeHTML(m.text || '') + '</div></div>' +
+      '<div class="gch-bubble bubble message-received msg-in message-bubble-char" data-side="char">' + escapeHTML(m.text || '') + '</div></div>' +
     '</div>';
   }).join('');
   /* ★ 图片消息：统一呼叫总入口 */
@@ -15435,6 +15875,7 @@ document.addEventListener('click', function(e){
     const name = (nameEl ? nameEl.value : '').trim();
     if(!name){ toast('请输入群名'); return; }
     if(!gccSelected.size){ toast('至少选一个成员'); return; }
+    
     const gid = 'g' + Date.now().toString(36) + Math.random().toString(36).slice(2,4);
     const g = {
       id: gid,
@@ -15445,10 +15886,64 @@ document.addEventListener('click', function(e){
       lastMsgAt: Date.now(),
       lastMsgText: ''
     };
-    saveGroup(g);
-    saveGroupMsgs(gid, []);
-    toast('群聊已创建');
-    openGroupList();
+    
+    // 保存头像
+    const doSaveAndOpen = function(avatarKey) {
+      if(avatarKey) g.avatarKey = avatarKey;
+      saveGroup(g);
+      saveGroupMsgs(gid, []);
+      toast('群聊已创建');
+      openGroupList();
+    };
+
+    if(window.__gccAvatarBlob) {
+      const key = 'gavatar_' + gid + '_' + Date.now().toString(36);
+      __idb.set(key, window.__gccAvatarBlob).then(function(){
+        doSaveAndOpen(key);
+        window.__gccAvatarBlob = null;
+      }).catch(function(err){
+        console.error('群头像保存失败', err);
+        doSaveAndOpen('');
+        window.__gccAvatarBlob = null;
+      });
+    } else {
+      doSaveAndOpen('');
+    }
+    return;
+  }
+  
+  // ★ 新建群聊页：上传头像按钮
+  if(t.closest('#gccAvatarUploadBtn')){
+    e.preventDefault(); e.stopPropagation();
+    if(!window.__gccAvatarInput){
+      const inp = document.createElement('input');
+      inp.type = 'file';
+      inp.accept = 'image/*';
+      inp.style.display = 'none';
+      document.body.appendChild(inp);
+      window.__gccAvatarInput = inp;
+      inp.addEventListener('change', function(){
+        const file = inp.files && inp.files[0];
+        inp.value = '';
+        if(!file) return;
+        openCrop(file, 'square', function(dataUrl){
+          window.__gccAvatarBlob = dataURLToBlob(dataUrl);
+          const box = document.getElementById('gccAvatarPreview');
+          if(box) box.innerHTML = '<img src="' + dataUrl + '">';
+        });
+      });
+    }
+    window.__gccAvatarInput.value = '';
+    window.__gccAvatarInput.click();
+    return;
+  }
+  
+  // ★ 新建群聊页：清除头像
+  if(t.closest('#gccAvatarClearBtn')){
+    e.preventDefault(); e.stopPropagation();
+    window.__gccAvatarBlob = null;
+    const box = document.getElementById('gccAvatarPreview');
+    if(box) box.innerHTML = '';
     return;
   }
 }, true);
@@ -15693,6 +16188,15 @@ function renderGroupListPage(){
       const gid = el.dataset.gid;
       if(typeof openGroupChat === 'function') openGroupChat(gid);
     };
+  });
+
+  // 异步加载群头像
+  box.querySelectorAll('img[data-gcavkey]').forEach(function(img){
+    const key = img.dataset.gcavkey;
+    if(!key) return;
+    __idb.toURL(key).then(function(url){
+      if(url) img.src = url;
+    }).catch(function(){});
   });
 }
 
@@ -16807,29 +17311,19 @@ document.addEventListener('touchend', function(e){
    ============================================================ */
 const UPDATE_LIST = [
   {
-    ver: '0.1.1',
-    date: '2026-10-31',
+    ver: '0.2.0',
+    date: '2026-11-01',
     items: [
-      '优化：修复聊天/字卡页反复写本地存储导致的卡顿，群聊只渲染最近 260 条',
-      '修复：开启后台通知/保活后，切后台收不到消息弹窗（定时任务改由保活层驱动）',
-      '修复：天气字卡只有打开日历才刷新缓存，现在后台每 30 分钟自动刷新',
-      '修复：心情字卡右上角设置按钮点不开',
-      '新增：群聊可以把普通字卡和群聊字卡混合发送',
-      '调整：更新入口从设置移到「我的 → 07 更新」',
-      '修复：群聊回复用错角色、@ 回复失效等多个群聊 bug',
-      '新增：选择功能支持「字母 / 数字」抽选，可设定角色最少最多选几个',
-      '新增：群聊飞行棋',
-      '新增：选择多选支持上传图片作为选项，文字可选、图片可选'
-    ]
-  },
-  {
-    ver: '0.1.0',
-    date: '2026-10-17',
-    items: [
-      '新增：字卡页菜单重新排版，按「编辑 / 特殊 / 数据」分组，更清爽',
-      '修复：已读逻辑不再出现「上面未读、下面已读」的夹层',
-      '优化：单字字卡不再合并成一坨，每条独立显示、数量可控',
-      '修复：占卜问题文字不再斜体'
+      '新增：红包功能，角色每小时概率发 1~4 次，支持自定义红包封面',
+      '新增：聊天统计，支持统计常用字卡 Top10、Emoji Top10 和活跃时间',
+      '新增：第三方字卡导入，支持自动识别各种格式，角色可用',
+      '修复：气泡 CSS 样式（敌我区分），所有卡片样式统一',
+      '修复：全站头像方圆切换 bug，顶部栏和聊天列表实时同步',
+      '修复：内置角色建一个出两个、头像传不上的问题',
+      '修复：版本更新弹窗「稍后」永远不弹的问题',
+      '优化：字卡需求界面改成黑白极简风，修复上限被重置的 bug',
+      '优化：拍一拍仅在抽屉出现，移除了功能页入口',
+      '优化：聊天输入框透明度支持实时预览背景图'
     ]
   }
 ];
@@ -19944,7 +20438,16 @@ function bindDeskApps(){
       else if(k==='memory'){ window.__deskMode=false; openMemoryScreen(); }
       else if(k==='groupchat'){ window.__deskMode=false; openGroupList(); }
       else if(k==='calendar'){ window.__deskMode=false; openDeskCalendar(); }
-      else if(k==='msgstat'){ if(typeof openStatsScreen === 'function') openStatsScreen(); }
+      else if(k==='msgstat'){
+        window.__deskMode = true;
+        try{
+          if(typeof openStatsScreen === 'function') openStatsScreen();
+          else toast('消息统计模块未加载');
+        }catch(e){
+          console.error(e);
+          toast('统计打开失败：' + e.message);
+        }
+      }
       else if(k==='gameres'){ if(typeof window.openGameLobby === 'function') window.openGameLobby(); }
       else if(k==='watch'){ openWatchScreen(); }
       else if(k==='dream'){ openDreamScreen(); }
@@ -19993,10 +20496,36 @@ function saveCardDemand(d, roleId){
 /* 随机摇一批「小要求」：可以同时出现多条；秒数上限 5000 */
 function _rollCardDemandItems(maxCount){
   const out = [];
-  if(Math.random() < 0.60) out.push({ kind:'noReply' });
+  let r = {};
+  try{ r = getReply(getCurrentRoleId()); }catch(e){}
+  
+  if(r && r.noReplyOn !== false){
+    if(Math.random() < 0.60) out.push({ kind:'noReply' });
+  } else {
+    if(Math.random() < 0.60) out.push({ kind:'openNoReply' });
+  }
   if(Math.random() < 0.75) out.push({ kind:'cards', n: 1 + Math.floor(Math.random() * Math.min(6, maxCount)) });
   if(Math.random() < 0.50) out.push({ kind:'slowDelay', sec: 1 + Math.floor(Math.random() * 5000) });
   if(Math.random() < 0.50) out.push({ kind:'fastDelay', sec: 1 + Math.floor(Math.random() * 5000) });
+  if(Math.random() < 0.45){
+    let puncts = ['。', '，', '？', '！', '~', '♡', '…', '——', '：'];
+    try{
+      const r = getReply(getCurrentRoleId());
+      if(r && Array.isArray(r.punctList) && r.punctList.length){
+        puncts = r.punctList.filter(p => p !== '' && p !== ' ');
+      }
+    }catch(e){}
+    const uniq = Array.from(new Set(puncts.filter(Boolean)));
+    if(uniq.length){
+      const num = 1 + Math.floor(Math.random() * Math.min(3, uniq.length));
+      const copy = uniq.slice();
+      const picked = [];
+      for(let i = 0; i < num && copy.length; i++){
+        picked.push(copy.splice(Math.floor(Math.random() * copy.length), 1)[0]);
+      }
+      out.push({ kind:'removePunct', list: picked });
+    }
+  }
   if(!out.length) out.push({ kind:'cards', n: 1 + Math.floor(Math.random() * Math.min(6, maxCount)) });
   out.forEach(function(it){
     it.id = 'cdq' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
@@ -20011,13 +20540,19 @@ function refreshCardDemand(prev, roleId){
   let maxCount = (prev && typeof prev.maxCount === 'number') ? prev.maxCount : 6;
   maxCount = Math.max(1, Math.min(6, maxCount));
 
-  /* 类型：从「角色需求」分组抽 */
+  /* 类型：从「角色需求」分组抽，支持一次抽 1~6 个 */
   let type = null;
   try{
     const demandCards = (typeof getCardsFromGroup === 'function') ? getCardsFromGroup('public', 'g-demand') : [];
     if(demandCards && demandCards.length){
-      if(Math.random() < 0.5){
-        type = demandCards[Math.floor(Math.random() * demandCards.length)];
+      if(Math.random() < 0.8){
+        const num = 1 + Math.floor(Math.random() * Math.min(6, demandCards.length));
+        const copy = demandCards.slice();
+        const picked = [];
+        for(let i = 0; i < num && copy.length; i++){
+          picked.push(copy.splice(Math.floor(Math.random() * copy.length), 1)[0]);
+        }
+        type = picked.join('、');
       }
     }
   }catch(e){}
@@ -20071,59 +20606,28 @@ function openCardDemandScreen(){
   });
 }
 
-/* 把一条随机需求写回该角色的回复设置 */
-function _applyCardDemandItem(roleId, it){
-  const r = getReply(roleId);
-  if(it.kind === 'noReply'){
-    r.noReplyOn = false;
-  } else if(it.kind === 'slowDelay'){
-    const sec = Math.max(1, Math.min(5000, it.sec || 1));
-    r.maxDelay = sec * 1000;
-    if(r.minDelay > r.maxDelay) r.minDelay = r.maxDelay;
-  } else if(it.kind === 'fastDelay'){
-    const sec = Math.max(1, Math.min(5000, it.sec || 1));
-    r.minDelay = sec * 1000;
-    if(r.maxDelay < r.minDelay) r.maxDelay = r.minDelay;
-  }
-  saveReply();
-}
-
-function _demandItemText(it){
-  if(it.kind === 'noReply') return '想让 Ta 关掉「已读不回」';
-  if(it.kind === 'cards')   return '想要 ' + it.n + ' 张字卡';
-  if(it.kind === 'slowDelay') return '想把回复最慢延迟调到 ' + it.sec + ' 秒';
-  if(it.kind === 'fastDelay') return '想把回复最快延迟调到 ' + it.sec + ' 秒';
-  return '一个小心愿';
-}
+ 
 
 function renderCardDemand(d){
   const wrap = document.getElementById('cardDemandWrap');
   if(!wrap) return;
   const rid = getCurrentRoleId();
   let roleName = '';
-  try{ const r = getRoleById(rid); roleName = r ? r.name : ''; }catch(e){}
-
-  const typeHTML = d.type
-    ? '<div class="cd-value">' + escapeHTML(d.type) + '</div>'
-    : '<div class="cd-value none">暂无类型需求</div>';
-
-  const countHTML = (d.count !== null && d.count !== undefined)
-    ? '<div class="cd-value">' + d.count + ' 张</div>'
-    : '<div class="cd-value none">无想法</div>';
-
-  const deleteHTML = (d.deleteList && d.deleteList.length)
-    ? '<div class="cd-value">' +
-        '<div class="cd-delete-list">' +
-          d.deleteList.map(function(n){ return '<span class="cd-del-chip">' + escapeHTML(n) + '</span>'; }).join('') +
-        '</div>' +
-      '</div>'
-    : '<div class="cd-value none">无</div>';
+  try{ const r = getRoleById(rid); roleName = r ? r.displayName || r.name : ''; }catch(e){}
 
   const demands = Array.isArray(d.demands) ? d.demands : [];
   const demandHTML = demands.length
     ? demands.map(function(it){
+        let txt = '';
+        if(it.kind === 'noReply') txt = '想要关掉「已读不回」';
+        else if(it.kind === 'openNoReply') txt = '想要开启「已读不回」';
+        else if(it.kind === 'cards') txt = '想要 ' + it.n + ' 张字卡';
+        else if(it.kind === 'slowDelay') txt = '想要把回复最慢延迟调到 ' + it.sec + ' 秒';
+        else if(it.kind === 'fastDelay') txt = '想要把回复最快延迟调到 ' + it.sec + ' 秒';
+        else if(it.kind === 'removePunct') txt = '想要关掉标点：' + (it.list || []).join(' ');
+        else txt = '一个小心愿';
         return '<div class="cd-demand-item' + (it.done ? ' done' : '') + '">' +
-          '<span class="cd-demand-txt">' + escapeHTML(_demandItemText(it)) + '</span>' +
+          '<span class="cd-demand-txt">' + escapeHTML(txt) + '</span>' +
           (it.done
             ? '<span class="cd-demand-done">已完成</span>'
             : '<button class="cd-demand-btn" data-demand="' + escapeHTML(it.id) + '" type="button">满足</button>') +
@@ -20131,30 +20635,41 @@ function renderCardDemand(d){
       }).join('')
     : '<div class="cd-value none">暂时没有</div>';
 
+  const typeHTML = d.type
+    ? '<div class="cd-value">' + escapeHTML(d.type) + '</div>'
+    : '<div class="cd-value none">暂无类型需求</div>';
+
+  const countNum = (d.count !== null && d.count !== undefined) ? d.count : '无想法';
+  const countHTML = '<div class="cd-value"' + (countNum === '无想法' ? ' style="color:#ccc;font-style:italic"' : '') + '>' +
+    countNum + (countNum !== '无想法' ? ' 张' : '') + '</div>' +
+    '<div class="cd-max-row"><span>上限</span>' +
+      '<input type="number" id="cdMaxCount" min="1" max="6" value="' + d.maxCount + '"><span>张</span>' +
+    '</div>';
+
+  const deleteHTML = (d.deleteList && d.deleteList.length)
+    ? '<div class="cd-value"><div class="cd-delete-list">' +
+        d.deleteList.map(function(n){ return '<span class="cd-del-chip">' + escapeHTML(n) + '</span>'; }).join('') +
+      '</div></div>'
+    : '<div class="cd-value none">无</div>';
+
   wrap.innerHTML =
-    '<div class="cd-hero">' +
-      '<div class="cd-title">字 卡 需 求</div>' +
+    '<div class="cd-hero" style="padding-top:12px">' +
       '<div class="cd-sub">' + (roleName ? escapeHTML(roleName) + ' · ' : '') + 'CARD DEMAND</div>' +
       '<div class="cd-refresh"><button class="cd-refresh-btn" id="cdRefreshNow" type="button">刷新需求</button></div>' +
     '</div>' +
     '<div class="cd-card"><div class="cd-label">现在的需求</div>' + demandHTML + '</div>' +
     '<div class="cd-card"><div class="cd-label">想要的字卡类型</div>' + typeHTML + '</div>' +
-    '<div class="cd-card"><div class="cd-label">想要的字卡数量</div>' + countHTML +
-      '<div class="cd-max-row"><span>上限</span>' +
-        '<input type="number" id="cdMaxCount" min="1" max="6" value="' + d.maxCount + '"><span>张</span>' +
-      '</div>' +
-    '</div>' +
+    '<div class="cd-card"><div class="cd-label">想要的字卡数量</div>' + countHTML + '</div>' +
     '<div class="cd-card"><div class="cd-label">想删掉的字卡</div>' + deleteHTML + '</div>' +
     '<div class="cd-toggle-row">' +
-      '<span class="cd-tlabel">想要开启拼字卡</span>' +
+      '<span class="cd-tlabel">是否想开启拼字卡</span>' +
       '<label class="cd-switch"><input type="checkbox" id="cdEnableCombine" ' + (d.enableCombine?'checked':'') + '><span class="cd-sw-slider"></span></label>' +
     '</div>' +
     '<div class="cd-toggle-row">' +
-      '<span class="cd-tlabel">想要开启标点符号查看</span>' +
+      '<span class="cd-tlabel">是否想开启标点符号</span>' +
       '<label class="cd-switch"><input type="checkbox" id="cdEnablePunct" ' + (d.enablePunct?'checked':'') + '><span class="cd-sw-slider"></span></label>' +
     '</div>';
 
-  /* 刷新需求（只重摇需求与字卡内容，不动上限） */
   const rb = document.getElementById('cdRefreshNow');
   if(rb) rb.onclick = function(){
     const nd = refreshCardDemand(d, rid);
@@ -20162,14 +20677,34 @@ function renderCardDemand(d){
     toast('已刷新需求');
   };
 
-  /* 满足随机需求 */
   wrap.querySelectorAll('[data-demand]').forEach(function(btn){
     btn.onclick = function(){
       const id = btn.dataset.demand;
       const cur = getCardDemand(rid);
       const it = (cur.demands || []).find(function(x){ return x.id === id; });
       if(!it || it.done) return;
-      _applyCardDemandItem(rid, it);
+      const r = getReply(rid);
+      if(it.kind === 'noReply'){
+        r.noReplyOn = false;
+      } else if(it.kind === 'openNoReply'){
+        r.noReplyOn = true;
+      } else if(it.kind === 'slowDelay'){
+        const sec = Math.max(1, Math.min(5000, it.sec || 1));
+        r.maxDelay = sec * 1000;
+        if(r.minDelay > r.maxDelay) r.minDelay = r.maxDelay;
+      } else if(it.kind === 'fastDelay'){
+        const sec = Math.max(1, Math.min(5000, it.sec || 1));
+        r.minDelay = sec * 1000;
+        if(r.maxDelay < r.minDelay) r.maxDelay = r.minDelay;
+      } else if(it.kind === 'removePunct'){
+        if(!Array.isArray(r.disabledPunctList)) r.disabledPunctList = [];
+        (it.list || []).forEach(function(p){
+          const i = r.punctList.indexOf(p);
+          if(i >= 0) r.punctList.splice(i, 1);
+          if(r.disabledPunctList.indexOf(p) < 0) r.disabledPunctList.push(p);
+        });
+      }
+      saveReply();
       it.done = true;
       saveCardDemand(cur, rid);
       renderCardDemand(cur);
@@ -20177,7 +20712,6 @@ function renderCardDemand(d){
     };
   });
 
-  /* 上限：只改上限，不再整体重摇 */
   const mc = document.getElementById('cdMaxCount');
   if(mc) mc.onchange = function(){
     const v = Math.max(1, Math.min(6, parseInt(mc.value, 10) || 6));
@@ -20191,7 +20725,6 @@ function renderCardDemand(d){
     renderCardDemand(cur);
   };
 
-  /* 拼字卡开关 */
   const cb = document.getElementById('cdEnableCombine');
   if(cb) cb.onchange = function(){
     const cur = getCardDemand(rid);
@@ -20199,7 +20732,6 @@ function renderCardDemand(d){
     saveCardDemand(cur, rid);
   };
 
-  /* 标点开关 */
   const pb = document.getElementById('cdEnablePunct');
   if(pb) pb.onchange = function(){
     const cur = getCardDemand(rid);
@@ -22679,113 +23211,301 @@ on('#importCardFile','change',function(){
 
 /* ★ 把各种结构的 JSON 统一成标准格式：{ __type, __version, public, roles } */
 function normalizeImportData(data){
-  if(!data) return null;
+  if(!data || typeof data !== 'object') return null;
 
-  /* ① 标准格式：原样返回（兼容旧版导出文件里的 our-dreamland-cards） */
-  if((data.__type === 'choco-cards' || data.__type === 'our-dreamland-cards') && Array.isArray(data.public)){
-	return data;
+  function isCardItem(x){
+    if(typeof x === 'string' && x.trim()) return true;
+    if(x && typeof x === 'object' && typeof x.text === 'string' && x.text.trim()) return true;
+    return false;
+  }
+  function toText(x){
+    if(typeof x === 'string') return x.trim();
+    if(x && typeof x === 'object' && typeof x.text === 'string') return x.text.trim();
+    return '';
   }
 
-  /* ② 纯对象：{ "分类名": ["卡1","卡2"] } */
-  if(typeof data === 'object' && !Array.isArray(data)){
-	var keys = Object.keys(data);
-	var catList = [];
-	keys.forEach(function(k){
-	  if(Array.isArray(data[k])){
-		var items = data[k].map(function(x){
-		  if(typeof x === 'string') return x;
-		  if(x && typeof x === 'object' && typeof x.text === 'string') return x.text;
-		  return '';
-		}).filter(Boolean);
-		if(items.length) catList.push({ id: 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2,6), name: k, list: items });
-	  }
-	});
-	if(catList.length){
-	  return {
-		__type: 'choco-cards',
-		__version: 1,
-		public: [{ id: 'g-import-' + Date.now().toString(36), name: '导入', icon: 'doc', sub: '从 JSON 导入', cats: catList }],
-		roles: {}
-	  };
-	}
-	return null;
+  if(data.__type === 'choco-cards' || data.__type === 'our-dreamland-cards'){
+    if(!Array.isArray(data.public)) return null;
+    const allGroups = data.public.concat(
+      Object.keys(data.roles || {}).reduce(function(acc, rid){
+        return acc.concat(Array.isArray(data.roles[rid]) ? data.roles[rid] : []);
+      }, [])
+    );
+    const hasStructure = allGroups.some(function(g){
+      return g && Array.isArray(g.cats) && g.cats.length > 0;
+    });
+    if(!hasStructure) return null;
+    return data;
   }
 
-  /* ③ 纯数组：["卡1","卡2"] 或 [{text:"卡1"}] */
+  const META_KEYS = {
+    exportdate:1, date:1, time:1, timestamp:1, exportedat:1, createdat:1, updatedat:1,
+    version:1, __version:1, app:1, appname:1, site:1, sitename:1, author:1, by:1,
+    modules:1, module:1, type:1, __type:1, schema:1, format:1,
+    name:1, title:1, description:1, desc:1, note:1, remark:1
+  };
+  const ROLE_CONTAINER_KEYS = { roles:1, characters:1, rolelist:1, role_list:1, charlist:1, char_list:1 };
+  function isMetaKey(k){
+    if(!k) return false;
+    const s = String(k).toLowerCase();
+    if(s.charAt(0) === '_') return true;
+    return !!META_KEYS[s];
+  }
+  function isRoleContainerKey(k){
+    if(!k) return false;
+    return !!ROLE_CONTAINER_KEYS[String(k).toLowerCase()];
+  }
+  function isCardGroupObj(x){
+    if(!x || typeof x !== 'object' || Array.isArray(x)) return false;
+    if(typeof x.name !== 'string') return false;
+    return Array.isArray(x.cards) || Array.isArray(x.list) || Array.isArray(x.items);
+  }
+  function getGroupList(x){
+    if(Array.isArray(x.cards)) return x.cards;
+    if(Array.isArray(x.list)) return x.list;
+    if(Array.isArray(x.items)) return x.items;
+    return [];
+  }
+
+  const cats = [];
+  let cid = 0;
+  function newCatId(){ return 'c' + Date.now().toString(36) + '_' + (cid++) + '_' + Math.random().toString(36).slice(2, 6); }
+  function pushCat(name, list){
+    if(!Array.isArray(list)) return;
+    const items = list.map(function(x){
+      if(isCardItem(x)) return { text: toText(x), t: Date.now() };
+      return null;
+    }).filter(Boolean);
+    if(!items.length) return;
+    cats.push({ id: newCatId(), name: String(name || '未命名'), list: items });
+  }
+  function pushCatAllowEmpty(name, list){
+    if(!Array.isArray(list)) return;
+    const items = list.map(function(x){
+      if(isCardItem(x)) return { text: toText(x), t: Date.now() };
+      return null;
+    }).filter(Boolean);
+    cats.push({ id: newCatId(), name: String(name || '未命名'), list: items });
+  }
+  function isTuple(x){
+    return Array.isArray(x) && x.length === 2 && typeof x[0] === 'string' && Array.isArray(x[1]);
+  }
+  function walkTuple(name, val){
+    if(!Array.isArray(val)) return;
+    if(isTuple(val)){
+      if(val[1].length && val[1].every(isTuple)){
+        val[1].forEach(function(sub){ pushCat(sub[0], sub[1]); });
+        return;
+      }
+      pushCat(val[0], val[1]);
+      return;
+    }
+    if(val.length && val.every(isTuple)){
+      val.forEach(function(sub){ pushCat(sub[0], sub[1]); });
+      return;
+    }
+    if(val.length && val.every(function(x){ return Array.isArray(x); })){
+      val.forEach(function(sub, i){ walkTuple(name + '_' + i, sub); });
+      return;
+    }
+    pushCat(name, val);
+  }
+
   if(Array.isArray(data)){
-	var items2 = data.map(function(x){
-	  if(typeof x === 'string') return x;
-	  if(x && typeof x === 'object' && typeof x.text === 'string') return x.text;
-	  return '';
-	}).filter(Boolean);
-	if(items2.length){
-	  return {
-		__type: 'choco-cards',
-		__version: 1,
-		public: [{ id: 'g-import-' + Date.now().toString(36), name: '导入', icon: 'doc', sub: '从 JSON 导入', cats: [
-		  { id: 'c' + Date.now().toString(36), name: '导入', list: items2 }
-		]}],
-		roles: {}
-	  };
-	}
-	return null;
+    if(data.length && isTuple(data[0])){
+      data.forEach(function(sub){ if(isTuple(sub)) pushCat(sub[0], sub[1]); });
+    } else if(data.length && data.every(isCardGroupObj)){
+      data.forEach(function(g){ pushCat(g.name, getGroupList(g)); });
+    } else {
+      pushCat('导入', data);
+    }
+    if(!cats.length) return null;
+    return {
+      __type: 'choco-cards',
+      __version: 1,
+      public: [{ id: 'g-import-' + Date.now().toString(36), name: '导入', icon: 'doc', sub: '从 JSON 导入', cats: cats }],
+      roles: {}
+    };
   }
 
-  return null;
+  function handleRole(roleObj, roleName){
+    if(!roleObj || typeof roleObj !== 'object') return;
+    const prefix = roleName ? (roleName + ' · ') : '';
+    Object.keys(roleObj).forEach(function(k){
+      const v = roleObj[k];
+      if(v === null || v === undefined) return;
+      if(Array.isArray(v)){
+        if(v.length === 0) return;
+        if(v.every(isCardGroupObj)){
+          v.forEach(function(g){ pushCat(prefix + g.name, getGroupList(g)); });
+          return;
+        }
+        if(v.every(isTuple)){
+          v.forEach(function(sub){ pushCat(prefix + sub[0], sub[1]); });
+          return;
+        }
+        if(k.toLowerCase() === 'name' || isMetaKey(k)) return;
+        pushCat(prefix + k, v);
+        return;
+      }
+      if(v && typeof v === 'object'){
+        Object.keys(v).forEach(function(sub){
+          const sv = v[sub];
+          if(Array.isArray(sv)){
+            if(sv.length === 0) return;
+            if(sv.every(isCardGroupObj)){
+              sv.forEach(function(g){ pushCat(prefix + g.name, getGroupList(g)); });
+            } else {
+              pushCat(prefix + k + '_' + sub, sv);
+            }
+          }
+        });
+      }
+    });
+  }
+
+  Object.keys(data).forEach(function(k){
+    const v = data[k];
+    if(v === null || v === undefined) return;
+    if(isMetaKey(k)) return;
+    if(isRoleContainerKey(k) && v && typeof v === 'object' && !Array.isArray(v)){
+      Object.keys(v).forEach(function(rid){
+        const roleObj = v[rid];
+        if(!roleObj || typeof roleObj !== 'object') return;
+        const rName = (typeof roleObj.name === 'string' && roleObj.name.trim()) ? roleObj.name.trim() : rid;
+        handleRole(roleObj, rName);
+      });
+      return;
+    }
+    if(Array.isArray(v)){
+      if(v.length === 0){ pushCatAllowEmpty(k, []); return; }
+      if(v.every(isCardGroupObj)){ v.forEach(function(g){ pushCat(g.name, getGroupList(g)); }); return; }
+      if(isTuple(v)){ walkTuple(k, v); return; }
+      if(v.every(isTuple)){ v.forEach(function(sub){ pushCat(sub[0], sub[1]); }); return; }
+      pushCat(k, v);
+      return;
+    }
+    if(v && typeof v === 'object'){
+      Object.keys(v).forEach(function(sub){
+        const sv = v[sub];
+        if(Array.isArray(sv)){
+          if(sv.length === 0) return;
+          if(sv.every(isCardGroupObj)){ sv.forEach(function(g){ pushCat(g.name, getGroupList(g)); }); return; }
+          pushCat(k + '_' + sub, sv);
+        }
+      });
+    }
+  });
+
+  if(!cats.length) return null;
+  return {
+    __type: 'choco-cards',
+    __version: 1,
+    public: [{ id: 'g-import-' + Date.now().toString(36), name: '导入', icon: 'doc', sub: '从 JSON 导入', cats: cats }],
+    roles: {}
+  };
 }
 function countImportCards(data){
   if(!data) return 0;
-  let n=0;
-  (data.public||[]).forEach(g=>(g.cats||[]).forEach(c=>(c.list||[]).forEach(()=>n++)));
-  Object.values(data.roles||{}).forEach(groups=>{
-	if(!Array.isArray(groups)) return;
-	groups.forEach(g=>(g.cats||[]).forEach(c=>(c.list||[]).forEach(()=>n++)));
+  let n = 0;
+  (data.public || []).forEach(function(g){
+    (g.cats || []).forEach(function(c){ n += (c.list || []).length; });
+  });
+  Object.keys(data.roles || {}).forEach(function(rid){
+    (data.roles[rid] || []).forEach(function(g){
+      (g.cats || []).forEach(function(c){ n += (c.list || []).length; });
+    });
   });
   return n;
 }
+
 function applyImportCards(mode){
   if(!pendingImportData) return;
-  if(mode==='overwrite'){
-	cardStore.public = Array.isArray(pendingImportData.public) ? pendingImportData.public : [];
-	cardStore.roles = (pendingImportData.roles && typeof pendingImportData.roles === 'object') ? pendingImportData.roles : {};
-	toast('已覆盖导入');
-  }else{
-	function mergeInto(target, incoming){
-	  (incoming||[]).forEach(g=>{
-		let exist = target.find(x=>x.id===g.id);
-		if(!exist){ target.push(JSON.parse(JSON.stringify(g))); return; }
-		if(!exist.cats) exist.cats=[];
-		// 先收集这个组下所有分类已有的字卡，做全分类去重
-		const groupPool = new Set();
-		exist.cats.forEach(ec=>{ (ec.list||[]).forEach(item=>{
-		  const t = typeof item==='string'?item:(item.mood||item.kaomoji||'');
-		  if(t) groupPool.add(t);
-		}); });
-		(g.cats||[]).forEach(c=>{
-		  let ec = exist.cats.find(x=>x.id===c.id);
-		  if(!ec){ exist.cats.push(JSON.parse(JSON.stringify(c))); (c.list||[]).forEach(item=>{ const t = typeof item==='string'?item:(item.mood||item.kaomoji||''); if(t) groupPool.add(t); }); return; }
-		  (c.list||[]).forEach(line=>{
-			const t = typeof line==='string'?line:(line.mood||line.kaomoji||'');
-			if(!t) return;
-			if(groupPool.has(t)) return;   // 整个分组里已有 → 跳过
-			ec.list.push(line);
-			groupPool.add(t);
-		  });
-		});
-	  });
-	}
-	mergeInto(cardStore.public, pendingImportData.public);
-	Object.keys(pendingImportData.roles||{}).forEach(rid=>{
-	  if(!cardStore.roles[rid]) cardStore.roles[rid]=[];
-	  const groups = pendingImportData.roles[rid];
-	  if(Array.isArray(groups)) mergeInto(cardStore.roles[rid], groups);
-	});
-	toast('已合并导入');
+
+  const srcCats = [];
+  (pendingImportData.public || []).forEach(function(g){
+    (g.cats || []).forEach(function(c){ srcCats.push(c); });
+  });
+  Object.keys(pendingImportData.roles || {}).forEach(function(rid){
+    (pendingImportData.roles[rid] || []).forEach(function(g){
+      (g.cats || []).forEach(function(c){ srcCats.push(c); });
+    });
+  });
+
+  if(!srcCats.length){
+    toast('没有可导入的字卡');
+    pendingImportData = null;
+    $('#mImportMode').classList.remove('show');
+    return;
   }
+
+  const owner = curOwner || 'public';
+  const groups = (owner === 'public') ? cardStore.public : (cardStore.roles[owner] || (cardStore.roles[owner] = []));
+  let gNormal = groups.find(function(g){ return g && g.id === 'g-normal'; });
+  if(!gNormal){
+    gNormal = { id: 'g-normal', name: '普通字卡', icon: 'doc', sub: '', cats: [] };
+    groups.unshift(gNormal);
+  }
+  if(!Array.isArray(gNormal.cats)) gNormal.cats = [];
+
+  const existPool = new Set();
+  gNormal.cats.forEach(function(c){
+    (c.list || []).forEach(function(x){
+      const t = typeof x === 'string' ? x : (x && x.text ? x.text : '');
+      if(t) existPool.add(String(t).trim());
+    });
+  });
+
+  let addedTotal = 0;
+  let skippedDup = 0;
+  let catCount = 0;
+
+  srcCats.forEach(function(srcCat){
+    const catName = String(srcCat.name || '未命名').trim() || '未命名';
+    let dstCat = gNormal.cats.find(function(c){ return c && c.name === catName; });
+    if(!dstCat){
+      dstCat = { id: 'c-import-' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 6), name: catName, list: [] };
+      gNormal.cats.push(dstCat);
+    }
+    if(!Array.isArray(dstCat.list)) dstCat.list = [];
+    catCount++;
+    (srcCat.list || []).forEach(function(item){
+      const t = typeof item === 'string' ? item : (item && item.text ? item.text : '');
+      const s = String(t || '').trim();
+      if(!s) return;
+      if(existPool.has(s)){ skippedDup++; return; }
+      dstCat.list.push({ text: s, t: Date.now() });
+      existPool.add(s);
+      addedTotal++;
+    });
+  });
+
   saveCardStore();
   pendingImportData = null;
   $('#mImportMode').classList.remove('show');
-  renderGroupList();
+
+  try{
+    if(typeof getAllRoleIds === 'function' && typeof syncRoleCardGroups === 'function'){
+      getAllRoleIds().forEach(function(rid){
+        try{ syncRoleCardGroups(rid); }catch(e){}
+      });
+    }
+  }catch(e){ console.error('导入后补角色结构失败', e); }
+
+  let msg = '已导入 ' + addedTotal + ' 条 / ' + catCount + ' 个分类';
+  if(skippedDup) msg += '，跳过 ' + skippedDup + ' 条重复';
+  if(owner === 'public'){
+    msg += ' 到「公用 → 普通字卡」';
+  } else {
+    const role = getRoleById(owner);
+    msg += ' 到「' + ((role && displayName(role)) || '角色') + ' → 普通字卡」';
+  }
+  toast(msg);
+
+  try{ renderOwnerChips(); }catch(e){}
+  try{ renderGroupList(); }catch(e){}
+  try{ renderCdTabs(); }catch(e){}
+  try{ renderCdList(); }catch(e){}
 }
 $('#btnMerge').addEventListener('click', ()=>applyImportCards('merge'));
 $('#btnOverwrite').addEventListener('click', ()=>applyImportCards('overwrite'));
@@ -24324,8 +25044,23 @@ on('#editAvFile','change',function(){
       return;
     }
     if(context === 'builtin') {
-      blEditAvatarTmp = data;
-      renderBlEditAvatar();
+      /* ★ 修复：区分「新建内置角色」和「编辑内置角色」
+         - mNewBuiltin 弹窗用 biAvatarTmp + renderBiAvatar()
+         - mEditBuiltin 弹窗用 blEditAvatarTmp + renderBlEditAvatar()
+         原来一律写 blEditAvatarTmp，导致新建弹窗头像永远传不上 */
+      var newMask = document.getElementById('mNewBuiltin');
+      var editMask = document.getElementById('mEditBuiltin');
+      if(newMask && newMask.classList.contains('show')){
+        biAvatarTmp = data;
+        if(typeof renderBiAvatar === 'function') renderBiAvatar();
+      } else if(editMask && editMask.classList.contains('show')){
+        blEditAvatarTmp = data;
+        if(typeof renderBlEditAvatar === 'function') renderBlEditAvatar();
+      } else {
+        /* 兜底：两个都没开，落到编辑变量，不影响旧逻辑 */
+        blEditAvatarTmp = data;
+        if(typeof renderBlEditAvatar === 'function') renderBlEditAvatar();
+      }
       return;
     }
     if(context === 'cip') {
@@ -24715,6 +25450,18 @@ on('#optNewGroup','click',()=>{ $('#mAdd').classList.remove('show'); openNewGrou
 	  friends.push(role);
 	  saveFriends(friends);
 	  setRoleAutoAdd(role.id, biAutoAddTmp);
+	  /* ★ 写入关系网：把新建时勾选的人跟这个内置角色关联起来 */
+	  try{
+	    if(typeof uniRelSelected !== 'undefined' && uniRelSelected && typeof uniRelSelected.forEach === 'function'){
+	      uniRelSelected.forEach(function(targetId){
+	        try{ addFriendPair(role.id, targetId); }catch(e){}
+	      });
+	      if(typeof uniRelSelected.clear === 'function') uniRelSelected.clear();
+	      else uniRelSelected = new Set();
+	      const valEl = document.getElementById('biRelVal');
+	      if(valEl) valEl.textContent = '未设置';
+	    }
+	  }catch(e){ console.error('写入内置关系网失败', e); }
 	  renderFriends();
 	  $('#mNewBuiltin').classList.remove('show');
 	  toast('已创建内置角色');
@@ -25026,6 +25773,19 @@ window.triggerAvatarUpload = function(context) {
     window.triggerAvatarUpload('builtin');
   }, true);
 })();
+/* ★ 内置角色 ·「默认」按钮：清空头像 */
+(function bindBiClearAvatar(){
+  if(window.__biClearAvBound) return;
+  window.__biClearAvBound = true;
+  document.addEventListener('click', function(e){
+    var btn = e.target && e.target.closest ? e.target.closest('#btnBiClearAv') : null;
+    if(!btn) return;
+    e.preventDefault();
+    e.stopPropagation();
+    biAvatarTmp = '';
+    if(typeof renderBiAvatar === 'function') renderBiAvatar();
+  }, true);
+})();
 
 /* ★ 统一关系网选择数据层（普通增加角色 & 内置角色共用） */
 let uniRelSelected = new Set();
@@ -25100,50 +25860,7 @@ document.addEventListener('click', function(e){
   }
 }, true);
 
-/* ★ 创建内置角色时，把关系网和自主开关存进去 */
-document.addEventListener('click', function(e){
-  if(e.target.closest('#btnCreateBuiltin')){
-    var n = document.getElementById('biName').value.trim();
-    if(!n){ toast('请输入名字'); return; }
-    var sign = document.getElementById('biSign').value.trim() || SIGN_PLACEHOLDER;
-    var friends = getFriends();
-    var role = {
-      id: uid(),
-      name: n,
-      avatar: biAvatarTmp || '',
-      sub: sign,
-      group: '',
-      shape: 'square',
-      topbarBg: '',
-      star: false,
-      pinned: false,
-      builtin: true,
-      hidden: true,
-      blocked: false,
-      deletedAt: 0,
-      nextBuiltinApplyAt: 0,
-      builtinStage: 0,
-      builtinReject: 0
-    };
-    friends.push(role);
-    saveFriends(friends);
-    setRoleAutoAdd(role.id, biAutoAddTmp);
-    
-    // ★ 写入关系网：把勾选的人跟新角色关联起来
-    uniRelSelected.forEach(function(targetId){
-      addFriendPair(role.id, targetId);
-    });
-
-    // 清空状态
-    uniRelSelected = new Set();
-    var valEl = document.getElementById('biRelVal');
-    if(valEl) valEl.textContent = '未设置';
-
-    renderFriends();
-    document.getElementById('mNewBuiltin').classList.remove('show');
-    toast('已创建内置角色');
-  }
-}, true);
+ 
 
 /* ★ 核心修复：找到原来创建普通角色的代码，替换掉，加入关系网保存 */
 document.addEventListener('click', function(e){
@@ -26185,6 +26902,96 @@ function openExportMenu(){
   }
   // 初始化动态模块
   try{ if(typeof window.initMoments === 'function') window.initMoments(); }catch(e){ console.error('动态初始化失败:', e); }
+
+  // ========== 红包功能初始化 ==========
+  // 动态插入红包相关弹窗
+  if(!document.getElementById('mSendRedPacket')){
+    const html = `
+      <div class="modal" id="mSendRedPacket">
+        <div class="overlay" data-close></div>
+        <div class="sheet" style="max-width:320px;border-radius:20px;padding:22px 20px;">
+          <div class="sheet-head" style="padding:0 0 14px;border-bottom:0.6px dashed #eee;margin-bottom:16px;">
+            <h3 style="font-size:15px;font-weight:300;letter-spacing:4px;">发 红 包</h3>
+            <button class="x" data-close type="button">✕</button>
+          </div>
+          <div style="margin-bottom:16px;">
+            <label style="font-size:12px;color:#999;margin-bottom:8px;display:block">金额（元）</label>
+            <input type="number" id="rpAmount" placeholder="0.00" style="width:100%;border:none;border-bottom:1px solid #ccc;background:transparent;padding:8px 0;font-size:20px;font-family:Georgia,serif;outline:none;">
+          </div>
+          <div style="margin-bottom:24px;">
+            <label style="font-size:12px;color:#999;margin-bottom:8px;display:block">留言</label>
+            <input type="text" id="rpNote" placeholder="恭喜发财，大吉大利" maxlength="20" style="width:100%;border:none;border-bottom:1px solid #ccc;background:transparent;padding:8px 0;font-size:14px;outline:none;">
+          </div>
+          <button class="primary-btn" id="btnSendRp" type="button">塞 钱 进 红 包</button>
+        </div>
+      </div>
+      <div class="modal" id="mOpenRedPacket">
+        <div class="overlay" data-close></div>
+        <div class="sheet" style="max-width:300px;border-radius:20px;padding:30px 20px;text-align:center;">
+          <div id="rpOpenStatus" style="font-size:16px;font-weight:300;color:#d4af37;margin-bottom:20px;letter-spacing:2px">恭喜发财</div>
+          <div style="font-size:32px;font-family:Georgia,serif;color:#1a1a1a;margin-bottom:24px;"><span id="rpOpenAmount">0.00</span> <span style="font-size:16px">元</span></div>
+          <button class="primary-btn" data-close type="button">完 成</button>
+        </div>
+      </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', html);
+  }
+
+  // 美化面板增加红包封面设置
+  document.addEventListener('click', function(e) {
+    const t = e.target;
+    if(t.closest('#rpCoverEntry')) {
+      e.preventDefault(); e.stopPropagation();
+      const f = document.getElementById('rpCoverFile');
+      if(f) { f.value = ''; f.click(); }
+    }
+    if(t.closest('#rpCoverReset')) {
+      e.preventDefault(); e.stopPropagation();
+      const rid = getCurrentRoleId();
+      saveRoleField(rid, 'rpCover', '');
+      const img = document.getElementById('rpCoverPreview');
+      if(img) { img.src = ''; img.style.display = 'none'; }
+      toast('已恢复默认封面');
+    }
+  }, true);
+
+  document.addEventListener('change', function(e) {
+    if(e.target && e.target.id === 'rpCoverFile') {
+      const file = e.target.files[0];
+      e.target.value = '';
+      if(!file) return;
+      openCrop(file, 3/4, function(dataUrl) {
+        saveRoleField(getCurrentRoleId(), 'rpCover', dataUrl);
+        const img = document.getElementById('rpCoverPreview');
+        if(img) { img.src = dataUrl; img.style.display = 'block'; }
+        toast('红包封面已更新');
+      });
+    }
+  }, true);
+
+  // 绑定发红包按钮
+  document.addEventListener('click', function(e){
+    if(e.target.closest('#btnSendRp')) {
+      e.preventDefault(); e.stopPropagation();
+      const amt = parseFloat(document.getElementById('rpAmount').value);
+      const note = document.getElementById('rpNote').value.trim() || '恭喜发财，大吉大利';
+      if(isNaN(amt) || amt <= 0) { toast('请输入正确的金额'); return; }
+      
+      document.getElementById('mSendRedPacket').classList.remove('show');
+      
+      const rpMsg = {
+        id: uid(),
+        role: 'user',
+        time: Date.now(),
+        redPacket: {
+          amount: amt,
+          note: note,
+          opened: false
+        }
+      };
+      dispatchUserMsg(rpMsg);
+    }
+  }, true);
 })();
 
 /* ========== 动态模块 ========== */
@@ -27054,35 +27861,65 @@ if(m.owner !== 'me' && !areFriends(m.owner, rid)) return;            // 角色�
 })();
 
 /* ============================================================
-   ★ 消息统计页
+   ★ 消息统计页（重构版）
    ============================================================ */
 (function(){
+  function extractEmojis(text) {
+    if (!text) return [];
+    const emojiRegex = /[\u{1F300}-\u{1F64F}\u{1F900}-\u{1F9FF}\u{1F680}-\u{1F6FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu;
+    return text.match(emojiRegex) || [];
+  }
+
   function computeStats(){
     const friends = getFriends();
-    const roleStats = {};
     let totalAll = 0, userAll = 0, charAll = 0, wordsAll = 0;
     const hourDist = new Array(24).fill(0);
+    const userCardMap = {}, charCardMap = {}, charEmojiMap = {};
 
     friends.forEach(f => {
-      const msgs = getMsgs(f.id) || [];
-      let total = 0, userCnt = 0, charCnt = 0, words = 0;
+      const msgs = lsGet('mj_msgs_' + f.id, []) || [];
       msgs.forEach(m => {
         if(m.sys || m.recalled) return;
-        total++;
-        const text = m.text || '';
-        words += text.length;
-        if(m.role === 'user') userCnt++;
-        else charCnt++;
-        if(m.ts){
-          const h = new Date(m.ts).getHours();
+        
+        let text = m.text || m.pinyin || '';
+        if (typeof text !== 'string') text = String(text);
+        
+        const emojis = extractEmojis(text);
+        if (m.role === 'char') emojis.forEach(e => charEmojiMap[e] = (charEmojiMap[e] || 0) + 1);
+        
+        text = text.replace(/\[([\s\S]*?)\]/g, '$1');
+        const cleanText = text.replace(/[\s\r\n]/g, '').replace(/[。，！？：；、~♡…—,.!?:;]/g, '');
+        
+        totalAll++;
+        wordsAll += text.length;
+        if(m.role === 'user') userAll++;
+        else charAll++;
+        
+        if(m.time){
+          const h = new Date(m.time).getHours();
           hourDist[h]++;
         }
+
+        if (m.kind === 'pinyin' && m.han) {
+          const key = m.han;
+          if (m.role === 'user') userCardMap[key] = (userCardMap[key] || 0) + 1;
+          else charCardMap[key] = (charCardMap[key] || 0) + 1;
+        } else if (cleanText && cleanText.length > 0) {
+          const key = cleanText;
+          if (m.role === 'user') userCardMap[key] = (userCardMap[key] || 0) + 1;
+          else charCardMap[key] = (charCardMap[key] || 0) + 1;
+        }
       });
-      roleStats[f.id] = { name: f.name || '角色', total, user: userCnt, char: charCnt, words };
-      totalAll += total; userAll += userCnt; charAll += charCnt; wordsAll += words;
     });
 
-    return { roleStats, totalAll, userAll, charAll, wordsAll, hourDist };
+    const getTop10 = (obj) => Object.keys(obj).map(k => ({ text: k, count: obj[k] })).sort((a,b) => b.count - a.count).slice(0, 10);
+
+    return { 
+      totalAll, userAll, charAll, wordsAll, hourDist,
+      topUserCards: getTop10(userCardMap),
+      topCharCards: getTop10(charCardMap),
+      topCharEmoji: getTop10(charEmojiMap)
+    };
   }
 
   function renderStats(){
@@ -27095,25 +27932,42 @@ if(m.owner !== 'me' && !areFriends(m.owner, rid)) return;            // 角色�
       '<div class="st-card"><div class="st-num">' + s.totalAll + '</div><div class="st-label">总消息数</div></div>' +
       '<div class="st-card"><div class="st-num">' + s.wordsAll + '</div><div class="st-label">总字数</div></div>' +
       '<div class="st-card"><div class="st-num">' + s.userAll + '</div><div class="st-label">你发的</div></div>' +
-      '<div class="st-card"><div class="st-num">' + s.charAll + '</div><div class="st-label">角色发的</div></div>' +
+      '<div class="st-card"><div class="st-num">' + s.charAll + '</div><div class="st-label">Ta发的</div></div>' +
       '</div>';
 
-    /* 每个角色的统计 */
-    const roles = Object.entries(s.roleStats).sort((a,b) => b[1].total - a[1].total);
-    html += '<div class="st-section"><div class="st-sec-title">各角色消息</div>';
-    roles.forEach(([rid, rs]) => {
-      const pct = rs.total ? Math.round(rs.user / rs.total * 100) : 0;
-      html += '<div class="st-role-row">' +
-        '<div class="st-role-name">' + escapeHTML(rs.name) + '</div>' +
-        '<div class="st-role-bar"><div class="st-role-bar-user" style="width:' + pct + '%"></div></div>' +
-        '<div class="st-role-meta">' + rs.total + ' 条 · ' + rs.words + ' 字</div>' +
-        '</div>';
+    html += '<div class="st-section"><div class="st-sec-title">你的常用字卡 Top10</div><div style="display:flex;flex-wrap:wrap;gap:8px">';
+    if(s.topUserCards.length === 0) html += '<div style="color:#bbb;font-size:12px;padding:10px">暂无数据</div>';
+    s.topUserCards.forEach((c, i) => {
+      html += '<div style="background:rgba(0,0,0,0.03);border:0.7px solid rgba(0,0,0,0.06);padding:6px 12px;border-radius:12px;display:flex;align-items:center;gap:8px">' +
+        '<span style="font-size:10px;color:#999;font-family:Georgia,serif">#'+(i+1)+'</span>' +
+        '<span style="font-size:13.5px;color:#1a1a1a;font-weight:300">'+escapeHTML(c.text)+'</span>' +
+        '<span style="font-size:10px;color:#bbb">'+c.count+'次</span>' +
+      '</div>';
     });
-    html += '</div>';
+    html += '</div></div>';
 
-    /* 24小时活跃分布 */
-    html += '<div class="st-section"><div class="st-sec-title">24小时活跃分布</div>' +
-      '<div class="st-hour-chart">';
+    html += '<div class="st-section"><div class="st-sec-title">Ta的常用字卡 Top10</div><div style="display:flex;flex-wrap:wrap;gap:8px">';
+    if(s.topCharCards.length === 0) html += '<div style="color:#bbb;font-size:12px;padding:10px">暂无数据</div>';
+    s.topCharCards.forEach((c, i) => {
+      html += '<div style="background:rgba(0,0,0,0.03);border:0.7px solid rgba(0,0,0,0.06);padding:6px 12px;border-radius:12px;display:flex;align-items:center;gap:8px">' +
+        '<span style="font-size:10px;color:#999;font-family:Georgia,serif">#'+(i+1)+'</span>' +
+        '<span style="font-size:13.5px;color:#1a1a1a;font-weight:300">'+escapeHTML(c.text)+'</span>' +
+        '<span style="font-size:10px;color:#bbb">'+c.count+'次</span>' +
+      '</div>';
+    });
+    html += '</div></div>';
+
+    html += '<div class="st-section"><div class="st-sec-title">Ta最爱用的 Emoji</div><div style="display:flex;flex-wrap:wrap;gap:8px">';
+    if(s.topCharEmoji.length === 0) html += '<div style="color:#bbb;font-size:12px;padding:10px">暂无数据</div>';
+    s.topCharEmoji.forEach((c, i) => {
+      html += '<div style="background:rgba(0,0,0,0.03);border:0.7px solid rgba(0,0,0,0.06);padding:6px 12px;border-radius:12px;display:flex;align-items:center;gap:8px">' +
+        '<span style="font-size:16px">'+escapeHTML(c.text)+'</span>' +
+        '<span style="font-size:10px;color:#bbb">'+c.count+'次</span>' +
+      '</div>';
+    });
+    html += '</div></div>';
+
+    html += '<div class="st-section"><div class="st-sec-title">24小时活跃分布</div><div class="st-hour-chart">';
     for(let h = 0; h < 24; h++){
       const h2 = (h+1) % 24;
       const v = s.hourDist[h];
@@ -28716,3 +29570,99 @@ function goToPage(name){
   if(typeof idx !== 'number') return;
   if(window.__goPage) window.__goPage(idx);
 }
+(function(){
+  if(window.__versionCheckLoaded) return;
+  window.__versionCheckLoaded = true;
+
+  const VERSION_KEY = 'mj_app_last_version';
+  const IGNORE_KEY = 'mj_app_ignore_version';
+
+  function getLatestVersion() {
+    try {
+      if (typeof UPDATE_LIST !== 'undefined' && UPDATE_LIST.length > 0) {
+        return UPDATE_LIST[0].ver;
+      }
+    } catch(e) {}
+    return '0.0.0';
+  }
+
+  function showUpdateDialog(latest) {
+    if (document.getElementById('updateDialogMask')) return;
+
+    const mask = document.createElement('div');
+    mask.id = 'updateDialogMask';
+    mask.style.cssText = 'position:fixed;inset:0;z-index:2147483647;background:rgba(0,0,0,.4);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:24px';
+
+    mask.innerHTML =
+      '<div style="width:100%;max-width:300px;background:#fff;border-radius:20px;padding:24px 20px 16px;box-shadow:0 10px 40px rgba(0,0,0,.15);text-align:center;animation:pop .28s cubic-bezier(.22,1,.36,1)">' +
+        '<div style="width:48px;height:48px;border-radius:50%;background:#f5f5f5;display:flex;align-items:center;justify-content:center;margin:0 auto 16px">' +
+          '<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#1a1a1a" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.5 0 4.8.9 6.5 2.5"/><polyline points="21 3 21 9 15 9"/></svg>' +
+        '</div>' +
+        '<div style="font-size:16px;font-weight:400;letter-spacing:2px;color:#1a1a1a;margin-bottom:8px">发现新版本</div>' +
+        '<div style="font-size:12px;color:#999;line-height:1.6;margin-bottom:20px;letter-spacing:.5px">' +
+          '代码已更新至 <b>v' + latest + '</b><br>' +
+          '<span style="font-size:10.5px;color:#bbb">稍后可在「设置 → 刷新」手动更新</span>' +
+        '</div>' +
+        '<div style="display:flex;gap:10px">' +
+          '<button id="updateBtnCancel" type="button" style="flex:1;padding:12px 0;border-radius:10px;border:0.7px solid rgba(0,0,0,.12);background:transparent;color:#999;font-size:13px;font-family:inherit;letter-spacing:1px;cursor:pointer">稍后</button>' +
+          '<button id="updateBtnOk" type="button" style="flex:1;padding:12px 0;border-radius:10px;border:none;background:#1a1a1a;color:#fff;font-size:13px;font-family:inherit;letter-spacing:1px;cursor:pointer">立即刷新</button>' +
+        '</div>' +
+      '</div>';
+
+    document.body.appendChild(mask);
+
+    mask.addEventListener('click', function(e){
+      if (e.target === mask) handleCancel();
+    });
+
+    function handleCancel() {
+      // 记录忽略的版本，本次不再弹
+      lsSet(IGNORE_KEY, latest);
+      mask.remove();
+      if (typeof toast === 'function') toast('已忽略，下次进入时会再次提醒');
+    }
+
+    function handleRefresh() {
+      // 刷新前，先把版本号记上，防止刷新后重复弹
+      lsSet(VERSION_KEY, latest);
+      lsSet(IGNORE_KEY, '');
+      mask.remove();
+      if (typeof forceRefreshApp === 'function') {
+        forceRefreshApp();
+      } else {
+        location.reload();
+      }
+    }
+
+    document.getElementById('updateBtnCancel').onclick = handleCancel;
+    document.getElementById('updateBtnOk').onclick = handleRefresh;
+  }
+
+  function checkVersion() {
+    const latest = getLatestVersion();
+    const current = lsGet(VERSION_KEY, '0.0.0');
+    const ignored = lsGet(IGNORE_KEY, '');
+
+    // 如果最新版本已经忽略了，本次就不弹
+    if (ignored === latest) return;
+
+    // 当前存的版本和最新版本不一样，说明更新了
+    if (current !== latest) {
+      // 首次进来如果是 0.0.0（新用户），直接记最新版，不弹
+      if (current === '0.0.0') {
+        lsSet(VERSION_KEY, latest);
+        return;
+      }
+      // 否则弹窗提示更新
+      setTimeout(() => {
+        showUpdateDialog(latest);
+      }, 800);
+    }
+  }
+
+  if (document.readyState === 'complete') {
+    checkVersion();
+  } else {
+    window.addEventListener('load', checkVersion);
+  }
+})();
