@@ -1360,10 +1360,12 @@
   <div class="bp-body">
 	<div class="bp-row" data-panel="theme"><span class="num">01</span><div class="r-name">主题</div><span class="r-val" id="themeVal">粉樱</span><span class="r-arr">›</span></div>
 	<div class="bp-row" data-panel="avatar"><span class="num">02</span><div class="r-name">头像方圆</div><span class="r-val" id="avatarVal">方形</span><span class="r-arr">›</span></div>
-	<div class="bp-row" data-panel="bgimg"><span class="num">03</span><div class="r-name">上传图片</div><span class="r-arr">›</span></div>
+	<div class="bp-row" data-panel="bgimg"><span class="num">03</span><div class="r-name">上传背景</div><span class="r-arr">›</span></div>
 	<div class="bp-row" data-panel="titletext"><span class="num">04</span><div class="r-name">文字</div><span class="r-arr">›</span></div>
 	<div class="bp-row" data-panel="bubble"><span class="num">05</span><div class="r-name">聊天气泡</div><span class="r-arr">›</span></div>
 	<div class="bp-row" data-panel="layout"><span class="num">06</span><div class="r-name">聊天页布局</div><span class="r-val" id="layoutVal">默认</span><span class="r-arr">›</span></div>
+	<div class="bp-row" data-panel="drawerbg"><span class="num">07</span><div class="r-name">抽屉背景</div><span class="r-arr">›</span></div>
+	<div class="bp-row" data-panel="drawericon"><span class="num">08</span><div class="r-name">抽屉图标</div><span class="r-arr">›</span></div>
 
 	</div>
   </div>
@@ -1642,13 +1644,7 @@
       </div>
       <div class="op-row"><span class="op-lbl">透明度</span><input type="range" class="op-range" id="chatBgOpacity" min="0" max="100" value="85"><span class="op-val" id="chatBgOpacityVal">85%</span></div>
       <div class="op-row"><span class="op-lbl">模糊</span><input type="range" class="op-range" id="chatBgBlur" min="0" max="20" value="0"><span class="op-val" id="chatBgBlurVal">0px</span></div>
-      <div class="op-row"><span class="op-lbl">对齐</span>
-        <div class="align-tabs">
-          <button class="align-btn on" data-align="center" type="button">居中</button>
-          <button class="align-btn" data-align="top" type="button">顶部</button>
-          <button class="align-btn" data-align="bottom" type="button">底部</button>
-        </div>
-      </div>
+ 
     </div>
     <div class="up-section">
       <div class="up-title">顶部栏背景</div>
@@ -1683,6 +1679,40 @@
         </div>
       </div>
     </div>
+  </div>
+</div>
+
+<div class="sub-panel" id="spDrawerBg">
+  <div class="bp-head">
+    <button class="bp-back" data-close type="button">‹</button>
+    <div class="bp-title">抽 屉 背 景</div>
+    <div class="bp-head-right"></div>
+  </div>
+  <div class="sp-body">
+    <div class="up-section">
+      <div class="up-title">抽屉背景</div>
+      <div class="up-desc">换掉加号抽屉 / 表情抽屉后面那层底。</div>
+      <div class="up-preview" id="drawerBgPreview"><span class="ph">还没上传</span></div>
+      <div class="up-acts">
+        <button class="up-btn primary" id="btnDrawerBgUpload" type="button">上传背景</button>
+        <button class="up-btn ghost" id="btnDrawerBgReset" type="button">恢复默认</button>
+      </div>
+      <div class="op-row"><span class="op-lbl">透明度</span><input type="range" class="op-range" id="drawerBgOpacity" min="0" max="100" value="100"><span class="op-val" id="drawerBgOpacityVal">100%</span></div>
+      <div class="op-row"><span class="op-lbl">虚化</span><input type="range" class="op-range" id="drawerBgBlur" min="0" max="20" value="0"><span class="op-val" id="drawerBgBlurVal">0px</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="sub-panel" id="spDrawerIcon">
+  <div class="bp-head">
+    <button class="bp-back" data-close type="button">‹</button>
+    <div class="bp-title">抽 屉 图 标</div>
+    <div class="bp-head-right"></div>
+  </div>
+  <div class="sp-body">
+    <div class="up-desc" style="margin-bottom:14px">给每个功能格子单独换图。不换就保留原来的线条图标。</div>
+    <div id="drawerIconList"></div>
+    <input type="file" id="drawerIconFile" accept="image/*" style="display:none">
   </div>
 </div>
 
