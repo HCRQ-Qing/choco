@@ -2723,7 +2723,7 @@ function renderChatFull(forceBottom){
 	if(m.kind === 'pinyin'){
 	  body = `<div class="bubble">${esc(m.pinyin||'')}</div><div class="py-tag"><span class="pfx">单字字卡：</span><b><span class="py-word">${esc(m.han||'')}</span></b></div>`;
 	}else if(m.voice){
-	  const vBubbleCls = isUser ? 'message-sent message-bubble-user' : 'message-received message-bubble-char';
+	  const vBubbleCls = isUser ? 'message-sent msg-out message-bubble-user' : 'message-received msg-in message-bubble-char';
 	  body = `<div class="voice-bubble bubble ${vBubbleCls}" data-side="${isUser?'user':'char'}" data-url="${m.voiceUrl||''}" data-dur="${m.voice}" data-idbkey="${m.voiceIdbKey||''}"><div class="vb-play"><svg class="icon-play" viewBox="0 0 12 12"><path d="M3 1.5 L10 6 L3 10.5 Z"/></svg><svg class="icon-pause" viewBox="0 0 12 12"><rect x="3" y="2" width="2.5" height="8" rx="1"/><rect x="6.5" y="2" width="2.5" height="8" rx="1"/></svg></div><div class="vb-wave"><span></span><span></span><span></span><span></span><span></span><span></span></div><span class="vb-dur">${m.voice}"</span></div>`;
 	}else if(m.sticker){
 	  const stickerBubbleCls = isUser ? 'message-sent message-bubble-user' : 'message-received message-bubble-char';
@@ -2858,7 +2858,9 @@ function renderChatFull(forceBottom){
 		body = `<div class="bubble${m.sendFailed ? ' bubble-failed' : ''}">[图片]</div>`;
 	  } else {
 		const showText = rawText.replace(/\[([\s\S]*?)\]/g, '$1');
-		body = `<div class="bubble text-bubble${m.sendFailed ? ' bubble-failed' : ''}">${escapeHTML(showText)}${failedMark}</div>`;
+		const _sideCls = isUser ? 'message-sent msg-out message-bubble-user' : 'message-received msg-in message-bubble-char';
+		const _sideAttr = isUser ? 'user' : 'char';
+		body = `<div class="bubble text-bubble ${_sideCls}${m.sendFailed ? ' bubble-failed' : ''}" data-side="${_sideAttr}">${escapeHTML(showText)}${failedMark}</div>`;
 	  }
 	}
 
@@ -2889,27 +2891,8 @@ function renderChatFull(forceBottom){
 	  }).join('') + '</div>'
 	) : '';
 
-	const msgHTML = `<div class="msg ${isUser?'user':'char'}" data-id="${m.id}">${av}<div class="msg-body">${timeSep}${activeMark}${quote}${body}${readFlush}${reactHTML}</div></div>`;
-	const _side = isUser ? 'user' : 'char';
-	const _sideClasses = isUser
-	  ? 'message-sent msg-out message-bubble-user'
-	  : 'message-received msg-in message-bubble-char';
-	function _withSide(html, sideClasses, side){
-	  const div = document.createElement('div');
-	  div.innerHTML = html;
-	  const firstChild = div.firstElementChild;
-	  if(firstChild){
-	    if(!firstChild.className.includes('message-sent') && !firstChild.className.includes('message-received')){
-	      firstChild.className += ' ' + sideClasses;
-	    }
-	    firstChild.setAttribute('data-side', side);
-	  }
-	  return div.innerHTML;
-	}
 	const _msgBodyInner = `${timeSep}${activeMark}${quote}${body}${readFlush}${reactHTML}`;
-	const _bodyWrapped = `<div class="msg-body">${_msgBodyInner}</div>`;
-	const _bodyWithSide = _withSide(_bodyWrapped, _sideClasses, _side);
-	return `<div class="msg ${isUser?'user':'char'}" data-id="${m.id}">${av}${_bodyWithSide}</div>`;
+	return `<div class="msg ${isUser?'user':'char'}" data-id="${m.id}">${av}<div class="msg-body">${_msgBodyInner}</div></div>`;
   }).join('');
   /* 每次重建列表时，在末尾追加「输入中」尾巴。
      用函数开头记下的 _wasTypingShown 恢复显示状态，
@@ -13339,8 +13322,7 @@ function injectCustomCss(){
     el.id = 'customCssStyle';
     document.head.appendChild(el);
   }
-  /* ★ 性能修复：内容没变就不重新赋值，避免每次渲染都触发一次样式重算 */
-  const css = getCustomCss();
+  const css = (beautyCfg.bubble === 'custom') ? getCustomCss() : '';
   if(el.__cssCache !== css){
     el.__cssCache = css;
     el.textContent = css;
@@ -25296,9 +25278,6 @@ function refreshChatRole(){
   $('#chatAvatar').innerHTML=avatarHTML(role.avatar);
   const mpAv=$('#mpAv'); if(mpAv) mpAv.innerHTML=avatarHTML(role.avatar);
   const ssAv=$('#splitAvatar'); if(ssAv) ssAv.innerHTML=avatarHTML(role.avatar);
-
-  /* 换头像 / 改备注后，统一走公共重绘入口 */
-  forceRepaintChat('换头像');
 
   renderFriends();
   // 切角色时重置心情/状态定时器，避免上一个角色的定时器跑到新角色头上
