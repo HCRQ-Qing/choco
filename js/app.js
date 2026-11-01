@@ -23470,7 +23470,9 @@ function applyImportCards(mode){
     catCount++;
     (srcCat.list || []).forEach(function(item){
       const t = typeof item === 'string' ? item : (item && item.text ? item.text : '');
-      const s = String(t || '').trim();
+      let s = String(t || '').trim();
+      if(!s) return;
+      s = s.replace(/^["'\s]+|["',\s]+$/g, '');
       if(!s) return;
       if(existPool.has(s)){ skippedDup++; return; }
       dstCat.list.push({ text: s, t: Date.now() });
