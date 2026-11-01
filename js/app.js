@@ -18850,17 +18850,6 @@ function openSettingsPanel(){
   });
   renderSettingsCounts();
   updateFullscreenState();
-  
-  // ★ 动态注入日志入口，防止 index.html 里找不到位置
-  const setList = document.querySelector('#settingsScreen .set-list');
-  if(setList && !document.getElementById('setRowLog')){
-    const row = document.createElement('div');
-    row.className = 'set-row';
-    row.id = 'setRowLog';
-    row.setAttribute('data-set', 'log');
-    row.innerHTML = '<span class="num">08</span><span class="name">日志</span><span class="val">查看错误报告</span><span class="en">LOG</span><span class="arr">→</span>';
-    setList.appendChild(row);
-  }
 }
 
 /* ===== 清除全部数据（恢复出厂） ===== */
@@ -19086,9 +19075,6 @@ document.addEventListener('click', function(e){
     else if(key === 'backup-import'){
       if(window.ChocoBackup) window.ChocoBackup.pickImport();
       else toast('备份模块未加载');
-    }
-    else if(key === 'log'){
-      openLoggerScreen();
     }
     return;
   }
@@ -29816,90 +29802,4 @@ function goToPage(name){
     window.addEventListener('load', checkVersion);
   }
 })();
-/* ===== 系统日志面板 ===== */
-document.addEventListener('click', function(e){
-  var row = e.target.closest && e.target.closest('[data-set="log"]');
-  if(!row) return;
-  e.preventDefault(); e.stopPropagation();
-  openLoggerScreen();
-}, true);
-
-function openLoggerScreen(){
-  var logs = (window.MJ_LOGGER && window.MJ_LOGGER.get) ? window.MJ_LOGGER.get() : [];
-  var mask = document.getElementById('mjLogMask');
-  if(mask) mask.remove();
-  
-  mask = document.createElement('div');
-  mask.id = 'mjLogMask';
-  mask.style.cssText = 'position:fixed;inset:0;z-index:2147483640;background:#fff;max-width:520px;margin:0 auto;display:flex;flex-direction:column;overflow:hidden;';
-  
-  var html = '<div style="flex:none;display:flex;align-items:center;gap:12px;padding:20px 22px 12px;border-bottom:0.6px dashed #ececec;">' +
-    '<button id="mjLogBack" type="button" style="width:38px;height:38px;flex:none;border:none;background:transparent;color:#1a1a1a;font-size:22px;cursor:pointer;opacity:.55;">‹</button>' +
-    '<div style="flex:1;font-size:15px;font-weight:300;letter-spacing:6px;text-align:center;color:#1a1a1a;">系 统 日 志</div>' +
-    '<div style="width:38px;flex:none"></div>' +
-  '</div>';
-  
-  var traces = window.MJ_LOGGER.getTrace ? window.MJ_LOGGER.getTrace() : [];
-  var traceHtml = traces.map(function(t){
-    return '<div style="font-size:11px;color:#666;line-height:1.6;border-bottom:1px dashed #eee;padding:4px 0;"><span style="color:#999;margin-right:6px;">' + new Date(t.t).toLocaleTimeString() + '</span>' + escapeHTML(t.a) + (t.d ? ' <span style="color:#bbb;">(' + escapeHTML(t.d) + ')</span>' : '') + '</div>';
-  }).join('');
-  if(!traces.length) traceHtml = '<div style="font-size:11px;color:#bbb;text-align:center;padding:10px;">暂无操作轨迹</div>';
-
-  html += '<div style="flex:none;display:flex;gap:10px;padding:12px 22px;border-bottom:0.6px solid #f0f0f0;background:#fafafa;">' +
-    '<button id="mjLogCopy" style="flex:1;padding:8px 0;border-radius:8px;border:0.7px solid #1a1a1a;background:#fff;color:#1a1a1a;font-size:12px;cursor:pointer;">一键复制</button>' +
-    '<button id="mjLogExport" style="flex:1;padding:8px 0;border-radius:8px;border:none;background:#1a1a1a;color:#fff;font-size:12px;cursor:pointer;">导出 TXT</button>' +
-    '<button id="mjLogClear" style="flex:none;padding:8px 14px;border-radius:8px;border:0.7px solid #ff4757;background:#fff;color:#ff4757;font-size:12px;cursor:pointer;">清空</button>' +
-  '</div>' +
-  '<div style="flex:none;padding:10px 22px;background:#fff;border-bottom:0.6px solid #f0f0f0;">' +
-    '<div style="font-size:11px;color:#999;margin-bottom:6px;">操作轨迹 (崩溃前点了什么)</div>' +
-    '<div style="max-height:100px;overflow-y:auto;">' + traceHtml + '</div>' +
-  '</div>';
-  
-  html += '<div id="mjLogBody" style="flex:1;overflow-y:auto;padding:16px 22px;background:#f7f7f7;">';
-  if(!logs.length){
-    html += '<div style="text-align:center;color:#bbb;font-size:13px;padding:80px 0;line-height:2;">暂无错误日志<br><span style="font-size:11px;">如果遇到问题，请把这里的日志发给开发者</span></div>';
-  } else {
-    logs.forEach(function(l, i){
-      var timeStr = new Date(l.time).toLocaleString('zh-CN');
-      html += '<div style="background:#fff;border-radius:12px;padding:14px;margin-bottom:12px;box-shadow:0 2px 8px rgba(0,0,0,.03);">' +
-        '<div style="display:flex;justify-content:space-between;font-size:11px;color:#999;margin-bottom:6px;">' +
-          '<span>[' + l.type + ']</span><span>' + timeStr + '</span>' +
-        '</div>' +
-        '<div style="font-size:13px;color:#ff4757;font-weight:500;word-break:break-all;line-height:1.5;">' + escapeHTML(l.msg) + '</div>' +
-        (l.detail ? '<div style="font-size:11px;color:#666;margin-top:6px;background:#fafafa;padding:6px 8px;border-radius:6px;word-break:break-all;">' + escapeHTML(l.detail) + '</div>' : '') +
-      '</div>';
-    });
-  }
-  html += '</div>';
-  mask.innerHTML = html;
-  document.body.appendChild(mask);
-  
-  document.getElementById('mjLogBack').onclick = function(){ mask.remove(); };
-  
-  document.getElementById('mjLogCopy').onclick = function(){
-    if(!logs.length) return toast('暂无日志可复制');
-    var text = window.MJ_LOGGER.exportTxt();
-    copyText(text, '日志已复制到剪贴板');
-  };
-  
-  document.getElementById('mjLogExport').onclick = function(){
-    if(!logs.length) return toast('暂无日志可导出');
-    var text = window.MJ_LOGGER.exportTxt();
-    var blob = new Blob([text], {type: 'text/plain;charset=utf-8'});
-    var a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = 'MJ_Error_Log_' + new Date().toISOString().slice(0,10) + '.txt';
-    document.body.appendChild(a);
-    a.click();
-    setTimeout(function(){ a.remove(); URL.revokeObjectURL(a.href); }, 1000);
-    toast('已导出 TXT');
-  };
-  
-  document.getElementById('mjLogClear').onclick = function(){
-    if(!logs.length) return toast('日志已经是空的');
-    if(!confirm('确定清空所有日志吗？不可恢复。')) return;
-    window.MJ_LOGGER.clear();
-    mask.remove();
-    toast('日志已清空');
-  };
-}
+ 
