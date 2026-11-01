@@ -467,6 +467,10 @@
         <span class="num">04</span><span class="name">刷新</span>
         <span class="val">强制刷新</span><span class="en">REFRESH</span><span class="arr">→</span>
       </div>
+      <div class="set-row" data-set="diagnose">
+        <span class="num">05</span><span class="name">诊断</span>
+        <span class="val">环境检测</span><span class="en">DIAGNOSE</span><span class="arr">→</span>
+      </div>
       <div class="set-row" data-set="wipe">
         <span class="num">05</span><span class="name">清除全部数据</span>
         <span class="val">不可恢复</span><span class="en">WIPE</span><span class="arr">→</span>
@@ -1362,10 +1366,9 @@
 	<div class="bp-row" data-panel="avatar"><span class="num">02</span><div class="r-name">头像方圆</div><span class="r-val" id="avatarVal">方形</span><span class="r-arr">›</span></div>
 	<div class="bp-row" data-panel="bgimg"><span class="num">03</span><div class="r-name">上传背景</div><span class="r-arr">›</span></div>
 	<div class="bp-row" data-panel="titletext"><span class="num">04</span><div class="r-name">文字</div><span class="r-arr">›</span></div>
-	<div class="bp-row" data-panel="bubble"><span class="num">05</span><div class="r-name">聊天气泡</div><span class="r-arr">›</span></div>
+	<div class="bp-row" data-panel="topbar"><span class="num">05</span><div class="r-name">顶部栏排版</div><span class="r-val" id="topbarLayoutVal">默认</span><span class="r-arr">›</span></div>
+	<div class="bp-row" data-panel="bubble"><span class="num">06</span><div class="r-name">聊天气泡</div><span class="r-arr">›</span></div>
 	<div class="bp-row" data-panel="layout"><span class="num">06</span><div class="r-name">聊天页布局</div><span class="r-val" id="layoutVal">默认</span><span class="r-arr">›</span></div>
-	<div class="bp-row" data-panel="drawerbg"><span class="num">07</span><div class="r-name">抽屉背景</div><span class="r-arr">›</span></div>
-	<div class="bp-row" data-panel="drawericon"><span class="num">08</span><div class="r-name">抽屉图标</div><span class="r-arr">›</span></div>
 
 	</div>
   </div>
@@ -1658,6 +1661,29 @@
       <div class="op-row"><span class="op-lbl">虚化</span><input type="range" class="op-range" id="topbarBgBlur" min="0" max="20" value="0"><span class="op-val" id="topbarBgBlurVal">0px</span></div>
       <div class="up-desc" style="margin-top:6px">不传图片时，顶部栏默认透明，直接透出下面的聊天背景；「恢复默认」也是这个效果。</div>
     </div>
+
+    <!-- ★ 抽屉背景 & 抽屉图标入口（从主列表挪过来） -->
+    <div class="up-section">
+      <div class="up-title">抽屉背景 / 图标</div>
+      <div class="up-desc">换掉加号抽屉 / 表情抽屉后面那层底，以及功能格子的图标。</div>
+      <div class="up-acts" style="margin-top:12px">
+        <button class="up-btn primary" id="btnDrawerBgUpload" type="button">上传抽屉背景</button>
+        <button class="up-btn ghost" id="btnDrawerBgReset" type="button">恢复默认</button>
+      </div>
+      <div class="op-row" style="margin-top:12px">
+        <span class="op-lbl">透明度</span>
+        <input type="range" class="op-range" id="drawerBgOpacity" min="0" max="100" value="100">
+        <span class="op-val" id="drawerBgOpacityVal">100%</span>
+      </div>
+      <div class="op-row">
+        <span class="op-lbl">虚化</span>
+        <input type="range" class="op-range" id="drawerBgBlur" min="0" max="20" value="0">
+        <span class="op-val" id="drawerBgBlurVal">0px</span>
+      </div>
+      <div class="up-acts" style="margin-top:16px">
+        <button class="up-btn ghost" id="btnGoDrawerIcon" type="button">去设置抽屉图标 ›</button>
+      </div>
+    </div>
     
     <!-- ★ 挪过来的输入栏透明度 -->
     <div class="up-section">
@@ -1745,6 +1771,66 @@
         <span class="txt-preview-cn" id="prevTitleCn">私语</span>
         <span class="txt-preview-en" id="prevTitleEn">THE OTHER SIDE</span>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- ★ 顶部栏排版子页 -->
+<div class="sub-panel" id="spTopbarLayout">
+  <div class="bp-head">
+    <button class="bp-back" data-close type="button">‹</button>
+    <div class="bp-title">顶部栏排版</div>
+    <div class="bp-head-right"></div>
+  </div>
+  <div class="sp-body">
+    <div style="font-size:11.5px;color:#999;margin-bottom:16px;letter-spacing:.5px;">切换后立刻生效，如果你中途想换回原版，选默认即可。</div>
+    
+    <div style="display:flex; flex-direction:column; gap:12px; padding:0 4px;">
+      
+      <div style="display:flex; align-items:center; justify-content:space-between; padding:12px 16px; background:#fafafa; border:0.7px solid #eee; border-radius:14px; margin-bottom:8px;">
+        <span style="font-size:14px; font-weight:500; color:#1a1a1a;">居中时显示头像</span>
+        <label class="switch"><input type="checkbox" id="centerShowAvatarSw"><span class="slider"></span></label>
+      </div>
+
+      <!-- 默认 -->
+      <div class="topbar-layout-card" data-toplayout="default" style="height:auto !important; flex:none !important; padding:16px; background:#fafafa; border:0.7px solid #eee; border-radius:14px; cursor:pointer; display:flex; align-items:center; gap:12px; box-sizing:border-box;">
+        <div style="width:56px; height:36px; background:#fff; border-radius:6px; border:0.5px solid #ebebeb; display:flex; flex-direction:column; align-items:center; justify-content:center; flex:none; gap:2px;">
+           <div style="width:28px; height:2px; background:#ddd; border-radius:2px;"></div>
+           <div style="width:38px; height:6px; background:#eee; border-radius:2px; display:flex; align-items:center; padding:0 2px;"><div style="width:6px; height:6px; background:#ccc; border-radius:50%;"></div></div>
+        </div>
+        <div style="flex:1;">
+          <div style="font-size:14px; font-weight:500; color:#1a1a1a;">默认经典</div>
+          <div style="font-size:11px; color:#999; margin-top:4px;">标题居中，头像在左</div>
+        </div>
+        <div style="width:20px; height:20px; border-radius:50%; border:1.5px solid #ccc; display:flex; align-items:center; justify-content:center; flex:none;" class="chk"><div style="width:10px; height:10px; border-radius:50%; background:#1a1a1a; display:none;"></div></div>
+      </div>
+
+      <!-- 靠左极简 -->
+      <div class="topbar-layout-card" data-toplayout="left" style="height:auto !important; flex:none !important; padding:16px; background:#fafafa; border:0.7px solid #eee; border-radius:14px; cursor:pointer; display:flex; align-items:center; gap:12px; box-sizing:border-box;">
+        <div style="width:56px; height:36px; background:#fff; border-radius:6px; border:0.5px solid #ebebeb; display:flex; align-items:center; padding:0 4px; flex:none; gap:4px;">
+           <div style="width:10px; height:10px; background:#ccc; border-radius:50%;"></div>
+           <div style="width:20px; height:2px; background:#ddd; border-radius:2px;"></div>
+        </div>
+        <div style="flex:1;">
+          <div style="font-size:14px; font-weight:500; color:#1a1a1a;">靠左极简</div>
+          <div style="font-size:11px; color:#999; margin-top:4px;">从头排到尾，无状态</div>
+        </div>
+        <div style="width:20px; height:20px; border-radius:50%; border:1.5px solid #ccc; display:flex; align-items:center; justify-content:center; flex:none;" class="chk"><div style="width:10px; height:10px; border-radius:50%; background:#1a1a1a; display:none;"></div></div>
+      </div>
+
+      <!-- 居中显示 -->
+      <div class="topbar-layout-card" data-toplayout="center" style="height:auto !important; flex:none !important; padding:16px; background:#fafafa; border:0.7px solid #eee; border-radius:14px; cursor:pointer; display:flex; align-items:center; gap:12px; box-sizing:border-box;">
+        <div style="width:56px; height:36px; background:#fff; border-radius:6px; border:0.5px solid #ebebeb; display:flex; align-items:center; justify-content:center; position:relative; flex:none;">
+           <div style="width:20px; height:2px; background:#ddd; border-radius:2px;"></div>
+           <div style="position:absolute; right:6px; width:10px; height:10px; background:#ccc; border-radius:50%;"></div>
+        </div>
+        <div style="flex:1;">
+          <div style="font-size:14px; font-weight:500; color:#1a1a1a;">居中显示</div>
+          <div style="font-size:11px; color:#999; margin-top:4px;">名字居中，头像靠右</div>
+        </div>
+        <div style="width:20px; height:20px; border-radius:50%; border:1.5px solid #ccc; display:flex; align-items:center; justify-content:center; flex:none;" class="chk"><div style="width:10px; height:10px; border-radius:50%; background:#1a1a1a; display:none;"></div></div>
+      </div>
+
     </div>
   </div>
 </div>
@@ -4866,6 +4952,7 @@
 
 <!-- ===== IndexedDB 数据底座 ===== -->
 <script src="js/indexeddb.js"></script>
+<script src="js/diagnose.js"></script>
 <!-- ===== 聊天 / 群聊 · 上传图片 ===== -->
 <script src="js/chat-image.js"></script>
 <!-- ===== 气泡通用别名补丁 ===== -->
