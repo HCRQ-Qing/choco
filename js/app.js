@@ -2858,7 +2858,7 @@ function renderChatFull(forceBottom){
 		body = `<div class="bubble${m.sendFailed ? ' bubble-failed' : ''}">[图片]</div>`;
 	  } else {
 		const showText = rawText.replace(/\[([\s\S]*?)\]/g, '$1');
-		body = `<div class="bubble text-bubble${m.sendFailed ? ' bubble-failed' : ''}" style="display:inline-block;width:max-content;max-width:100%;"><div class="text-inner">${escapeHTML(showText)}${failedMark}</div></div>`;
+		body = `<div class="bubble text-bubble${m.sendFailed ? ' bubble-failed' : ''}">${escapeHTML(showText)}${failedMark}</div>`;
 	  }
 	}
 
