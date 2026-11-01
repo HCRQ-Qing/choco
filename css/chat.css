@@ -164,93 +164,9 @@
   backface-visibility: hidden;
   transform: translateZ(0);
 }
-/* 气泡基础：不再有默认细框 */
-.bubble{
-  padding:var(--bubble-pad-v, 5.6px) var(--bubble-pad-h, 11.2px);
-  font-size:var(--bubble-font-size, 12.5px);
-  line-height:1.4;
-  word-break:break-word;
-  white-space:pre-wrap;
-  position:relative;
-  font-family:inherit;
-  font-weight:400;
-  background:#ffffff;
-  border:none;
-  color:#1a1a1a;
-  transition:box-shadow .15s ease,border-color .15s ease;
-}
-.msg.user .bubble{background:#f0f0f0;color:#1a1a1a;border-radius:6px;border:none}
-.msg.char .bubble{background:#ffffff;border:none;color:#1a1a1a;border-radius:6px}
+ 
 
-/* ===== 气泡样式主题（由美化面板切换） ===== */
-
-/* 气泡尖角 —— 大圆角 + 一侧小尖角 */
-body[data-bubble="gray"]:not([data-bubble-custom]) .msg .bubble,
-body[data-bubble="gray"]:not([data-bubble-custom]) .msg.char .bubble,
-body[data-bubble="gray"]:not([data-bubble-custom]) .msg.user .bubble{
-  padding:8px 13px;
-  font-size:13.5px;
-  line-height:1.5;
-  font-weight:400;
-  background:#f3f3f3;
-  border:none !important;
-  box-shadow:none !important;
-  color:#1a1a1a;
-}
-body[data-bubble="gray"] .msg.char .bubble{
-  background:#f3f3f3;
-  border-radius:16px 16px 16px 4px;
-}
-body[data-bubble="gray"] .msg.user .bubble{
-  background:#ebebeb;
-  border-radius:16px 16px 4px 16px;
-}
-/* ★ 彻底剥离外层容器，只针对真正的文字气泡进行渲染 */
-body[data-bubble="gray"] .msg .bubble {
-  background: transparent !important;
-  border: none !important;
-  box-shadow: none !important;
-  padding: 0 !important;
-}
-
-body[data-bubble="gray"] .msg .text-inner {
-  background: #f3f3f3 !important;
-  color: #1a1a1a !important;
-  padding: 8px 13px !important;
-  display: inline-block !important;
-  max-width: 100% !important;
-  box-sizing: border-box !important;
-  line-height: 1.5 !important;
-  border: none !important;
-  box-shadow: none !important;
-}
-
-body[data-bubble="gray"] .msg.char .text-inner {
-  border-radius: 16px 16px 16px 4px !important;
-}
-
-body[data-bubble="gray"] .msg.user .text-inner {
-  border-radius: 16px 16px 4px 16px !important;
-}
-
-/* 方括号 —— 尺寸写死，不受滑杆影响 */
-body[data-bubble="bracket"] .msg .bubble,
-body[data-bubble="bracket"] .msg.char .bubble,
-body[data-bubble="bracket"] .msg.user .bubble{
-  padding:4px 10px;
-  font-size:13.5px;
-  line-height:1.4;
-  font-weight:400;
-  background:transparent !important;
-  border:none !important;
-  border-radius:0;
-  box-shadow:none !important;
-  color:#1a1a1a;
-}
-body[data-bubble="bracket"] .msg.char .bubble::before{content:"「";color:#1a1a1a;margin-right:4px;font-size:14px;opacity:.5}
-body[data-bubble="bracket"] .msg.char .bubble::after{content:"」";color:#1a1a1a;margin-left:4px;font-size:14px;opacity:.5}
-body[data-bubble="bracket"] .msg.user .bubble::before{content:"「";color:#1a1a1a;margin-right:4px;font-size:14px;opacity:.5}
-body[data-bubble="bracket"] .msg.user .bubble::after{content:"」";color:#1a1a1a;margin-left:4px;font-size:14px;opacity:.5}
+ 
 
 
 
