@@ -174,13 +174,13 @@
   position:relative;
   font-family:inherit;
   font-weight:400;
-  background:transparent;
+  background:#ffffff;
   border:none;
   color:#1a1a1a;
   transition:box-shadow .15s ease,border-color .15s ease;
 }
-.msg.user .bubble{background:transparent;color:#1a1a1a;border-radius:6px;border:none}
-.msg.char .bubble{background:transparent;border:none;color:#1a1a1a;border-radius:6px}
+.msg.user .bubble{background:#f4f4f4;color:#1a1a1a;border-radius:6px;border:none}
+.msg.char .bubble{background:#ffffff;border:none;color:#1a1a1a;border-radius:6px}
 
 /* ===== 气泡样式主题（由美化面板切换） ===== */
 
@@ -213,7 +213,7 @@ body[data-bubble="bracket"] .msg.user .bubble{
   font-size:13.5px;
   line-height:1.4;
   font-weight:400;
-  background:transparent;
+  background:transparent !important;
   border:none !important;
   border-radius:0;
   box-shadow:none !important;
