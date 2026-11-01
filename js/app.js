@@ -25188,7 +25188,14 @@ on('#editAvFile','change',function(){
 
       try { msgs = loadMsgs(); } catch(err){}
       try { refreshChatRole(); } catch(err){}
-      forceRepaintChat('换头像');
+      
+      // 绕过闭包拦截，强行调底层重绘
+      if(typeof window.__forceRenderChat === 'function') window.__forceRenderChat();
+      if(typeof renderChatFull === 'function') {
+        renderChatFull(true);
+      } else {
+        forceRepaintChat('换头像');
+      }
 
       toast('头像已更新');
       return;
