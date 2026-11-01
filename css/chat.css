@@ -658,3 +658,36 @@ body[data-bubble="bracket"] .msg .voice-bubble::after{content:none !important}
   position: relative;
   z-index: 2;
 }
+
+/* =========================================
+   ★ 顶部栏排版样式扩展
+   ========================================= */
+
+/* 1. 靠左极简 */
+.chat-topbar.layout-left { padding: 14px 16px 12px !important; }
+.chat-topbar.layout-left .topbar-title { display: none !important; }
+.chat-topbar.layout-left .topbar-actions { top: 50% !important; transform: translateY(-50%) !important; }
+.chat-topbar.layout-left .topbar-row { width: 100%; margin: 0; padding-right: 70px; align-items: center; display: flex; flex-wrap: nowrap; }
+.chat-topbar.layout-left .avatar-wrap { order: 2; width: 42px; height: 42px; margin-left: 6px; flex: none; }
+.chat-topbar.layout-left .chat-avatar { width: 42px; height: 42px; }
+.chat-topbar.layout-left .chat-info { order: 3; display: flex; flex-direction: row; align-items: center; margin-top: 0; margin-left: 10px; flex: none !important; }
+.chat-topbar.layout-left .chat-name { font-size: 16.5px; font-weight: 500; margin: 0; line-height: 1.2; }
+.chat-topbar.layout-left .chat-status { display: none !important; }
+.chat-topbar.layout-left .topbar-row #roleSwitchBtn { order: 1; position: static !important; transform: none !important; margin: 0; padding: 0; width: 28px; height: 28px; display: flex !important; align-items: center; justify-content: center; opacity: .6; flex: none; }
+.chat-topbar.layout-center .topbar-actions .pink-icon { display: flex !important; }
+
+/* 2. 居中排版 */
+.chat-topbar.layout-center { padding: 14px 16px 12px !important; }
+.chat-topbar.layout-center .topbar-title { display: none !important; }
+.chat-topbar.layout-center .topbar-row { width: 100%; margin: 0; display: block; position: relative; height: 46px; }
+.chat-topbar.layout-center .topbar-row #roleSwitchBtn { position: absolute; left: 0; top: 50%; transform: translateY(-50%); width: 28px; height: 28px; display: flex !important; align-items: center; justify-content: center; opacity: 0.6; z-index: 5; }
+.chat-topbar.layout-center .chat-info { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.chat-topbar.layout-center .chat-name { font-size: 16.5px; font-weight: 500; margin: 0; line-height: 1.2; white-space: nowrap; }
+.chat-topbar.layout-center .chat-status { display: flex; margin-top: 0; font-size: 11px; }
+.chat-topbar.layout-center .chat-status .seg { padding: 2px 8px; background: rgba(255,255,255,0.5); border-radius: 10px; }
+.chat-topbar.layout-center .chat-status .seg + .seg::before { display: none; }
+.chat-topbar.layout-center .avatar-wrap { position: absolute; right: 46px; top: 50%; transform: translateY(-50%); width: 36px; height: 36px; margin: 0; z-index: 5; }
+.chat-topbar.layout-center.hide-center-avatar .avatar-wrap { display: none !important; }
+.chat-topbar.layout-center .chat-avatar { width: 36px; height: 36px; }
+.chat-topbar.layout-center .topbar-actions { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); display: flex; align-items: center; z-index: 6; }
+.chat-topbar.layout-center .topbar-actions #moreBtn { width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; margin: 0; padding: 0; }
