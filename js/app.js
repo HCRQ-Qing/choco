@@ -2176,19 +2176,13 @@ if(typeof window.platformClass !== 'function'){
 }
 var platformClass = window.platformClass;
 function avatarHTML(a){ 
-  /* ★ 统一头像生成入口：全站所有头像都走这里
-     圆角不再写死成具体值（以前切换方/圆之后，顶部栏这类不重渲染的地方会一直是旧形状），
-     改为 inherit：外层的 .chat-avatar / .msg-av / .pav 等都由 --avatar-radius 控制，
-     切换形状时 CSS 变量一变，所有头像立刻跟着变。 */
   var inner = '';
-  
-  if(a && String(a).startsWith('data:')) {
-    inner = `<img src="${a}" style="border-radius:inherit;width:100%;height:100%;object-fit:cover;display:block;">`;
+  var src = String(a || '');
+  if(src.startsWith('data:') || src.startsWith('blob:') || src.startsWith('http')) {
+    inner = `<img src="${src}" style="border-radius:inherit;width:100%;height:100%;object-fit:cover;display:block;" onerror="this.style.display='none'">`;
   } else {
-    /* 没有头像时，画一个灰色的默认小人，并且跟随方圆设置 */
     inner = `<svg viewBox="0 0 100 100" style="width:100%;height:100%;display:block;"><circle fill="#d4d4d4" cx="50" cy="38" r="19"/><path fill="#d4d4d4" d="M12 100 C12 74 28 62 50 62 C72 62 88 74 88 100 Z"/></svg>`;
   }
-  
   return `<div style="width:100%;height:100%;border-radius:inherit;background:#f2f2f2;overflow:hidden;display:flex;align-items:center;justify-content:center;">${inner}</div>`;
 }
 /* ★ 死代码清理：userAvHTML 直接复用统一入口 avatarHTML，防止两套逻辑打架 */
@@ -2901,13 +2895,16 @@ function renderChatFull(forceBottom){
 	  ? 'message-sent msg-out message-bubble-user'
 	  : 'message-received msg-in message-bubble-char';
 	function _withSide(html, sideClasses, side){
-	  return html.replace(/<([a-zA-Z][\w-]*)([^>]*?)\sclass="([^"]*)"/, function(whole, tag, pre, cls){
-	    if(cls.indexOf('message-sent') >= 0 || cls.indexOf('message-received') >= 0){
-	      if(cls.indexOf('data-side') >= 0) return whole;
-	      return '<' + tag + pre + ' class="' + cls + '" data-side="' + side + '"';
+	  const div = document.createElement('div');
+	  div.innerHTML = html;
+	  const firstChild = div.firstElementChild;
+	  if(firstChild){
+	    if(!firstChild.className.includes('message-sent') && !firstChild.className.includes('message-received')){
+	      firstChild.className += ' ' + sideClasses;
 	    }
-	    return '<' + tag + pre + ' class="' + cls + ' ' + sideClasses + '" data-side="' + side + '"';
-	  });
+	    firstChild.setAttribute('data-side', side);
+	  }
+	  return div.innerHTML;
 	}
 	const _msgBodyInner = `${timeSep}${activeMark}${quote}${body}${readFlush}${reactHTML}`;
 	const _bodyWrapped = `<div class="msg-body">${_msgBodyInner}</div>`;
@@ -17374,6 +17371,17 @@ document.addEventListener('touchend', function(e){
    ============================================================ */
 const UPDATE_LIST = [
   {
+    ver: '0.2.3',
+    date: '2026-11-02',
+    items: [
+      '修复：头像上传后，聊天界面与全局列表不改变，仍显示旧头像的底层重绘Bug',
+      '修复：部分复杂卡片（如语音、特殊气泡）渲染时，外层正则误伤导致“气泡里面套气泡”的样式错乱问题',
+      '修复：从功能页内联打开的子页面，因历史状态残留内联样式（display:none）导致界面卡死打不开的问题',
+      '优化：头像渲染逻辑，现在完美兼容 Blob 和 HTTP 链接，不再强制退回灰色默认小人',
+      '优化：更新公告体验，刷新页面后不再重复弹出已忽略的版本提示'
+    ]
+  },
+  {
     ver: '0.2.2',
     date: '2026-11-01',
     items: [
@@ -20410,12 +20418,10 @@ const FULLSCREEN_ONLY_SCREENS = {
 };
 
 function showScreen(id){
-  /* 从功能页打开的新功能：搬进 desk 内联打开（群聊/回忆除外） */
   if(window.__deskMode && id !== 'deskScreen' && !FULLSCREEN_ONLY_SCREENS[id]){
     openDeskFeature(id);
     return;
   }
-  /* 从功能页返回：恢复功能页 */
   if(id === 'deskScreen' && _deskOrigHTML){
     closeDeskFeature();
     return;
@@ -20423,8 +20429,6 @@ function showScreen(id){
   window.__deskMode = false;
   closeAllOverlays();
   const sc = document.getElementById(id);
-  /* ★ 修复：如果这个屏幕之前被搬进 #page-desk，先搬回 body，
-     否则全屏打开后依然是 desk 的子节点，看起来像"打不开/退不出去" */
   if(sc && sc.parentNode !== document.body){
     sc.classList.remove('in-desk');
     document.body.appendChild(sc);
@@ -20434,7 +20438,12 @@ function showScreen(id){
       if(desk){ desk.innerHTML = _deskOrigHTML; _deskOrigHTML = null; bindDeskApps(); }
     }
   }
-  $$('.screen').forEach(s=>s.classList.toggle('on', s.id===id));
+  $$('.screen').forEach(s=>{
+    s.classList.toggle('on', s.id===id);
+    if(s.id === id && s.style.display === 'none'){
+      s.style.display = '';
+    }
+  });
 }
 function closeScreen(){
   const current = document.querySelector('.screen.on');
@@ -25177,13 +25186,9 @@ on('#editAvFile','change',function(){
       var pAv2 = document.getElementById('profileAvatar');
       if(pAv2) pAv2.innerHTML = avatarHTML(freshDataCip);
 
+      try { msgs = loadMsgs(); } catch(err){}
       try { refreshChatRole(); } catch(err){}
-      
-      try{
-        if(typeof window.__forceRenderChat === 'function'){ window.__forceRenderChat(); }
-        if(typeof renderChatFull === 'function'){ renderChatFull(true); }
-        else if(typeof renderChat === 'function'){ renderChat(true); }
-      }catch(err){ console.error('强制重绘失败', err); }
+      forceRepaintChat('换头像');
 
       toast('头像已更新');
       return;
