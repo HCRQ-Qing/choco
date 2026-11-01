@@ -2174,7 +2174,7 @@ if(typeof window.platformClass !== 'function'){
     return '';
   };
 }
-var platformClass = window.platformClass;
+var platformClass = function(p){ return typeof window.platformClass === 'function' ? window.platformClass(p) : ''; };
 function avatarHTML(a){ 
   var inner = '';
   var src = String(a || '');
@@ -12974,7 +12974,6 @@ function applyChatBg(){
   wrap.style.setProperty('--chat-bg-opacity', '1');
   wrap.style.setProperty('--chat-bg-blur', '0px');
   wrap.style.setProperty('--chat-bg-pos', 'center center');
-  wrap.style.setProperty('--chat-bg-align', 'center');
 
   if(!c.key){
     applyTopbarBg2();
@@ -12990,7 +12989,6 @@ function applyChatBg(){
     if(c.align === 'top') pos = 'center top';
     else if(c.align === 'bottom') pos = 'center bottom';
     wrap.style.setProperty('--chat-bg-pos', pos);
-    wrap.style.setProperty('--chat-bg-align', c.align || 'center');
 
     applyTopbarBg2();
   });
@@ -13080,6 +13078,7 @@ document.addEventListener('change', function(e){
   var target = _bgUploadTarget;
   var ratio = (target === 'topbar') ? (16 / 5) : (window.innerWidth / window.innerHeight);
   var titleText = (target === 'topbar') ? '调整顶部栏背景' : '调整聊天背景';
+  
   openCrop(file, ratio, titleText, function(dataUrl){
     function dataURLToBlob(u){
       var parts = String(u).split(',');
@@ -13092,17 +13091,28 @@ document.addEventListener('change', function(e){
     }
     var blob = dataURLToBlob(dataUrl);
     var key = 'bg_' + target + '_' + Date.now().toString(36);
+    
     __idb.set(key, blob).then(function(){
       if(target === 'chat'){
         var c = getChatBgCfg();
         if(c.key) __idb.del(c.key).catch(function(){});
-        c.key = key; saveChatBgCfg(c); applyChatBg(); renderBgImgPanel();
+        c.key = key; 
+        saveChatBgCfg(c); 
+        applyChatBg(); 
+        renderBgImgPanel();
       } else {
         var c2 = getTopbarBgCfg();
         if(c2.key) __idb.del(c2.key).catch(function(){});
-        c2.key = key; saveTopbarBgCfg(c2); applyTopbarBg2(); renderBgImgPanel();      }
+        c2.key = key; 
+        saveTopbarBgCfg(c2); 
+        applyTopbarBg2(); 
+        renderBgImgPanel();      
+      }
       toast('已上传');
-    }).catch(function(err){ console.error(err); toast('上传失败'); });
+    }).catch(function(err){ 
+      console.error(err); 
+      toast('上传失败'); 
+    });
   });
 }, true);
 document.addEventListener('input', function(e){
