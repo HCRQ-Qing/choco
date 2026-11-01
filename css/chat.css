@@ -179,7 +179,7 @@
   color:#1a1a1a;
   transition:box-shadow .15s ease,border-color .15s ease;
 }
-.msg.user .bubble{background:#f4f4f4;color:#1a1a1a;border-radius:6px;border:none}
+.msg.user .bubble{background:#f0f0f0;color:#1a1a1a;border-radius:6px;border:none}
 .msg.char .bubble{background:#ffffff;border:none;color:#1a1a1a;border-radius:6px}
 
 /* ===== 气泡样式主题（由美化面板切换） ===== */
@@ -192,16 +192,17 @@ body[data-bubble="gray"]:not([data-bubble-custom]) .msg.user .bubble{
   font-size:13.5px;
   line-height:1.5;
   font-weight:400;
-  background:rgba(0,0,0,.04);
+  background:#f3f3f3;
   border:none !important;
   box-shadow:none !important;
   color:#1a1a1a;
 }
 body[data-bubble="gray"] .msg.char .bubble{
+  background:#f3f3f3;
   border-radius:16px 16px 16px 4px;
 }
 body[data-bubble="gray"] .msg.user .bubble{
-  background:rgba(0,0,0,.06);
+  background:#ebebeb;
   border-radius:16px 16px 4px 16px;
 }
 
