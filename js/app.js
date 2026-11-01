@@ -2849,7 +2849,7 @@ function renderChatFull(forceBottom){
 		  const main = isSent ? (wData.word || '') : (wData.word || '');
 		  const sub = isSent ? (wData.meaning || '') : (wData.meaning || '');
 		  body = `<div class="bubble word-bubble" data-word-id="${escapeHTML(wm[1])}">` +
-		    '<span class="wb-tag">' + head + '</span>' +
+		    '<div class="wb-tag">' + head + '</div>' +
 		    '<div class="wb-main">' + escapeHTML(main) + '</div>' +
 		    (wData.phonetic ? '<div class="wb-phon">/' + escapeHTML(wData.phonetic) + '/</div>' : '') +
 		    (sub ? '<div class="wb-sub">' + escapeHTML(sub) + '</div>' : '') +
@@ -2864,7 +2864,7 @@ function renderChatFull(forceBottom){
 		body = `<div class="bubble${m.sendFailed ? ' bubble-failed' : ''}">[图片]</div>`;
 	  } else {
 		const showText = rawText.replace(/\[([\s\S]*?)\]/g, '$1');
-		body = `<div class="bubble${m.sendFailed ? ' bubble-failed' : ''}">${escapeHTML(showText)}${failedMark}</div>`;
+		body = `<div class="bubble text-bubble${m.sendFailed ? ' bubble-failed' : ''}" style="display:inline-block;width:max-content;max-width:100%;"><div class="text-inner">${escapeHTML(showText)}${failedMark}</div></div>`;
 	  }
 	}
 
@@ -17373,6 +17373,19 @@ document.addEventListener('touchend', function(e){
    - 只在这个面板里显示，不弹开屏、不影响别的地方
    ============================================================ */
 const UPDATE_LIST = [
+  {
+    ver: '0.2.2',
+    date: '2026-11-01',
+    items: [
+      '修复：抽卡函数返回值异常（导致数组被当成文本），解决角色发空白气泡或只发emoji不回复的底层Bug',
+      '修复：消息队列并发时未正确释放锁，导致连发消息时角色「只读不回」或延迟极高的问题',
+      '修复：连发消息时触发已读保护，导致后续消息不触发回复定时器的逻辑阻断问题',
+      '修复：更改聊天背景透明度时，气泡跟随背景变成半透明的问题（气泡底色调为实心色，恢复原始清晰质感）',
+      '修复：拖拽背景透明度滑杆时，底层背景图不实时刷新的问题',
+      '修复：修改用户/角色头像后，聊天页与列表偶尔未及时刷新的问题',
+      '优化：优化 500 轮消息生成测试，彻底杜绝空文本气泡产生'
+    ]
+  },
   {
     ver: '0.2.1',
     date: '2026-11-01',
