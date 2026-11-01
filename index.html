@@ -91,6 +91,7 @@
 			  <span class="seg"><span class="em" id="tbStatusEmoji">🎧</span><span id="tbStatusText">听歌中</span></span>
 			  <span class="seg" id="tbMood">开心</span>
 			</div>
+			<div class="chat-custom-line" id="chatCustomLine"></div>
 		  </div>
 		</div>
 	  </div>
@@ -1666,6 +1667,7 @@
     <div class="up-section">
       <div class="up-title">抽屉背景 / 图标</div>
       <div class="up-desc">换掉加号抽屉 / 表情抽屉后面那层底，以及功能格子的图标。</div>
+      <div class="up-preview" id="drawerBgPreview" style="aspect-ratio:16/9;margin-bottom:14px"><span class="ph">还没上传</span></div>
       <div class="up-acts" style="margin-top:12px">
         <button class="up-btn primary" id="btnDrawerBgUpload" type="button">上传抽屉背景</button>
         <button class="up-btn ghost" id="btnDrawerBgReset" type="button">恢复默认</button>
@@ -1731,7 +1733,7 @@
 
 <div class="sub-panel" id="spDrawerIcon">
   <div class="bp-head">
-    <button class="bp-back" data-close type="button">‹</button>
+    <button class="bp-back" id="spDrawerIconBack" type="button">‹</button>
     <div class="bp-title">抽 屉 图 标</div>
     <div class="bp-head-right"></div>
   </div>
@@ -1829,6 +1831,11 @@
           <div style="font-size:11px; color:#999; margin-top:4px;">名字居中，头像靠右</div>
         </div>
         <div style="width:20px; height:20px; border-radius:50%; border:1.5px solid #ccc; display:flex; align-items:center; justify-content:center; flex:none;" class="chk"><div style="width:10px; height:10px; border-radius:50%; background:#1a1a1a; display:none;"></div></div>
+      </div>
+
+      <div style="padding:4px 4px 8px;">
+        <div style="font-size:11px; color:#bbb; letter-spacing:.5px; margin-bottom:8px; padding-left:2px;">居中时名字下方那行字</div>
+        <input type="text" id="centerCustomLineInput" maxlength="20" placeholder="写点什么…" style="width:100%; border:none; border-bottom:0.7px solid rgba(0,0,0,.15); background:transparent; padding:8px 2px; font-size:14px; font-family:inherit; color:#1a1a1a; outline:none; letter-spacing:1px; transition:border-color .2s ease; box-sizing:border-box;">
       </div>
 
     </div>

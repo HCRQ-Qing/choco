@@ -69,11 +69,17 @@ const PRECACHE = [
 self.addEventListener('install', function(e){
   e.waitUntil(
     caches.open(CACHE_NAME).then(function(cache){
-      /* 逐个 add，任何一个失败都不影响整体安装 */
-      return Promise.all(PRECACHE.map(function(url){
-        return cache.add(url).catch(function(){});
-      }));
-    }).then(function(){ return self.skipWaiting(); })
+      // 改成串行下载，并在后台执行，避免瞬间并发几十个请求把手机内存撑爆、卡死主线程
+      var chain = Promise.resolve();
+      PRECACHE.forEach(function(url){
+        chain = chain.then(function(){
+          return cache.add(url).catch(function(){});
+        });
+      });
+      return chain;
+    }).then(function(){ 
+      return self.skipWaiting(); 
+    })
   );
 });
 
