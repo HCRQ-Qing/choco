@@ -12989,22 +12989,29 @@ function applyChatBg(){
   const c = getChatBgCfg();
   const wrap = document.getElementById('page-chat');
   if(!wrap) return;
-  wrap.style.backgroundImage = '';
-  wrap.style.backgroundSize = '';
-  wrap.style.backgroundPosition = '';
-  wrap.style.backgroundRepeat = '';
-  wrap.style.backgroundColor = '';
+  
+  wrap.style.setProperty('--chat-bg-img', 'none');
+  wrap.style.setProperty('--chat-bg-opacity', '1');
+  wrap.style.setProperty('--chat-bg-blur', '0px');
+  wrap.style.setProperty('--chat-bg-pos', 'center center');
+  wrap.style.setProperty('--chat-bg-align', 'center');
+
   if(!c.key){
     applyTopbarBg2();
     return;
   }
   __idb.toURL(c.key).then(function(url){
     if(!url) return;
-    wrap.style.backgroundImage = 'url(' + url + ')';
-    wrap.style.backgroundSize = 'cover';
-    wrap.style.backgroundPosition = c.align === 'top' ? 'center top' : (c.align === 'bottom' ? 'center bottom' : 'center center');
-    wrap.style.backgroundRepeat = 'no-repeat';
-    wrap.style.backgroundColor = 'rgba(255,255,255,' + ((100 - c.opacity) / 100) + ')';
+    wrap.style.setProperty('--chat-bg-img', 'url(' + url + ')');
+    wrap.style.setProperty('--chat-bg-opacity', String((100 - c.opacity) / 100));
+    wrap.style.setProperty('--chat-bg-blur', (c.blur || 0) + 'px');
+    
+    let pos = 'center center';
+    if(c.align === 'top') pos = 'center top';
+    else if(c.align === 'bottom') pos = 'center bottom';
+    wrap.style.setProperty('--chat-bg-pos', pos);
+    wrap.style.setProperty('--chat-bg-align', c.align || 'center');
+
     applyTopbarBg2();
   });
 }
@@ -13121,8 +13128,23 @@ document.addEventListener('change', function(e){
 document.addEventListener('input', function(e){
   var t = e.target;
   if(!t || !t.id) return;
-  if(t.id==='chatBgOpacity'){ var c=getChatBgCfg(); c.opacity=parseInt(t.value,10); saveChatBgCfg(c); var v=document.getElementById('chatBgOpacityVal'); if(v)v.textContent=c.opacity+'%'; applyChatBg(); }
-  if(t.id==='chatBgBlur'){ var c2=getChatBgCfg(); c2.blur=parseInt(t.value,10); saveChatBgCfg(c2); var v2=document.getElementById('chatBgBlurVal'); if(v2)v2.textContent=c2.blur+'px'; applyChatBg(); }
+  if(t.id==='chatBgOpacity'){ 
+    var c=getChatBgCfg(); 
+    c.opacity=parseInt(t.value,10); 
+    saveChatBgCfg(c); 
+    var v=document.getElementById('chatBgOpacityVal'); 
+    if(v)v.textContent=c.opacity+'%'; 
+    applyChatBg();
+    if(typeof updateChatBarStyle === 'function') updateChatBarStyle();
+  }
+  if(t.id==='chatBgBlur'){ 
+    var c2=getChatBgCfg(); 
+    c2.blur=parseInt(t.value,10); 
+    saveChatBgCfg(c2); 
+    var v2=document.getElementById('chatBgBlurVal'); 
+    if(v2)v2.textContent=c2.blur+'px'; 
+    applyChatBg();
+  }
   if(t.id==='topbarBgOpacity'){ var c3=getTopbarBgCfg(); c3.opacity=parseInt(t.value,10); saveTopbarBgCfg(c3); var v3=document.getElementById('topbarBgOpacityVal'); if(v3)v3.textContent=c3.opacity+'%'; applyTopbarBg2(); }
   if(t.id==='topbarBgBlur'){ var c4=getTopbarBgCfg(); c4.blur=parseInt(t.value,10); saveTopbarBgCfg(c4); var v4=document.getElementById('topbarBgBlurVal'); if(v4)v4.textContent=c4.blur+'px'; applyTopbarBg2(); }
 }, true);
@@ -25088,13 +25110,24 @@ on('#editAvFile','change',function(){
     if(context === 'profile') {
       var pid = window.__profileViewId || getCurrentRoleId();
       saveRoleField(pid, 'avatar', data);
+      
+      var freshRole = getRoleById(pid);
+      var freshData = freshRole ? freshRole.avatar : data;
+
       var pAv = document.getElementById('profileAvatar');
-      if(pAv) pAv.innerHTML = avatarHTML(data);
+      if(pAv) pAv.innerHTML = avatarHTML(freshData);
+      
       if(pid === getCurrentRoleId()){
         try{ refreshChatRole(); }catch(err){}
         if(typeof window.__forceRenderChat === 'function') window.__forceRenderChat();
         if(typeof renderChatFull === 'function') renderChatFull(true);
+      } else {
+        try{ renderFriends(); }catch(err){}
       }
+      
+      var cipAv = document.getElementById('cipAvatar');
+      if(cipAv && pid === getCurrentRoleId()) cipAv.innerHTML = avatarHTML(freshData);
+
       toast('头像已更新');
       return;
     }
@@ -25121,9 +25154,24 @@ on('#editAvFile','change',function(){
     if(context === 'cip') {
       var rid = getCurrentRoleId();
       saveRoleField(rid, 'avatar', data);
+      
+      var freshRoleCip = getRoleById(rid);
+      var freshDataCip = freshRoleCip ? freshRoleCip.avatar : data;
+
       var cipAv = document.getElementById('cipAvatar');
-      if(cipAv) cipAv.innerHTML = avatarHTML(data);
+      if(cipAv) cipAv.innerHTML = avatarHTML(freshDataCip);
+      
+      var pAv2 = document.getElementById('profileAvatar');
+      if(pAv2) pAv2.innerHTML = avatarHTML(freshDataCip);
+
       try { refreshChatRole(); } catch(err){}
+      
+      try{
+        if(typeof window.__forceRenderChat === 'function'){ window.__forceRenderChat(); }
+        if(typeof renderChatFull === 'function'){ renderChatFull(true); }
+        else if(typeof renderChat === 'function'){ renderChat(true); }
+      }catch(err){ console.error('强制重绘失败', err); }
+
       toast('头像已更新');
       return;
     }
