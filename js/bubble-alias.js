@@ -17,10 +17,11 @@
       });
       // 保留原来的 message-sent / message-received 别名（别人 CSS 可能用这个）
       document.querySelectorAll('#chatList .msg.user .bubble').forEach(function(el){
-        el.classList.add('message-sent');
+        // 只有当没有别名时才加上，防止重复类名套娃
+        if (!el.classList.contains('message-sent')) el.classList.add('message-sent');
       });
       document.querySelectorAll('#chatList .msg.char .bubble').forEach(function(el){
-        el.classList.add('message-received');
+        if (!el.classList.contains('message-received')) el.classList.add('message-received');
       });
     }catch(e){}
   }
