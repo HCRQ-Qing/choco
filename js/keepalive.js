@@ -285,7 +285,6 @@
 
   /* ---------- 9. 对外 API ---------- */
   window.KA = {
-    /* 注册一个由保活层驱动的任务；every 毫秒执行一次，冻结后自动补 */
     on: function(name, fn, everyMs){
       if(typeof fn !== 'function') return;
       tasks.push({ name: String(name || 'task'), fn: fn, every: Math.max(1000, Number(everyMs) || 60000), last: Date.now() });
@@ -294,9 +293,7 @@
     catchUp: catchUp,
     startWorker: startWorker,
     stopWorker: stopWorker,
-    /* 当前标签是不是主标签（后台调度只在主标签跑） */
     isLeader: function(){ return isLeaderTab; },
-    tabId: tabId,
     status: function(){
       return {
         kaOn: kaOn(),
