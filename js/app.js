@@ -75,29 +75,36 @@ function isPageInBackground(){
   return false;
 }
 
+/* ============================================================
+ *  主题系统 · 单一入口
+ *  颜色变量全部在 css/theme.css 中定义，这里只负责切换 data-theme。
+ *  新增主题：在 theme.css 加 [data-theme="xxx"] + 把 id 加进 THEMES 即可。
+ * ========================================================== */
 const THEMES = [
-  {id:'bw',name:'黑白',accent:'#1a1a1a',mbText:'#ffffff',v:{'--th-bg0':'#ffffff','--th-bg1':'#ffffff','--th-card':'#ffffff','--th-text':'#1a1a1a','--th-text-soft':'#999999','--th-text-mute':'#bbbbbb','--th-accent':'#1a1a1a','--th-accent-deep':'#000000','--th-accent-soft':'rgba(0,0,0,.04)','--th-accent-soft-2':'rgba(0,0,0,.08)','--th-accent-line':'rgba(0,0,0,.15)','--topbar-a':'rgba(0,0,0,.04)','--topbar-b':'#ffffff','--topbar-c':'#ffffff','--topbar-line':'rgba(0,0,0,.12)'}},
-  {id:'dark',name:'夜间',accent:'#e8e8e8',mbText:'#1a1a1a',v:{'--th-bg0':'#1a1a1a','--th-bg1':'#252525','--th-card':'#2e2e2e','--th-text':'#e8e8e8','--th-text-soft':'#a8a8a8','--th-text-mute':'#808080','--th-accent':'#e8e8e8','--th-accent-deep':'#ffffff','--th-accent-soft':'rgba(255,255,255,.06)','--th-accent-soft-2':'rgba(255,255,255,.10)','--th-accent-line':'rgba(255,255,255,.18)','--topbar-a':'rgba(255,255,255,.04)','--topbar-b':'#252525','--topbar-c':'#252525','--topbar-line':'rgba(255,255,255,.14)'}}
+  { id:'bw',   name:'黑白' },
+  { id:'dark', name:'夜间' }
 ];
 function applyTheme(id){
   const t = THEMES.find(x=>x.id===id) || THEMES[0];
-  const root = document.documentElement;
-  Object.keys(t.v).forEach(k => root.style.setProperty(k, t.v[k]));
-  root.style.setProperty('--mb-bg', t.accent);
-  root.style.setProperty('--mb-text', t.mbText);
-  root.setAttribute('data-theme', t.id);
+  document.documentElement.setAttribute('data-theme', t.id);
   lsSet('mj_theme', t.id);
+  // 同步浏览器顶栏颜色
+  const meta = document.getElementById('metaThemeColor');
+  if(meta){
+    meta.setAttribute('content', t.id === 'dark' ? '#1a1a1a' : '#ffffff');
+  }
 }
 try{
   // 旧主题 id 回退：如果 localStorage 里存的是已删除的主题，自动改成 bw
   (function migrateTheme(){
-    const VALID = ['bw', 'dark'];   // 目前支持黑白 / 夜间；以后加新主题，把 id 加进来即可
+    const VALID = THEMES.map(t=>t.id);
     const cur = lsGet('mj_theme', 'bw');
     if(!VALID.includes(cur)){
       lsSet('mj_theme', 'bw');
     }
   })();
-  applyTheme('bw');
+  // 读取已保存的主题并应用（不再强制 bw）
+  applyTheme(lsGet('mj_theme', 'bw'));
 }catch(e){ console.error(e); }
 
 const CALL_ROLE_CFG_KEY = 'mj_call_role_cfg_v1';
@@ -12249,7 +12256,10 @@ function applyMyFont(){
     if(row){
       e.preventDefault(); e.stopPropagation();
       var p = row.dataset.panel;
-      if(p === 'theme'){ toast('主题：黑白（目前只有这一个）'); }
+      if(p === 'theme'){
+        var st = document.getElementById('spTheme');
+        if(st) st.classList.add('show');
+      }
       else if(p === 'avatar'){
         var m = document.getElementById('spAvatar');
         if(m) m.classList.add('show');
@@ -12819,9 +12829,9 @@ function closeBeauty(){
   if(typeof renderCssPresetList === 'function') renderCssPresetList();
   if(typeof renderCssCurrentTip === 'function') renderCssCurrentTip();
 }
-const THEME_NAMES = {bw:'黑白'};
+const THEME_NAMES = {bw:'黑白', dark:'夜间'};
 function renderBeautyPanel(){
-  const cur = lsGet('mj_theme','sakura');
+  const cur = lsGet('mj_theme','bw');
   $$('#presetGrid .preset').forEach(el=>{ el.classList.toggle('on', el.dataset.theme===cur); });
   const tVal = $('#themeVal'); if(tVal) tVal.textContent = THEME_NAMES[cur] || '黑白';
   const aVal = $('#avatarVal'); if(aVal) aVal.textContent = beautyCfg.avatarShape==='circle'?'圆形':'方形';
@@ -12854,7 +12864,7 @@ function renderBeautyPanel(){
 	  const th = el.dataset.theme;
 	  applyTheme(th);
 	  $$('#presetGrid .preset').forEach(x=>x.classList.toggle('on', x===el));
-	  if(tVal) tVal.textContent = THEME_NAMES[th] || '粉樱';
+	  if(tVal) tVal.textContent = THEME_NAMES[th] || '黑白';
 	  const t = THEMES.find(x=>x.id===th);
 	  toast('已切换到：' + (t?t.name:th));
 	  applyTopbarBg();
