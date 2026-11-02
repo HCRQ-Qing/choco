@@ -141,10 +141,7 @@
   leaderTick(Date.now());
 
   /* 其它标签写了租约 → 立刻同步（被接管就退位） */
-  window.addEventListener('storage', function(e){
-    if(e.key !== LEADER_KEY) return;
-    leaderTick(Date.now());
-  });
+ 
 
   /* ---------- 4. Worker 心跳：主线程 timer 被节流时救场 ---------- */
   var WORKER_SRC =
