@@ -1,0 +1,189 @@
+/* ============================================================
+ *  theme.css · 主题系统唯一颜色变量来源 (Single Source of Truth)
+ * ============================================================
+ *  规则：
+ *  1. 所有颜色只在这里定义，组件一律用 var(--th-*) 引用。
+ *  2. JS 只负责切换 html[data-theme]，绝不写任何颜色变量。
+ *  3. 新增主题 = 在这里加一个 [data-theme="xxx"] 块，改一个地方即生效。
+ *  4. 保持向后兼容：旧的 --c-* / --th-* / --topbar-* / --mb-* 名都保留。
+ * ========================================================== */
+
+/* ---------- 亮色主题（黑白）· 默认 ---------- */
+:root,
+[data-theme="bw"] {
+  /* 背景层 */
+  --th-bg0:    #ffffff;          /* 应用最底层 */
+  --th-bg1:    #ffffff;          /* 页面 / 卡片底 */
+  --th-card:   #ffffff;          /* 浮层卡片底 */
+  --c-bg:      var(--th-bg0);
+  --c-page:    var(--th-bg1);
+
+  /* 文字 */
+  --th-text:       #1a1a1a;      /* 主文字 */
+  --th-text-soft:  #999999;      /* 次要文字 */
+  --th-text-mute:  #bbbbbb;      /* 弱化文字 */
+  --th-faint:      #d0d0d0;      /* 极弱 / 占位 */
+  --c-ink:      var(--th-text);
+  --c-ink-2:    var(--th-text-soft);
+  --c-muted:    var(--th-text-mute);
+  --c-faint:    var(--th-faint);
+
+  /* 强调色（主操作 / 图标 / 边框） */
+  --th-accent:        #1a1a1a;
+  --th-accent-deep:   #000000;
+  --th-accent-soft:   rgba(0,0,0,.04);
+  --th-accent-soft-2: rgba(0,0,0,.08);
+  --th-accent-line:   rgba(0,0,0,.15);
+
+  /* 边框 / 分割线 */
+  --th-border:   #d8d8d8;
+  --th-line:     rgba(0,0,0,.08);
+  --th-divider:  rgba(0,0,0,.06);
+  --c-border:    var(--th-border);
+  --c-line:      var(--th-line);
+
+  /* 气泡 */
+  --th-bubble:    rgba(0,0,0,.04);
+  --th-bubble-me: rgba(0,0,0,.06);
+  --c-bubble:    var(--th-bubble);
+  --c-bubble-me: var(--th-bubble-me);
+
+  /* 头像 */
+  --th-av-bg:  #f2f2f2;
+  --th-av-sil: #c8c8c8;
+  --c-avatar:     var(--th-av-bg);
+  --c-silhouette: var(--th-av-sil);
+
+  /* 顶栏 */
+  --topbar-a:    rgba(0,0,0,.04);
+  --topbar-b:    #ffffff;
+  --topbar-c:    #ffffff;
+  --topbar-line: rgba(0,0,0,.12);
+
+  /* 消息角标 */
+  --mb-bg:   #1a1a1a;
+  --mb-text: #ffffff;
+  --c-badge:     var(--mb-bg);
+  --c-badge-ink: var(--mb-text);
+
+  /* 遮罩 */
+  --mask-bg:     rgba(0,0,0,.15);
+  --mask-strong: rgba(0,0,0,.32);
+  --mask-blur:   blur(2px);
+
+  /* 阴影 */
+  --c-shadow: rgba(0,0,0,.07);
+  --shadow-l1: 0 1px 2px rgba(0,0,0,.04), 0 4px 12px rgba(0,0,0,.06);
+  --shadow-l2: 0 1px 2px rgba(0,0,0,.04), 0 4px 12px rgba(0,0,0,.06), 0 12px 32px rgba(0,0,0,.08);
+  --shadow-l3: 0 1px 2px rgba(0,0,0,.04), 0 4px 12px rgba(0,0,0,.06), 0 12px 32px rgba(0,0,0,.08), 0 24px 48px rgba(0,0,0,.10);
+
+  /* 危险 / 删除 */
+  --th-danger: #1a1a1a;
+
+  /* 主题色 meta */
+  --theme-color: #ffffff;
+}
+
+/* ---------- 暗色主题（夜间） ---------- */
+[data-theme="dark"] {
+  --th-bg0:    #1a1a1a;
+  --th-bg1:    #252525;
+  --th-card:   #2e2e2e;
+  --c-bg:      var(--th-bg0);
+  --c-page:    var(--th-bg1);
+
+  --th-text:       #e8e8e8;
+  --th-text-soft:  #a8a8a8;
+  --th-text-mute:  #808080;
+  --th-faint:      #5a5a5a;
+  --c-ink:      var(--th-text);
+  --c-ink-2:    var(--th-text-soft);
+  --c-muted:    var(--th-text-mute);
+  --c-faint:    var(--th-faint);
+
+  --th-accent:        #e8e8e8;
+  --th-accent-deep:   #ffffff;
+  --th-accent-soft:   rgba(255,255,255,.06);
+  --th-accent-soft-2: rgba(255,255,255,.10);
+  --th-accent-line:   rgba(255,255,255,.18);
+
+  --th-border:   #3a3a3a;
+  --th-line:     rgba(255,255,255,.10);
+  --th-divider:  rgba(255,255,255,.06);
+  --c-border:    var(--th-border);
+  --c-line:      var(--th-line);
+
+  --th-bubble:    rgba(255,255,255,.06);
+  --th-bubble-me: rgba(255,255,255,.10);
+  --c-bubble:    var(--th-bubble);
+  --c-bubble-me: var(--th-bubble-me);
+
+  --th-av-bg:  #333333;
+  --th-av-sil: #5a5a5a;
+  --c-avatar:     var(--th-av-bg);
+  --c-silhouette: var(--th-av-sil);
+
+  --topbar-a:    rgba(255,255,255,.04);
+  --topbar-b:    #252525;
+  --topbar-c:    #252525;
+  --topbar-line: rgba(255,255,255,.14);
+
+  --mb-bg:   #e8e8e8;
+  --mb-text: #1a1a1a;
+  --c-badge:     var(--mb-bg);
+  --c-badge-ink: var(--mb-text);
+
+  --mask-bg:     rgba(0,0,0,.55);
+  --mask-strong: rgba(0,0,0,.7);
+
+  --c-shadow: rgba(0,0,0,.35);
+  --shadow-l1: 0 1px 2px rgba(0,0,0,.2), 0 4px 12px rgba(0,0,0,.3);
+  --shadow-l2: 0 1px 2px rgba(0,0,0,.2), 0 4px 12px rgba(0,0,0,.3), 0 12px 32px rgba(0,0,0,.4);
+  --shadow-l3: 0 1px 2px rgba(0,0,0,.2), 0 4px 12px rgba(0,0,0,.3), 0 12px 32px rgba(0,0,0,.4), 0 24px 48px rgba(0,0,0,.5);
+
+  --th-danger: #e8e8e8;
+
+  --theme-color: #1a1a1a;
+}
+
+/* ============================================================
+ *  主题切换过渡（只对需要跟随主题的属性加过渡，避免全局抖动）
+ * ========================================================== */
+body,
+#app,
+.page,
+.screen,
+.modal .sheet,
+.drawer,
+.chat-topbar,
+.d-bar,
+.gch-bar,
+.tabbar,
+.utop,
+.search-box,
+.cd-search,
+.bh-search,
+.rel-search,
+.cs-input,
+.nf-search,
+.dr-search,
+.set-row,
+.me-row,
+.fr-row,
+.card,
+.bubble,
+input, textarea, select,
+button {
+  transition:
+    background-color var(--dur-base, 250ms) ease,
+    color var(--dur-base, 250ms) ease,
+    border-color var(--dur-base, 250ms) ease,
+    box-shadow var(--dur-base, 250ms) ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

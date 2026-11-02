@@ -1,6 +1,11 @@
+/* ============================================================
+ *  tokens.css · 设计常量（非颜色值）
+ *  颜色变量全部在 theme.css 中定义，这里只放字体 / 间距 / 圆角 / 阴影尺寸 / 层级等。
+ * ========================================================== */
 :root {
   --font-cn: "Songti SC", "STSong", "SimSun", "宋体", serif;
   --font-en: Georgia, "Times New Roman", serif;
+  --app-font: var(--font-cn);
 
   --fs-display: 31px;
   --fs-h1: 25px;
@@ -25,8 +30,9 @@
   --r-md: 12px;
   --r-lg: 16px;
   --r-full: 999px;
-  --avatar-radius: 12%;
+  --r-inner: calc(var(--r-lg) - 8px);
 
+  --avatar-radius: 14%;
   --avatar-sm: 32px;
   --avatar-md: 48px;
   --avatar-lg: 64px;
@@ -41,16 +47,10 @@
   --ease: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-spring: cubic-bezier(0.32, 0.72, 0, 1);
 
-  --r-inner: calc(var(--r-lg) - 8px);
-
   --ls-tight: 1px;
   --ls-normal: 2px;
   --ls-wide: 3px;
   --ls-wider: 6px;
-
-  --shadow-l1: 0 1px 2px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.06);
-  --shadow-l2: 0 1px 2px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.06), 0 12px 32px rgba(0, 0, 0, 0.08);
-  --shadow-l3: 0 1px 2px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.06), 0 12px 32px rgba(0, 0, 0, 0.08), 0 24px 48px rgba(0, 0, 0, 0.10);
 
   --icon-sm: 16px;
   --icon-md: 20px;
@@ -84,93 +84,4 @@
   --z-drawer: 500;
   --z-modal: 600;
   --z-toast: 700;
-
-  /* ===== 颜色变量（照预览取值） ===== */
-  --c-bg: #ececec;
-  --c-page: #ffffff;
-  --c-ink: #1a1a1a;
-  --c-ink-2: #888;
-  --c-muted: #bbb;
-  --c-faint: #d0d0d0;
-  --c-line: rgba(0, 0, 0, 0.08);
-  --c-border: #d8d8d8;
-  --c-bubble: rgba(0, 0, 0, 0.04);
-  --c-bubble-me: rgba(0, 0, 0, 0.06);
-  --c-avatar: #f2f2f2;
-  --c-silhouette: #c8c8c8;
-  --c-badge: #1a1a1a;
-  --c-badge-ink: #ffffff;
-  --c-shadow: rgba(0, 0, 0, 0.07);
-
-  /* ===== 旧 --th-* 变量别名（统一指向常量表，保持兼容） ===== */
-  --app-font: var(--font-cn);
-  --avatar-radius: 14%;
-
-  --th-bg0: var(--c-page);
-  --th-bg1: var(--c-page);
-  --th-card: var(--c-page);
-  --th-text: var(--c-ink);
-  --th-text-soft: var(--c-ink-2);
-  --th-text-mute: var(--c-muted);
-  --th-accent: var(--c-ink);
-  --th-accent-deep: #000000;
-  --th-accent-soft: var(--c-bubble);
-  --th-accent-soft-2: var(--c-line);
-  --th-accent-line: rgba(0,0,0,.15);
-  --th-danger: var(--c-ink);
-  --th-av-bg: var(--c-avatar);
-  --th-av-sil: var(--c-silhouette);
-  --mb-bg: var(--c-ink);
-  --mb-text: var(--c-page);
-  --topbar-a: var(--c-bubble);
-  --topbar-b: var(--c-page);
-  --topbar-c: var(--c-page);
-  --topbar-line: rgba(0,0,0,.12);
-
-  /* ===== 遮罩 ===== */
-  --mask-bg: rgba(0,0,0,.15);
-  --mask-blur: blur(2px);
-}
-[data-theme="bw"]{
-  --th-av-bg: var(--c-avatar);
-  --th-av-sil: var(--c-silhouette);
-  --topbar-a: var(--c-bubble);
-  --topbar-b: var(--c-page);
-  --topbar-c: var(--c-page);
-  --topbar-line: rgba(0,0,0,.12);
-}
-
-[data-theme="dark"]{
-  --topbar-fade-1: rgba(0,0,0,.55);
-  --topbar-fade-2: rgba(0,0,0,.35);
-  --c-bg: #1a1a1a;
-  --c-page: #252525;
-  --c-ink: #e8e8e8;
-  --c-ink-2: #a8a8a8;
-  --c-muted: #808080;
-  --c-faint: #5a5a5a;
-  --c-line: rgba(255,255,255,0.10);
-  --c-border: #3a3a3a;
-  --c-bubble: rgba(255,255,255,0.06);
-  --c-bubble-me: rgba(255,255,255,0.10);
-  --c-avatar: #333333;
-  --c-silhouette: #5a5a5a;
-  --c-badge: #e8e8e8;
-  --c-badge-ink: #1a1a1a;
-  --c-shadow: rgba(0,0,0,0.35);
-
-  --th-accent-deep: #ffffff;
-  --th-accent-line: rgba(255,255,255,0.18);
-  --th-danger: #e8e8e8;
-  --mb-bg: #e8e8e8;
-  --mb-text: #1a1a1a;
-  --topbar-line: rgba(255,255,255,0.14);
-
-  --mask-bg: rgba(0,0,0,0.55);
-}
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
-    animation-duration: 0.01ms !important;
-    transition-duration: 0.01ms !important;
-  }
 }

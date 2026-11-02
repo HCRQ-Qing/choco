@@ -2,39 +2,39 @@
 #expSheet{max-width:340px !important;}
 #mExport .sub-row{
   display:flex;align-items:center;justify-content:space-between;
-  padding:14px 2px 10px;font-size:11.5px;color:#999;letter-spacing:1px;
+  padding:14px 2px 10px;font-size:11.5px;color:var(--th-text-soft);letter-spacing:1px;
 }
-#mExport .sub-row .all{color:#1a1a1a;cursor:pointer;font-size:12px;}
+#mExport .sub-row .all{color:var(--th-text);cursor:pointer;font-size:12px;}
 #mExport .exp-cat-list{max-height:52vh;overflow-y:auto;scrollbar-width:none;margin-bottom:16px;}
 #mExport .exp-cat-list::-webkit-scrollbar{display:none}
 #mExport .exp-cat-row{
   display:flex;align-items:center;gap:12px;
   padding:15px 2px;cursor:pointer;
-  border-bottom:0.6px dashed rgba(0,0,0,.06);
+  border-bottom:0.6px dashed var(--th-bubble-me);
 }
 #mExport .exp-cat-row:last-child{border-bottom:none}
 #mExport .exp-cat-row .exp-ck{
   width:18px;height:18px;flex:none;border-radius:50%;
   border:1.4px solid rgba(0,0,0,.42);
-  background:#fff;
+  background:var(--th-bg1);
   display:flex;align-items:center;justify-content:center;
   transition:background .15s ease, border-color .15s ease;
 }
-#mExport .exp-cat-row.on .exp-ck{background:#1a1a1a;border-color:#1a1a1a;}
+#mExport .exp-cat-row.on .exp-ck{background:var(--th-text);border-color:var(--th-text);}
 #mExport .exp-cat-row .exp-ck svg{width:10px;height:10px;display:block;}
 #mExport .exp-cat-row .exp-ck svg path{
-  fill:none;stroke:#fff;stroke-width:2.6;
+  fill:none;stroke:var(--th-bg1);stroke-width:2.6;
   stroke-linecap:round;stroke-linejoin:round;
   opacity:0;transition:opacity .15s ease;
 }
 #mExport .exp-cat-row.on .exp-ck svg path{opacity:1;}
-#mExport .exp-cat-row .exp-name{flex:1;font-size:13.5px;color:#1a1a1a;font-weight:300;letter-spacing:.5px;}
+#mExport .exp-cat-row .exp-name{flex:1;font-size:13.5px;color:var(--th-text);font-weight:300;letter-spacing:.5px;}
 #mExport .exp-cat-row .exp-count{font-size:11px;color:#ccc;font-family:Georgia,serif;flex:none;}
-#mExport .acts{padding-top:14px;border-top:0.6px dashed #ececec;}
+#mExport .acts{padding-top:14px;border-top:0.6px dashed var(--th-bg0);}
 #mExport .acts button{
   width:100%;padding:13px 0;border-radius:22px;
   font-size:13px;font-family:inherit;letter-spacing:2px;
-  cursor:pointer;background:#1a1a1a;color:#fff;border:none;
+  cursor:pointer;background:var(--th-text);color:var(--th-bg1);border:none;
 }
 #mExport .acts button:active{opacity:.85;}
 
@@ -44,11 +44,11 @@
   width:100%;
   max-width:460px;
   max-height:none;
-  background:#ffffff;
+  background:var(--th-bg1);
   border-radius:22px;
   border:none;
   overflow:visible;
-  box-shadow:0 20px 60px rgba(0,0,0,.08);
+  box-shadow:0 20px 60px var(--th-accent-soft-2);
   animation:pop .28s cubic-bezier(.22,1,.36,1);
   display:flex;flex-direction:column;
 }
@@ -62,7 +62,7 @@
   margin:0;
   font-size:16px;
   letter-spacing:3px;
-  color:#1a1a1a;
+  color:var(--th-text);
   font-weight:300;
   -webkit-font-smoothing:antialiased;
   -moz-osx-font-smoothing:grayscale;
@@ -72,18 +72,18 @@
   font-family:Georgia,serif;
   font-size:9px;
   letter-spacing:4px;
-  color:#c8c8c8;
+  color:var(--th-faint);
   font-weight:400;
   margin-left:10px;
 }
 #mDivine .sheet-head .x{
   width:30px;height:30px;border-radius:0;
   border:none;background:transparent;
-  cursor:pointer;font-size:14px;color:#999;
+  cursor:pointer;font-size:14px;color:var(--th-text-soft);
   display:flex;align-items:center;justify-content:center;
   font-family:inherit;transition:color .2s;
 }
-#mDivine .sheet-head .x:hover{color:#1a1a1a}
+#mDivine .sheet-head .x:hover{color:var(--th-text)}
 #mDivine .sheet-body{
   padding:0 22px 22px;
   overflow:visible;
@@ -96,7 +96,7 @@
    全部按 A 的风格来，但保留原结构和文字，只调视觉 */
 #mDivine .divine-title{
   font-size:14px !important;
-  color:#1a1a1a !important;
+  color:var(--th-text) !important;
   letter-spacing:5px !important;
   font-weight:300 !important;
   margin:0 0 4px !important;
@@ -107,7 +107,7 @@
 #mDivine .divine-sub{
   display:block !important;
   font-size:9px !important;
-  color:#c8c8c8 !important;
+  color:var(--th-faint) !important;
   letter-spacing:5px !important;
   font-weight:400 !important;
   margin:0 0 14px !important;
@@ -119,15 +119,15 @@
   height:auto !important;
   min-height:140px !important;
   max-height:none !important;
-  border:0.7px solid rgba(0,0,0,.12) !important;
+  border:0.7px solid var(--th-line) !important;
   border-radius:14px !important;
   padding:14px 16px !important;
   margin:0 0 14px !important;
   font-size:14px !important;
   font-family:inherit !important;
-  color:#1a1a1a !important;
+  color:var(--th-text) !important;
   outline:none !important;
-  background:#fdfdfd !important;
+  background:var(--th-bg1) !important;
   box-shadow:none !important;
   text-align:left !important;
   resize:vertical !important;
@@ -137,12 +137,12 @@
   letter-spacing:normal !important;
 }
 #mDivine .q-input:focus{
-  border-color:#1a1a1a !important;
-  background:#fff !important;
+  border-color:var(--th-text) !important;
+  background:var(--th-bg1) !important;
   box-shadow:none !important;
 }
 #mDivine .q-input::placeholder{
-  color:#c8c8c8 !important;
+  color:var(--th-faint) !important;
   font-weight:300 !important;
   letter-spacing:normal !important;
 }
@@ -176,9 +176,9 @@
 }
 #mDivine .count-btn.on,
 #mDivine .drawer-btn.on{
-  color:#ffffff !important;
-  background:#1a1a1a !important;
-  border-color:#1a1a1a !important;
+  color:var(--th-bg1) !important;
+  background:var(--th-text) !important;
+  border-color:var(--th-text) !important;
   font-weight:400 !important;
 }
 #mDivine .count-btn.on::after,
@@ -186,8 +186,8 @@
 #mDivine .primary-btn{
   border:none !important;
   border-radius:22px !important;
-  background:#1a1a1a !important;
-  color:#ffffff !important;
+  background:var(--th-text) !important;
+  color:var(--th-bg1) !important;
   padding:14px !important;
   font-size:13.5px !important;
   font-family:inherit !important;
@@ -196,7 +196,7 @@
   text-indent:3px !important;
   cursor:pointer !important;
   margin:18px 0 0 !important;
-  box-shadow:0 2px 8px rgba(0,0,0,.12) !important;
+  box-shadow:0 2px 8px var(--th-line) !important;
   display:block !important;
   text-align:center !important;
   width:100% !important;
@@ -214,9 +214,9 @@
   flex-wrap:nowrap !important;
   margin-top:14px !important;
 }
-.sheet-body label{display:block;font-size:11px;color:#999;margin:0 0 2px;letter-spacing:.3px}
+.sheet-body label{display:block;font-size:11px;color:var(--th-text-soft);margin:0 0 2px;letter-spacing:.3px}
 .sheet-body label:first-child{margin-top:0}
-.sheet-body input[type=text],.sheet-body input[type=number]{width:100%;border:0.7px solid #d8d8d8;border-radius:8px;padding:14px 16px;font-size:13.5px;font-family:inherit;color:#1a1a1a;outline:none;background:#ffffff;resize:vertical;line-height:1.7;box-shadow:0 1px 4px rgba(0,0,0,.02);transition:border-color .2s,box-shadow .2s;flex-shrink:0;min-height:auto}
+.sheet-body input[type=text],.sheet-body input[type=number]{width:100%;border:0.7px solid var(--th-border);border-radius:8px;padding:14px 16px;font-size:13.5px;font-family:inherit;color:var(--th-text);outline:none;background:var(--th-bg1);resize:vertical;line-height:1.7;box-shadow:0 1px 4px var(--th-divider);transition:border-color .2s,box-shadow .2s;flex-shrink:0;min-height:auto}
 /* 新建分组里的角色选择行 */
 #ngPick .pick .pick-av{
   width:34px;height:34px;flex:none;overflow:hidden;
@@ -230,22 +230,22 @@
   display:flex;flex-direction:row;align-items:center;gap:12px;
   padding:12px 2px;
   background:transparent;
-  border:none;border-bottom:0.6px dashed rgba(0,0,0,.06);border-radius:0;
+  border:none;border-bottom:0.6px dashed var(--th-bubble-me);border-radius:0;
   margin:0;width:100%;box-sizing:border-box;
   cursor:pointer;
   transition:background .18s ease;
 }
 #ngPick .pick:last-child{border-bottom:none}
 
-#ngPick .pick .pick-name{flex:1;font-size:13.5px;color:#1a1a1a;letter-spacing:1px}
+#ngPick .pick .pick-name{flex:1;font-size:13.5px;color:var(--th-text);letter-spacing:1px}
 #ngPick .pick .pick-chk{
   width:20px;height:20px;border-radius:50%;flex:none;
-  border:0.7px solid #d0d0d0;
+  border:0.7px solid var(--th-faint);
   background:transparent;
   display:flex;align-items:center;justify-content:center;
   font-size:11px;color:transparent;transition:all .18s;
 }
-#ngPick .pick.on .pick-chk{background:#1a1a1a;border-color:#1a1a1a;color:#fff}
+#ngPick .pick.on .pick-chk{background:var(--th-text);border-color:var(--th-text);color:var(--th-bg1)}
 
 /* ★ 干掉旧的 translateX，白圆的位置只靠 left 控制 */
 #mReply #replyBody .switch .slider::before{
@@ -260,51 +260,51 @@
 #gmList .gm-item{
   display:flex;align-items:center;gap:10px;
   padding:12px 14px;border-radius:10px;
-  border:0.7px solid #e8e8e8;background:#ffffff;
+  border:0.7px solid var(--th-border);background:var(--th-bg1);
   margin-bottom:8px;cursor:pointer;
   transition:all .18s ease;
   touch-action:none;
 }
-#gmList .gm-item:active{background:#fafafa}
+#gmList .gm-item:active{background:var(--th-accent-soft)}
 #gmList .gm-item .gm-drag{
-  color:#999;font-size:16px;flex:none;cursor:grab;
+  color:var(--th-text-soft);font-size:16px;flex:none;cursor:grab;
   padding-right:2px;line-height:1;user-select:none;
 }
-#gmList .gm-item .gm-name{flex:1;font-size:13.5px;color:#1a1a1a}
+#gmList .gm-item .gm-name{flex:1;font-size:13.5px;color:var(--th-text)}
 #gmList .gm-item .gm-del{
   width:20px;height:20px;border-radius:50%;flex:none;
-  background:#f0f0f0;color:#999;font-size:11px;
+  background:var(--th-divider);color:var(--th-text-soft);font-size:11px;
   display:flex;align-items:center;justify-content:center;
   transition:all .15s;
 }
-#gmList .gm-item .gm-del:active{background:#1a1a1a;color:#fff}
-#gmList .gm-item.dragging{opacity:.4;background:#f5f5f5}
-#gmList .gm-item.drag-over{border-color:#1a1a1a;background:#fafafa}
+#gmList .gm-item .gm-del:active{background:var(--th-text);color:var(--th-bg1)}
+#gmList .gm-item.dragging{opacity:.4;background:var(--th-accent-soft)}
+#gmList .gm-item.drag-over{border-color:var(--th-text);background:var(--th-accent-soft)}
 /* 改分组弹窗 */
 #cgList{margin-top:4px}
 .cg-item{
   display:flex;align-items:center;gap:10px;
   padding:12px 14px;border-radius:10px;
-  border:0.7px solid #e8e8e8;background:#ffffff;
+  border:0.7px solid var(--th-border);background:var(--th-bg1);
   margin-bottom:8px;cursor:pointer;
-  font-size:13.5px;color:#1a1a1a;
+  font-size:13.5px;color:var(--th-text);
   transition:all .18s ease;
   touch-action:none;
 }
-.cg-item:active{background:#fafafa}
-.cg-item.on{border-color:#1a1a1a;background:#fafafa;font-weight:500}
+.cg-item:active{background:var(--th-accent-soft)}
+.cg-item.on{border-color:var(--th-text);background:var(--th-accent-soft);font-weight:500}
 .cg-item .cg-drag{
   color:#ccc;font-size:13px;flex:none;cursor:grab;
   padding-right:2px;user-select:none;
 }
-.cg-item.dragging{opacity:.4;background:#f5f5f5}
-.cg-item.drag-over{border-color:#1a1a1a;background:#fafafa}
+.cg-item.dragging{opacity:.4;background:var(--th-accent-soft)}
+.cg-item.drag-over{border-color:var(--th-text);background:var(--th-accent-soft)}
 
 .primary-btn{
   border:none;
   border-radius:22px;
-  background:#1a1a1a;
-  color:#ffffff;
+  background:var(--th-text);
+  color:var(--th-bg1);
   padding:14px;
   font-size:13.5px;
   cursor:pointer;
@@ -313,10 +313,10 @@
   font-weight:400;
   letter-spacing:3px;
   margin-top:2px;
-  box-shadow:0 2px 8px rgba(0,0,0,.12);
+  box-shadow:0 2px 8px var(--th-line);
   transition:opacity .2s,box-shadow .2s ease;
 }
-.primary-btn:active{opacity:.85;box-shadow:0 1px 4px rgba(0,0,0,.1)}
+.primary-btn:active{opacity:.85;box-shadow:0 1px 4px var(--th-line)}
 .primary-btn:active{opacity:.8;transform:scale(.98)}
 .primary-btn[disabled]{opacity:.4;cursor:not-allowed}
 .btn-row{display:flex;gap:10px;margin-top:16px}
@@ -346,14 +346,14 @@
   font-size:14px !important;
   font-weight:400 !important;
   letter-spacing:2px !important;
-  color:#1a1a1a;
+  color:var(--th-text);
 }
 #mCardEdit .sheet-head .x{
   width:24px !important;
   height:24px !important;
   border:none;
   background:transparent;
-  color:#c8c8c8;
+  color:var(--th-faint);
   font-size:12px;
   cursor:pointer;
   display:flex;
@@ -373,22 +373,22 @@
 }
 #mCardEdit #cardEditText{
   width:100% !important;
-  border:1px solid #ececec !important;
+  border:1px solid var(--th-bg0) !important;
   border-radius:10px !important;
   padding:10px 12px !important;
   font-size:14px !important;
   font-family:inherit !important;
-  color:#1a1a1a !important;
+  color:var(--th-text) !important;
   outline:none !important;
   resize:none !important;
   line-height:1.6 !important;
   box-sizing:border-box !important;
-  background:#fff !important;
+  background:var(--th-bg1) !important;
   min-height:auto !important;
   transition:border-color .2s;
 }
 #mCardEdit #cardEditText:focus{
-  border-color:#1a1a1a !important;
+  border-color:var(--th-text) !important;
 }
 #mCardEdit .card-edit-cats{
   display:flex !important;
@@ -403,8 +403,8 @@
   padding:6px 12px !important;
   border-radius:10px !important;
   font-size:12px !important;
-  color:#999 !important;
-  background:#f7f7f7 !important;
+  color:var(--th-text-soft) !important;
+  background:var(--th-accent-soft) !important;
   border:none !important;
   cursor:pointer;
   font-family:inherit;
@@ -412,8 +412,8 @@
   transition:background .18s,color .18s;
 }
 #mCardEdit .card-edit-cat.on{
-  background:#1a1a1a !important;
-  color:#fff !important;
+  background:var(--th-text) !important;
+  color:var(--th-bg1) !important;
 }
 #mCardEdit .card-edit-cat span{
   opacity:.6;
@@ -437,12 +437,12 @@
 }
 #mCardEdit .btn-row .ghost-btn{
   background:transparent !important;
-  border:1px solid #ececec !important;
-  color:#999 !important;
+  border:1px solid var(--th-bg0) !important;
+  color:var(--th-text-soft) !important;
 }
 #mCardEdit .btn-row .primary-btn{
-  background:#1a1a1a !important;
-  color:#fff !important;
+  background:var(--th-text) !important;
+  color:var(--th-bg1) !important;
   border:none !important;
   font-weight:400 !important;
   box-shadow:none !important;
@@ -453,14 +453,14 @@
   position:relative;
   padding:22px 22px 24px;
   border-radius:18px;
-  border:0.7px solid rgba(0,0,0,.05);
+  border:0.7px solid var(--th-accent-soft);
 }
 #mAddCards .sheet .x{
   position:absolute;
   top:10px;right:18px;
   width:24px;height:24px;
   display:flex;align-items:center;justify-content:center;
-  font-size:14px;color:#d0d0d0;
+  font-size:14px;color:var(--th-faint);
   font-family:Georgia,serif;
   font-weight:300;
   line-height:1;
@@ -468,7 +468,7 @@
   -webkit-tap-highlight-color:transparent;
   transition:color .18s;
 }
-#mAddCards .sheet .x:active{color:#1a1a1a}
+#mAddCards .sheet .x:active{color:var(--th-text)}
 
 #mAddCards .sheet-head{
   display:flex;flex-direction:column;
@@ -478,7 +478,7 @@
 }
 #mAddCards .sheet-head h3{
   font-size:15px;font-weight:300;
-  letter-spacing:6px;color:#1a1a1a;
+  letter-spacing:6px;color:var(--th-text);
   line-height:1.2;margin:0;
 }
 #mAddCards .sheet-head h3::after{
@@ -486,7 +486,7 @@
   display:block;
   font-family:Georgia,serif;
   font-size:8.5px;letter-spacing:5px;
-  color:#d0d0d0;font-weight:400;
+  color:var(--th-faint);font-weight:400;
   margin-top:7px;line-height:1;
 }
 
@@ -509,7 +509,7 @@
   gap:0;
   margin-bottom:20px;
   padding:0;
-  border-bottom:0.6px solid rgba(0,0,0,.06);
+  border-bottom:0.6px solid var(--th-bubble-me);
 }
 #mAddCards #acModes .mode-tab{
   flex:1;
@@ -527,7 +527,7 @@
   font-family:inherit;
 }
 #mAddCards #acModes .mode-tab.on{
-  color:#1a1a1a;
+  color:var(--th-text);
   font-weight:400;
 }
 #mAddCards #acModes .mode-tab.on::after{
@@ -536,7 +536,7 @@
   left:50%;bottom:-1px;
   transform:translateX(-50%);
   width:20px;height:1.5px;
-  background:#1a1a1a;
+  background:var(--th-text);
   border-radius:0;
 }
 
@@ -544,14 +544,14 @@
   display:block;
   width:100%;
   box-sizing:border-box;
-  border:0.7px solid rgba(0,0,0,.06);
+  border:0.7px solid var(--th-bubble-me);
   border-radius:14px;
   padding:20px 18px;
   font-size:13.5px;
   font-family:inherit;
-  color:#1a1a1a;
+  color:var(--th-text);
   outline:none;
-  background:#ffffff;
+  background:var(--th-bg1);
   resize:none;
   line-height:2.1;
   font-weight:300;
@@ -561,7 +561,7 @@
   transition:border-color .2s,background .2s;
 }
 #mAddCards #acText:focus{
-  border-color:#1a1a1a;
+  border-color:var(--th-text);
 }
 #mAddCards #acText::placeholder{color:#dcdcdc;font-weight:300;letter-spacing:2px}
 
@@ -571,10 +571,10 @@
   justify-content:space-between;
   padding:14px 16px;
   border-radius:12px;
-  background:#fafafa;
+  background:var(--th-accent-soft);
   border:none;
   font-size:13.5px;
-  color:#1a1a1a;
+  color:var(--th-text);
   font-weight:300;
   letter-spacing:.5px;
   margin-top:14px;
@@ -582,17 +582,17 @@
   cursor:pointer;
 }
 #mAddCards .sheet-body #acCatPick .cat-label{
-  font-size:13.5px;color:#1a1a1a;
+  font-size:13.5px;color:var(--th-text);
   letter-spacing:.5px;font-weight:300;flex:none;
 }
 #mAddCards .sheet-body #acCatPick .cat-value{
-  flex:1;font-size:13.5px;color:#999;
+  flex:1;font-size:13.5px;color:var(--th-text-soft);
   text-align:right;letter-spacing:.5px;font-weight:300;
   margin-right:8px;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
 }
 #mAddCards .sheet-body #acCatPick .cat-arr{
-  color:#c0c0c0;font-size:11px;flex:none;
+  color:var(--th-faint);font-size:11px;flex:none;
 }
 
 #mAddCards #btnAddCardsOk{
@@ -601,14 +601,14 @@
   padding:16px 0;
   border-radius:24px;
   border:none;
-  background:#1a1a1a;
-  color:#fff;
+  background:var(--th-text);
+  color:var(--th-bg1);
   font-size:14px;
   letter-spacing:6px;
   font-weight:300;
   text-align:center;
   cursor:pointer;
-  box-shadow:0 4px 16px rgba(0,0,0,.10);
+  box-shadow:0 4px 16px var(--th-line);
   transition:opacity .2s, transform .1s;
 }
 #mAddCards #btnAddCardsOk:active{opacity:.85;transform:scale(.99)}
@@ -621,9 +621,9 @@
   padding:20px 18px;
   font-size:13.5px;
   font-family:inherit;
-  color:#1a1a1a;
+  color:var(--th-text);
   outline:none;
-  background:#fafafa;
+  background:var(--th-accent-soft);
   resize:none;
   line-height:2.1;
   font-weight:300;
@@ -632,24 +632,24 @@
   min-height:140px;
   transition:background .2s;
 }
-#aeText:focus{background:#f5f5f5}
+#aeText:focus{background:var(--th-accent-soft)}
 #aeText::placeholder{color:#dcdcdc;font-weight:300;letter-spacing:2px}
-.mode-tab{flex:1;padding:9px 0;border-radius:8px;text-align:center;font-size:12px;font-weight:500;letter-spacing:1px;cursor:pointer;background:transparent;border:0.7px solid #d0d0d0;color:#999;font-family:inherit;transition:all .2s ease}
-.mode-tab.on{background:#1a1a1a;color:#ffffff;border-color:#1a1a1a;font-weight:600}
-.mode-desc{font-size:11px;color:#999;line-height:1.6;letter-spacing:.3px;padding:0 2px}
+.mode-tab{flex:1;padding:9px 0;border-radius:8px;text-align:center;font-size:12px;font-weight:500;letter-spacing:1px;cursor:pointer;background:transparent;border:0.7px solid var(--th-faint);color:var(--th-text-soft);font-family:inherit;transition:all .2s ease}
+.mode-tab.on{background:var(--th-text);color:var(--th-bg1);border-color:var(--th-text);font-weight:600}
+.mode-desc{font-size:11px;color:var(--th-text-soft);line-height:1.6;letter-spacing:.3px;padding:0 2px}
 /* 分类选择行 */
 .cat-pick-wrap{
   display:flex;align-items:center;gap:10px;
   padding:14px 16px;border-radius:12px;
-  border:none;background:#fafafa;
+  border:none;background:var(--th-accent-soft);
   cursor:pointer;transition:all .18s;
 }
-.cat-pick-wrap:active{background:#f5f5f5}
+.cat-pick-wrap:active{background:var(--th-accent-soft)}
 .cat-pick-wrap .cat-label{
-  font-size:11.5px;color:#999;flex:none;letter-spacing:.3px;
+  font-size:11.5px;color:var(--th-text-soft);flex:none;letter-spacing:.3px;
 }
 .cat-pick-wrap .cat-value{
-  flex:1;font-size:13px;color:#1a1a1a;text-align:right;
+  flex:1;font-size:13px;color:var(--th-text);text-align:right;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
 }
 .cat-pick-wrap .cat-arr{

@@ -1,7 +1,7 @@
 /* ===== 内置角色一览 · 极简修复版（强隔离） ===== */
 
 #builtinListScreen {
-  background: #ffffff !important;
+  background: var(--th-bg1) !important;
 }
 
 .bl-list {
@@ -21,7 +21,7 @@
   padding: 18px 0 !important;
   background: transparent !important;
   border: none !important;
-  border-bottom: 0.7px dashed rgba(0,0,0,.08) !important;
+  border-bottom: 0.7px dashed var(--th-accent-soft-2) !important;
   border-radius: 0 !important;
   box-shadow: none !important;
   margin-bottom: 0 !important;
@@ -57,7 +57,7 @@
   font-size: 15px;
   font-weight: 300 !important;
   letter-spacing: 1.5px;
-  color: #1a1a1a;
+  color: var(--th-text);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   white-space: nowrap;
@@ -77,17 +77,17 @@
 
 .bl-edit {
   font-size: 11px;
-  color: #999;
+  color: var(--th-text-soft);
   letter-spacing: 1px;
   flex: none;
   padding: 6px 12px;
-  border: 0.6px solid #ececec;
+  border: 0.6px solid var(--th-bg0);
   border-radius: 12px;
-  background: #fafafa;
+  background: var(--th-accent-soft);
   transition: all 0.2s ease;
 }
 .bl-row:active .bl-edit {
-  background: #1a1a1a;
-  color: #fff;
-  border-color: #1a1a1a;
+  background: var(--th-text);
+  color: var(--th-bg1);
+  border-color: var(--th-text);
 }

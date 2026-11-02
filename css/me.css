@@ -1,17 +1,17 @@
 /* ===== 我的页 · 极简透明线条（方案 A） ===== */
-#page-me{background:var(--th-bg0,#ffffff);position:relative;overflow:hidden}
+#page-me{background:var(--th-bg0,var(--th-bg1));position:relative;overflow:hidden}
 #page-me > *{position:relative;z-index:1}
 
 .me-page{width:100%;max-width:520px;height:100%;margin:0 auto;display:flex;flex-direction:column;overflow:hidden;background:transparent;position:relative}
 
 /* 竖排小字：更淡，更像印刷水印 */
-.me-vert{position:absolute;top:22px;right:18px;writing-mode:vertical-rl;font-size:10px;letter-spacing:12px;color:#1a1a1a;opacity:.14;font-family:Georgia,serif;pointer-events:none;z-index:2}
+.me-vert{position:absolute;top:22px;right:18px;writing-mode:vertical-rl;font-size:10px;letter-spacing:12px;color:var(--th-text);opacity:.14;font-family:Georgia,serif;pointer-events:none;z-index:2}
 
 /* 顶部大名字：英文再退一档 */
 .me-hero{padding:44px 26px 18px;flex:none;position:relative;z-index:1}
-.me-big-name{font-size:34px;font-weight:500;letter-spacing:3px;color:#1a1a1a;line-height:1.1;font-family:inherit;word-break:break-word;cursor:pointer;transition:opacity .18s ease}
+.me-big-name{font-size:34px;font-weight:500;letter-spacing:3px;color:var(--th-text);line-height:1.1;font-family:inherit;word-break:break-word;cursor:pointer;transition:opacity .18s ease}
 .me-big-name:active{opacity:.55}
-.me-big-en{font-size:9.5px;letter-spacing:7px;color:#cccccc;margin-top:12px;font-family:Georgia,serif}
+.me-big-en{font-size:9.5px;letter-spacing:7px;color:var(--th-faint);margin-top:12px;font-family:Georgia,serif}
 
 /* 头像 + 签名：去掉一切边框阴影，签名更淡 */
 .me-info-row{display:flex;align-items:center;gap:16px;margin-top:28px}
@@ -19,12 +19,12 @@
 .me-avatar svg{position:absolute;inset:0;width:100%;height:100%;display:block}
 .me-avatar .silhouette{fill:#d4d4d4}
 .me-avatar img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center;display:block}
-.me-quote{flex:1;font-size:12px;color:#b0b0b0;line-height:1.8;letter-spacing:.6px;font-family:inherit;font-weight:300}
-.me-quote::before{content:"「";color:#1a1a1a;opacity:.18;margin-right:2px}
-.me-quote::after{content:"」";color:#1a1a1a;opacity:.18;margin-left:2px}
+.me-quote{flex:1;font-size:12px;color:var(--th-text-mute);line-height:1.8;letter-spacing:.6px;font-family:inherit;font-weight:300}
+.me-quote::before{content:"「";color:var(--th-text);opacity:.18;margin-right:2px}
+.me-quote::after{content:"」";color:var(--th-text);opacity:.18;margin-left:2px}
 
 /* 分隔线：从黑渐变到完全透明，只留一丝存在感 */
-.me-divider{height:0.7px;margin:30px 26px 0;background:linear-gradient(90deg,#1a1a1a 0%, transparent 70%);opacity:.14}
+.me-divider{height:0.7px;margin:30px 26px 0;background:linear-gradient(90deg,var(--th-text) 0%, transparent 70%);opacity:.14}
 
 /* ===== 标签区 · 个人页 / 我的页 共用 ===== */
 .profile-tags,
@@ -40,7 +40,7 @@
   align-items:baseline;
   gap:6px;
   padding:14px 0;
-  border-bottom:0.6px dashed rgba(0,0,0,.06);
+  border-bottom:0.6px dashed var(--th-bubble-me);
   font-size:13px;
   line-height:1.7;
   letter-spacing:.3px;
@@ -52,18 +52,18 @@
 }
 .profile-tags .tag-line.self,
 .me-tags .tag-line.self{
-  color:#1a1a1a;
+  color:var(--th-text);
   font-weight:300;
   cursor:default;
 }
 .profile-tags .tag-line.self .list,
 .me-tags .tag-line.self .list{
-  color:#1a1a1a;
+  color:var(--th-text);
   font-weight:300;
 }
 .profile-tags .tag-line .sep,
 .me-tags .tag-line .sep{
-  color:#d0d0d0;
+  color:var(--th-faint);
   margin:0 4px;
 }
 .profile-tags .tag-line.other,
@@ -73,21 +73,21 @@
 }
 .profile-tags .tag-line.other:active,
 .me-tags .tag-line.other:active{
-  background:rgba(0,0,0,.02);
+  background:var(--th-divider);
 }
 .profile-tags .tag-line.other .who,
 .me-tags .tag-line.other .who{
-  color:#1a1a1a;
+  color:var(--th-text);
   font-weight:400;
   letter-spacing:1px;
   flex:none;
-  -webkit-text-stroke:.1px #1a1a1a;
+  -webkit-text-stroke:.1px var(--th-text);
   -webkit-font-smoothing:antialiased;
 }
 .profile-tags .tag-line.other .who em,
 .me-tags .tag-line.other .who em{
   font-style:normal;
-  color:#1a1a1a;
+  color:var(--th-text);
   font-weight:400;
   margin-left:1px;
 }
@@ -95,7 +95,7 @@
 .me-tags .tag-line.other .list{
   flex:1;
   min-width:0;
-  color:#1a1a1a;
+  color:var(--th-text);
   font-weight:300;
   letter-spacing:.5px;
   word-break:break-word;
@@ -107,19 +107,19 @@
 .me-row{
   display:flex;align-items:center;gap:14px;
   padding:20px 4px;
-  border-bottom:0.6px dashed rgba(0,0,0,.06);
+  border-bottom:0.6px dashed var(--th-bubble-me);
   cursor:pointer;
   border-radius:8px;
   transition:background .18s ease;
 }
 .me-row:last-of-type{border-bottom:none}
 .me-row:active{background:rgba(0,0,0,.025)}
-.me-row .num{font-size:9.5px;color:#d8d8d8;font-family:Georgia,serif;letter-spacing:1.5px;width:24px;flex:none;font-weight:400}
-.me-row .name{flex:1;font-size:16px;font-weight:400;letter-spacing:2.5px;color:#1a1a1a}
-.me-row .en{font-size:9px;letter-spacing:3.5px;color:#d0d0d0;font-family:Georgia,serif;flex:none;font-weight:300}
-.me-row .arr{font-size:12px;color:#e0e0e0;flex:none;margin-left:12px;transition:transform .18s ease}
+.me-row .num{font-size:9.5px;color:var(--th-border);font-family:Georgia,serif;letter-spacing:1.5px;width:24px;flex:none;font-weight:400}
+.me-row .name{flex:1;font-size:16px;font-weight:400;letter-spacing:2.5px;color:var(--th-text)}
+.me-row .en{font-size:9px;letter-spacing:3.5px;color:var(--th-faint);font-family:Georgia,serif;flex:none;font-weight:300}
+.me-row .arr{font-size:12px;color:var(--th-border);flex:none;margin-left:12px;transition:transform .18s ease}
 .me-row:active .arr{transform:translateX(2px)}
-.me-row.hi .name{color:#1a1a1a;font-weight:300}
+.me-row.hi .name{color:var(--th-text);font-weight:300}
 
 /* ===== 细体增强补丁：让「我的」页文字真正变细（合并版 · 只留一套） ===== */
 /* 整页统一细体骨架 */
@@ -153,24 +153,24 @@
 }
 
 
-#page-friends{background:#ffffff;position:relative;overflow:hidden}
+#page-friends{background:var(--th-bg1);position:relative;overflow:hidden}
 #page-friends > *{position:relative;z-index:1}
 .fr-wrap{max-width:520px;margin:0 auto;width:100%;flex:1;overflow-y:auto;scrollbar-width:none;display:flex;flex-direction:column}
 .fr-wrap::-webkit-scrollbar{width:0}
 .fr-toprow{flex:none;display:flex;align-items:center;gap:10px;padding:18px 16px 14px;box-sizing:border-box;max-width:100%}
 
 /* ===== 标签面板（04 标签） ===== */
-#mTagPanel .sheet-body{padding:6px 22px 28px;font-size:14px;color:#1a1a1a}
-.tp-section{padding:18px 0;border-bottom:0.6px dashed rgba(0,0,0,.06)}
+#mTagPanel .sheet-body{padding:6px 22px 28px;font-size:14px;color:var(--th-text)}
+.tp-section{padding:18px 0;border-bottom:0.6px dashed var(--th-bubble-me)}
 .tp-section:last-child{border-bottom:none}
 .tp-sec-title{display:flex;align-items:baseline;gap:10px;margin-bottom:14px;letter-spacing:2px;font-weight:300}
 .tp-sec-title span:first-child{font-size:14px}
-.tp-count{font-size:11px;color:#c0c0c0;font-family:Georgia,serif;letter-spacing:1px}
+.tp-count{font-size:11px;color:var(--th-faint);font-family:Georgia,serif;letter-spacing:1px}
 .tp-chips{display:flex;flex-wrap:wrap;gap:8px}
-.tp-chip{padding:6px 14px;border-radius:999px;background:#f5f5f5;font-size:13px;font-weight:300;letter-spacing:.5px;line-height:1.4}
-.tp-chip-other{background:#fafafa;border:0.5px solid #eee}
+.tp-chip{padding:6px 14px;border-radius:999px;background:var(--th-accent-soft);font-size:13px;font-weight:300;letter-spacing:.5px;line-height:1.4}
+.tp-chip-other{background:var(--th-accent-soft);border:0.5px solid #eee}
 .tp-empty{color:#bbb;font-size:13px;font-weight:300;letter-spacing:.5px}
 .tp-others{display:flex;flex-direction:column;gap:16px}
 .tp-other-item{display:flex;flex-direction:column;gap:8px}
-.tp-who{font-size:13px;font-weight:400;letter-spacing:1px;color:#1a1a1a}
+.tp-who{font-size:13px;font-weight:400;letter-spacing:1px;color:var(--th-text)}
 .tp-who em{font-style:normal;margin-left:2px}
