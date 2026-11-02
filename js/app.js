@@ -76,7 +76,8 @@ function isPageInBackground(){
 }
 
 const THEMES = [
-  {id:'bw',name:'黑白',accent:'#1a1a1a',mbText:'#ffffff',v:{'--th-bg0':'#ffffff','--th-bg1':'#ffffff','--th-card':'#ffffff','--th-text':'#1a1a1a','--th-text-soft':'#999999','--th-text-mute':'#bbbbbb','--th-accent':'#1a1a1a','--th-accent-deep':'#000000','--th-accent-soft':'rgba(0,0,0,.04)','--th-accent-soft-2':'rgba(0,0,0,.08)','--th-accent-line':'rgba(0,0,0,.15)','--topbar-a':'rgba(0,0,0,.04)','--topbar-b':'#ffffff','--topbar-c':'#ffffff','--topbar-line':'rgba(0,0,0,.12)'}}
+  {id:'bw',name:'黑白',accent:'#1a1a1a',mbText:'#ffffff',v:{'--th-bg0':'#ffffff','--th-bg1':'#ffffff','--th-card':'#ffffff','--th-text':'#1a1a1a','--th-text-soft':'#999999','--th-text-mute':'#bbbbbb','--th-accent':'#1a1a1a','--th-accent-deep':'#000000','--th-accent-soft':'rgba(0,0,0,.04)','--th-accent-soft-2':'rgba(0,0,0,.08)','--th-accent-line':'rgba(0,0,0,.15)','--topbar-a':'rgba(0,0,0,.04)','--topbar-b':'#ffffff','--topbar-c':'#ffffff','--topbar-line':'rgba(0,0,0,.12)'}},
+  {id:'dark',name:'夜间',accent:'#e8e8e8',mbText:'#1a1a1a',v:{'--th-bg0':'#1a1a1a','--th-bg1':'#252525','--th-card':'#2e2e2e','--th-text':'#e8e8e8','--th-text-soft':'#a8a8a8','--th-text-mute':'#808080','--th-accent':'#e8e8e8','--th-accent-deep':'#ffffff','--th-accent-soft':'rgba(255,255,255,.06)','--th-accent-soft-2':'rgba(255,255,255,.10)','--th-accent-line':'rgba(255,255,255,.18)','--topbar-a':'rgba(255,255,255,.04)','--topbar-b':'#252525','--topbar-c':'#252525','--topbar-line':'rgba(255,255,255,.14)'}}
 ];
 function applyTheme(id){
   const t = THEMES.find(x=>x.id===id) || THEMES[0];
@@ -90,7 +91,7 @@ function applyTheme(id){
 try{
   // 旧主题 id 回退：如果 localStorage 里存的是已删除的主题，自动改成 bw
   (function migrateTheme(){
-    const VALID = ['bw'];   // 目前只保留黑白；以后加新主题，把 id 加进来即可
+    const VALID = ['bw', 'dark'];   // 目前支持黑白 / 夜间；以后加新主题，把 id 加进来即可
     const cur = lsGet('mj_theme', 'bw');
     if(!VALID.includes(cur)){
       lsSet('mj_theme', 'bw');
@@ -12200,18 +12201,19 @@ function applyMyPageBg(){
   var c = getMyBgCfg();
   var page = document.getElementById('page-me');
   if(!page) return;
+  
   if(!c.key){
-    page.style.backgroundImage = '';
-    page.style.filter = '';
+    page.style.setProperty('--me-bg-img', 'none');
+    page.style.setProperty('--me-bg-opacity', '1');
+    page.style.setProperty('--me-bg-blur', '0px');
     return;
   }
+  
   __idb.toURL(c.key).then(function(url){
     if(!url) return;
-    page.style.backgroundImage = 'linear-gradient(rgba(255,255,255,'+((100-c.opacity)/100)+'),rgba(255,255,255,'+((100-c.opacity)/100)+')),url('+url+')';
-    page.style.backgroundSize = 'cover';
-    page.style.backgroundPosition = 'center';
-    page.style.backgroundRepeat = 'no-repeat';
-    page.style.filter = c.blur>0 ? ('blur('+c.blur+'px)') : '';
+    page.style.setProperty('--me-bg-img', 'url(' + url + ')');
+    page.style.setProperty('--me-bg-opacity', String(c.opacity / 100));
+    page.style.setProperty('--me-bg-blur', (c.blur || 0) + 'px');
   });
 }
 function applyMyTitleText(){
@@ -17537,6 +17539,20 @@ document.addEventListener('touchend', function(e){
    ============================================================ */
 const UPDATE_LIST = [
   {
+    ver: '0.2.4',
+    date: '2026-11-03',
+    items: [
+      '新增：真心话独立桌面化，样式全面重构',
+      '优化：字卡库列表页全面美化，改用文字链切换与天平图标',
+      '优化：天气定位逻辑，改为直接 GPS 自动定位',
+      '修复：聊天输入法弹起时左右乱滑的问题',
+      '修复：塔罗牌图片上传变形、留白的问题',
+      '修复：内置角色头像上传失败的问题',
+      '修复：个人界面背景模糊溢出到文字和头像的问题',
+      '修复：移除了自动弹出的更新提示弹窗'
+    ]
+  },
+  {
     ver: '0.2.3',
     date: '2026-11-02',
     items: [
@@ -21998,7 +22014,7 @@ const GROUP_ICONS = {
   'g-share':'<svg viewBox="0 0 24 24"><path d="M10 14L21 3"/><path d="M15 3h6v6"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>',
   'g-festival':'<svg viewBox="0 0 24 24"><path d="M12 2v20M8 5h8M6 12h12M4 19h16"/><path d="M12 2c-2 0-4 2-4 4s2 4 4 4 4-2 4-4-2-4-4-4z"/></svg>',
   'g-special':'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 6v6l3 3"/></svg>',
-  'g-yesno':'<svg viewBox="0 0 24 24"><circle cx="7" cy="12" r="4"/><circle cx="17" cy="12" r="4"/><path d="M8.5 10.5l-1 1 1 1M15.5 10.5l1 1-1 1"/></svg>',
+  'g-yesno':'<svg viewBox="0 0 24 24"><path d="M12 4v16"/><path d="M5 20h14"/><path d="M4 8l4-2 4 2"/><path d="M12 8l4-2 4 2"/><path d="M2 12c0 1.6 1.3 3 3 3s3-1.4 3-3"/><path d="M16 12c0 1.6 1.3 3 3 3s3-1.4 3-3"/></svg>',
   'g-period':'<svg viewBox="0 0 24 24"><path d="M12 2s-6 6.5-6 12a6 6 0 0 0 12 0c0-5.5-6-12-6-12z"/></svg>'
 };
 const GROUP_ICON_FALLBACK = GROUP_ICONS['g-normal'];
@@ -22036,7 +22052,7 @@ function openCardLib(){
 function renderOwnerChips(){
   const box = $('#ownerChips'); if(!box) return;
   const roleName = getCurrentRoleName(); const roleId = getCurrentRoleId();
-  box.innerHTML = `<button class="owner-chip ${curOwner==='public'?'on':''}" data-owner="public">公用</button><button class="owner-chip ${curOwner===roleId?'on':''}" data-owner="${roleId}">${escapeHTML(roleName)} 专属字卡</button>`;
+  box.innerHTML = `<button class="owner-chip ${curOwner==='public'?'on':''}" data-owner="public">公用</button><button class="owner-chip ${curOwner===roleId?'on':''}" data-owner="${roleId}">${escapeHTML(roleName)}专属字卡</button>`;
   box.querySelectorAll('.owner-chip').forEach(el=>{ el.addEventListener('click',()=>{
     curOwner=el.dataset.owner;
     /* 切到角色专属时，先补齐这个角色的字卡结构 */
@@ -22102,8 +22118,7 @@ function renderGroupList(){
 	const total = (g.cats||[]).reduce((n,c)=>n+(c.list||[]).length,0);
 	const gid = (g && g.id) ? g.id : '';
 	const gname = (g && g.name) ? g.name : '未命名';
-	const gsub = (g && g.sub) ? g.sub : '';
-	var card = `<div class="group-card" data-open="${escapeHTML(gid)}"><div class="g-ic">${groupIconHTML(gid)}</div><div class="g-name">${escapeHTML(gname)}<span class="g-sub">${escapeHTML(gsub)}</span></div><div class="g-count">${total}</div><div class="g-arrow">›</div></div>`;
+	var card = `<div class="group-card" data-open="${escapeHTML(gid)}"><div class="g-ic">${groupIconHTML(gid)}</div><div class="g-name">${escapeHTML(gname)}</div><div class="g-count">${total}</div><div class="g-arrow">›</div></div>`;
 	/* ★ 只有角色专属字卡（curOwner !== 'public'），才在普通字卡后面插入语音入口 */
 	if(curOwner !== 'public' && g && g.id === 'g-normal'){
 	  card += voiceEntryHTML;
@@ -29957,102 +29972,7 @@ function goToPage(name){
   if(typeof idx !== 'number') return;
   if(window.__goPage) window.__goPage(idx);
 }
-(function(){
-  if(window.__versionCheckLoaded) return;
-  window.__versionCheckLoaded = true;
-
-  const VERSION_KEY = 'mj_app_last_version';
-  const IGNORE_KEY = 'mj_app_ignore_version';
-
-  function getLatestVersion() {
-    try {
-      if (typeof UPDATE_LIST !== 'undefined' && UPDATE_LIST.length > 0) {
-        return UPDATE_LIST[0].ver;
-      }
-    } catch(e) {}
-    return '0.0.0';
-  }
-
-  function showUpdateDialog(latest) {
-    if (document.getElementById('updateDialogMask')) return;
-
-    const mask = document.createElement('div');
-    mask.id = 'updateDialogMask';
-    mask.style.cssText = 'position:fixed;inset:0;z-index:2147483647;background:rgba(0,0,0,.4);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:24px';
-
-    mask.innerHTML =
-      '<div style="width:100%;max-width:300px;background:#fff;border-radius:20px;padding:24px 20px 16px;box-shadow:0 10px 40px rgba(0,0,0,.15);text-align:center;animation:pop .28s cubic-bezier(.22,1,.36,1)">' +
-        '<div style="width:48px;height:48px;border-radius:50%;background:#f5f5f5;display:flex;align-items:center;justify-content:center;margin:0 auto 16px">' +
-          '<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#1a1a1a" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.5 0 4.8.9 6.5 2.5"/><polyline points="21 3 21 9 15 9"/></svg>' +
-        '</div>' +
-        '<div style="font-size:16px;font-weight:400;letter-spacing:2px;color:#1a1a1a;margin-bottom:8px">发现新版本</div>' +
-        '<div style="font-size:12px;color:#999;line-height:1.6;margin-bottom:20px;letter-spacing:.5px">' +
-          '代码已更新至 <b>v' + latest + '</b><br>' +
-          '<span style="font-size:10.5px;color:#bbb">稍后可在「设置 → 刷新」手动更新</span>' +
-        '</div>' +
-        '<div style="display:flex;gap:10px">' +
-          '<button id="updateBtnCancel" type="button" style="flex:1;padding:12px 0;border-radius:10px;border:0.7px solid rgba(0,0,0,.12);background:transparent;color:#999;font-size:13px;font-family:inherit;letter-spacing:1px;cursor:pointer">稍后</button>' +
-          '<button id="updateBtnOk" type="button" style="flex:1;padding:12px 0;border-radius:10px;border:none;background:#1a1a1a;color:#fff;font-size:13px;font-family:inherit;letter-spacing:1px;cursor:pointer">立即刷新</button>' +
-        '</div>' +
-      '</div>';
-
-    document.body.appendChild(mask);
-
-    mask.addEventListener('click', function(e){
-      if (e.target === mask) handleCancel();
-    });
-
-    function handleCancel() {
-      // 记录忽略的版本，本次不再弹
-      lsSet(IGNORE_KEY, latest);
-      mask.remove();
-      if (typeof toast === 'function') toast('已忽略，下次进入时会再次提醒');
-    }
-
-    function handleRefresh() {
-      // 刷新前，先把版本号记上，防止刷新后重复弹
-      lsSet(VERSION_KEY, latest);
-      lsSet(IGNORE_KEY, '');
-      mask.remove();
-      if (typeof forceRefreshApp === 'function') {
-        forceRefreshApp();
-      } else {
-        location.reload();
-      }
-    }
-
-    document.getElementById('updateBtnCancel').onclick = handleCancel;
-    document.getElementById('updateBtnOk').onclick = handleRefresh;
-  }
-
-  function checkVersion() {
-    const latest = getLatestVersion();
-    const current = lsGet(VERSION_KEY, '0.0.0');
-    const ignored = lsGet(IGNORE_KEY, '');
-
-    // 如果最新版本已经忽略了，本次就不弹
-    if (ignored === latest) return;
-
-    // 当前存的版本和最新版本不一样，说明更新了
-    if (current !== latest) {
-      // 首次进来如果是 0.0.0（新用户），直接记最新版，不弹
-      if (current === '0.0.0') {
-        lsSet(VERSION_KEY, latest);
-        return;
-      }
-      // 否则弹窗提示更新
-      setTimeout(() => {
-        showUpdateDialog(latest);
-      }, 800);
-    }
-  }
-
-  if (document.readyState === 'complete') {
-    checkVersion();
-  } else {
-    window.addEventListener('load', checkVersion);
-  }
-})();
+ 
 
 /* ============================================================
    抽屉美化 · 背景
