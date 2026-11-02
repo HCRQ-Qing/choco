@@ -12451,8 +12451,26 @@ function renderMyBgSub(){
   var c = getMyBgCfg();
   var prev = document.getElementById('myBgPrev');
   if(prev){
-    if(c.key){ __idb.toURL(c.key).then(function(u){ if(u) prev.innerHTML='<img src="'+u+'" style="width:100%;height:100%;object-fit:cover;display:block;border-radius:10px">'; }); }
-    else prev.innerHTML = '还没上传';
+    prev.style.aspectRatio = '16/9';
+    prev.style.background = '#f7f7f7';
+    prev.style.border = '0.7px solid rgba(0,0,0,.08)';
+    prev.style.borderRadius = '12px';
+    prev.style.display = 'flex';
+    prev.style.alignItems = 'center';
+    prev.style.justifyContent = 'center';
+    prev.style.overflow = 'hidden';
+    prev.style.marginBottom = '14px';
+    
+    if(c.key){ 
+      __idb.toURL(c.key).then(function(u){ 
+        if(u) prev.innerHTML='<img src="'+u+'" style="width:100%;height:100%;object-fit:cover;display:block">'; 
+        else prev.innerHTML = '<span class="ph" style="font-size:12px;color:#c8c8c8;letter-spacing:1px;font-weight:300">还没上传</span>';
+      }).catch(function(){
+        prev.innerHTML = '<span class="ph" style="font-size:12px;color:#c8c8c8;letter-spacing:1px;font-weight:300">还没上传</span>';
+      }); 
+    } else {
+      prev.innerHTML = '<span class="ph" style="font-size:12px;color:#c8c8c8;letter-spacing:1px;font-weight:300">还没上传</span>';
+    }
   }
   var op = document.getElementById('myBgOpacity'); if(op) op.value = c.opacity;
   var opv = document.getElementById('myBgOpacityVal'); if(opv) opv.textContent = c.opacity + '%';
@@ -12468,29 +12486,105 @@ function renderMyBgSub(){
     if(t.closest('#myBgBack')){ e.preventDefault(); e.stopPropagation(); document.getElementById('mySpBg').classList.remove('show'); return; }
     if(t.closest('#myBgUpload')){ e.preventDefault(); e.stopPropagation(); var f=document.getElementById('myBgFile'); if(f){f.value='';f.click();} return; }
     if(t.closest('#myBgReset')){ e.preventDefault(); e.stopPropagation(); var c=getMyBgCfg(); if(c.key)__idb.del(c.key).catch(function(){}); c.key=''; saveMyBgCfg(c); applyMyPageBg(); renderMyBgSub(); toast('已恢复默认'); return; }
+    if(t.closest('#myCardBgUpload')){ e.preventDefault(); e.stopPropagation(); var f2=document.getElementById('myCardBgFile'); if(f2){f2.value='';f2.click();} return; }
+    if(t.closest('#myCardBgReset')){ e.preventDefault(); e.stopPropagation(); var c2=getMyCardBgCfg(); if(c2.key)__idb.del(c2.key).catch(function(){}); c2.key=''; saveMyCardBgCfg(c2); applyMyCardBg(); renderMyCardBgSub(); toast('已恢复默认'); return; }
   }, true);
   document.addEventListener('input', function(e){
     var t = e.target;
     if(!t || !t.id) return;
     if(t.id === 'myBgOpacity'){ var c=getMyBgCfg(); c.opacity=parseInt(t.value,10)||0; saveMyBgCfg(c); var v=document.getElementById('myBgOpacityVal'); if(v)v.textContent=c.opacity+'%'; applyMyPageBg(); }
     if(t.id === 'myBgBlur'){ var c2=getMyBgCfg(); c2.blur=parseInt(t.value,10)||0; saveMyBgCfg(c2); var v2=document.getElementById('myBgBlurVal'); if(v2)v2.textContent=c2.blur+'px'; applyMyPageBg(); }
+    if(t.id === 'myCardBgOpacity'){ var c3=getMyCardBgCfg(); c3.opacity=parseInt(t.value,10)||0; saveMyCardBgCfg(c3); var v3=document.getElementById('myCardBgOpacityVal'); if(v3)v3.textContent=c3.opacity+'%'; applyMyCardBg(); }
+    if(t.id === 'myCardBgBlur'){ var c4=getMyCardBgCfg(); c4.blur=parseInt(t.value,10)||0; saveMyCardBgCfg(c4); var v4=document.getElementById('myCardBgBlurVal'); if(v4)v4.textContent=c4.blur+'px'; applyMyCardBg(); }
   }, true);
   document.addEventListener('change', function(e){
     var t = e.target;
-    if(!t || t.id !== 'myBgFile') return;
-    var file = t.files && t.files[0]; t.value='';
-    if(!file) return;
-    var key = 'mybg_' + Date.now().toString(36);
-    __idb.set(key, file).then(function(){
-      var c = getMyBgCfg();
-      if(c.key) __idb.del(c.key).catch(function(){});
-      c.key = key; saveMyBgCfg(c);
-      applyMyPageBg();
-      renderMyBgSub();
-      toast('已上传');
-    }).catch(function(err){ console.error(err); toast('上传失败'); });
+    if(!t || !t.id) return;
+    if(t.id === 'myBgFile'){
+      var file = t.files && t.files[0]; t.value='';
+      if(!file) return;
+      var key = 'mybg_' + Date.now().toString(36);
+      __idb.set(key, file).then(function(){
+        var c = getMyBgCfg();
+        if(c.key) __idb.del(c.key).catch(function(){});
+        c.key = key; saveMyBgCfg(c);
+        applyMyPageBg();
+        renderMyBgSub();
+        toast('已上传');
+      }).catch(function(err){ console.error(err); toast('上传失败'); });
+    }
+    if(t.id === 'myCardBgFile'){
+      var file2 = t.files && t.files[0]; t.value='';
+      if(!file2) return;
+      var key2 = 'mycardbg_' + Date.now().toString(36);
+      __idb.set(key2, file2).then(function(){
+        var c = getMyCardBgCfg();
+        if(c.key) __idb.del(c.key).catch(function(){});
+        c.key = key2; saveMyCardBgCfg(c);
+        applyMyCardBg();
+        renderMyCardBgSub();
+        toast('已上传字卡页背景');
+      }).catch(function(err){ console.error(err); toast('上传失败'); });
+    }
   }, true);
 })();
+
+const MY_CARD_BG_KEY = 'mj_card_page_bg_v1';
+function getMyCardBgCfg(){ var c=lsGet(MY_CARD_BG_KEY,null); if(!c||typeof c!=='object')c={key:'',opacity:85,blur:0}; return c; }
+function saveMyCardBgCfg(c){ lsSet(MY_CARD_BG_KEY, c); }
+
+function applyMyCardBg(){
+  var c = getMyCardBgCfg();
+  var screens = [document.getElementById('cardLibScreen'), document.getElementById('cardDetailScreen')];
+  screens.forEach(function(scr){
+    if(!scr) return;
+    if(!c.key){
+      scr.style.backgroundImage = '';
+      scr.style.backgroundColor = '#ffffff';
+      return;
+    }
+    __idb.toURL(c.key).then(function(url){
+      if(!url) return;
+      var bgColor = 'rgba(255,255,255,' + ((100 - c.opacity) / 100) + ')';
+      scr.style.backgroundImage = 'linear-gradient(' + bgColor + ',' + bgColor + '), url(' + url + ')';
+      scr.style.backgroundSize = 'cover';
+      scr.style.backgroundPosition = 'center';
+      scr.style.backgroundRepeat = 'no-repeat';
+      scr.style.filter = c.blur > 0 ? ('blur(' + c.blur + 'px)') : '';
+    });
+  });
+}
+
+function renderMyCardBgSub(){
+  var c = getMyCardBgCfg();
+  var prev = document.getElementById('myCardBgPrev');
+  if(prev){
+    prev.style.aspectRatio = '16/9';
+    prev.style.background = '#f7f7f7';
+    prev.style.border = '0.7px solid rgba(0,0,0,.08)';
+    prev.style.borderRadius = '12px';
+    prev.style.display = 'flex';
+    prev.style.alignItems = 'center';
+    prev.style.justifyContent = 'center';
+    prev.style.overflow = 'hidden';
+    prev.style.marginBottom = '14px';
+    
+    if(c.key){ 
+      __idb.toURL(c.key).then(function(u){ 
+        if(u) prev.innerHTML='<img src="'+u+'" style="width:100%;height:100%;object-fit:cover;display:block">'; 
+        else prev.innerHTML = '<span class="ph" style="font-size:12px;color:#c8c8c8;letter-spacing:1px;font-weight:300">还没上传</span>';
+      }).catch(function(){
+        prev.innerHTML = '<span class="ph" style="font-size:12px;color:#c8c8c8;letter-spacing:1px;font-weight:300">还没上传</span>';
+      }); 
+    } else {
+      prev.innerHTML = '<span class="ph" style="font-size:12px;color:#c8c8c8;letter-spacing:1px;font-weight:300">还没上传</span>';
+    }
+  }
+  var op = document.getElementById('myCardBgOpacity'); if(op) op.value = c.opacity;
+  var opv = document.getElementById('myCardBgOpacityVal'); if(opv) opv.textContent = c.opacity + '%';
+  var bl = document.getElementById('myCardBgBlur'); if(bl) bl.value = c.blur;
+  var blv = document.getElementById('myCardBgBlurVal'); if(blv) blv.textContent = c.blur + 'px';
+}
 
 function renderMyTxtSub(){
   var c = getMyTitleCfg();
@@ -12561,7 +12655,7 @@ function renderMyTxtSub(){
   var a = document.createElement('input'); a.type='file'; a.accept='image/*'; a.id='myBgFile'; a.style.display='none'; document.body.appendChild(a);
   var b = document.createElement('input'); b.type='file'; b.accept='.ttf,.otf,.woff,.woff2,font/*'; b.id='myFontFile'; b.style.display='none'; document.body.appendChild(b);
 })();
-setTimeout(function(){ try{ applyMyPageBg(); applyMyTitleText(); applyMyFont(); }catch(e){} }, 1200);
+setTimeout(function(){ try{ applyMyPageBg(); applyMyTitleText(); applyMyFont(); applyMyCardBg(); }catch(e){} }, 1200);
 function openBeauty(mode){
   /* 抽屉美化：六项全部显示，不再按入口藏行 */
   document.querySelectorAll('#beautyPanel .bp-row[data-panel]').forEach(el=>el.style.display='');
@@ -12926,6 +13020,220 @@ $$('.bp-row[data-panel]').forEach(row=>{
 	if(target) $(target).classList.add('show');
   });
 });
+/* ===== 美化 · 上传背景 · 个人界面 / 字卡页 标签切换 ===== */
+(function bindSpBgTabs(){
+  if(window.__spBgTabsBound) return;
+  window.__spBgTabsBound = true;
+  document.addEventListener('click', function(e){
+    var t = e.target;
+    if(!t || !t.closest) return;
+    var tab = t.closest('#spBgTabs .bg-tab');
+    if(!tab) return;
+    e.preventDefault(); e.stopPropagation();
+    var which = tab.dataset.bgtab;
+    document.querySelectorAll('#spBgTabs .bg-tab').forEach(function(x){
+      x.classList.toggle('on', x === tab);
+    });
+    var me = document.getElementById('spBgPaneMe');
+    var card = document.getElementById('spBgPaneCard');
+    if(me) me.classList.toggle('on', which === 'me');
+    if(card) card.classList.toggle('on', which === 'card');
+    if(which === 'card') renderSpGroupIconList();
+  }, true);
+})();
+
+(function bindMyBgTabs(){
+  if(window.__myBgTabsBound) return;
+  window.__myBgTabsBound = true;
+  document.addEventListener('click', function(e){
+    var t = e.target;
+    if(!t || !t.closest) return;
+    var tab = t.closest('#myBgTabs .bg-tab');
+    if(!tab) return;
+    e.preventDefault(); e.stopPropagation();
+    var which = tab.dataset.mytab;
+    document.querySelectorAll('#myBgTabs .bg-tab').forEach(function(x){
+      x.classList.toggle('on', x === tab);
+    });
+    var me = document.getElementById('myBgPaneMe');
+    var card = document.getElementById('myBgPaneCard');
+    if(me) me.classList.toggle('on', which === 'me');
+    if(card) card.classList.toggle('on', which === 'card');
+    if(which === 'card') renderMyGroupIconList();
+  }, true);
+})();
+
+function renderMyGroupIconList(){
+  var box = document.getElementById('myGroupIconList');
+  if(!box) return;
+  var groups = getGroupsByOwner('public').filter(function(g){
+    return g && g.id !== 'g-sign';
+  });
+  var m = getGroupIconsMap();
+  if(!groups.length){
+    box.innerHTML = '<div style="padding:20px;text-align:center;color:#bbb;font-size:12.5px">还没有分组</div>';
+    return;
+  }
+  box.innerHTML = groups.map(function(g){
+    var thumb = m[g.id] ? '<img src="' + m[g.id] + '">' : groupIconHTML(g.id);
+    return '<div class="gicon-row">' +
+      '<div class="gicon-th">' + thumb + '</div>' +
+      '<div class="gicon-nm">' + escapeHTML(g.name || '未命名') + '</div>' +
+      '<button class="gicon-btn" type="button" data-myicon-up="' + escapeHTML(g.id) + '">换图</button>' +
+      (m[g.id] ? '<button class="gicon-btn g" type="button" data-myicon-del="' + escapeHTML(g.id) + '">恢复</button>' : '') +
+    '</div>';
+  }).join('');
+}
+
+(function bindMyGroupIconEvents(){
+  if(window.__myGroupIconBound) return;
+  window.__myGroupIconBound = true;
+  document.addEventListener('click', function(e){
+    var t = e.target;
+    if(!t || !t.closest) return;
+    var up = t.closest('[data-myicon-up]');
+    if(up){
+      e.preventDefault(); e.stopPropagation();
+      var fi = document.getElementById('myGroupIconFile');
+      if(fi){ fi._gid = up.dataset.myiconUp; fi.value = ''; fi.click(); }
+      return;
+    }
+    var del = t.closest('[data-myicon-del]');
+    if(del){
+      e.preventDefault(); e.stopPropagation();
+      var m = getGroupIconsMap();
+      delete m[del.dataset.myiconDel];
+      saveGroupIconsMap(m);
+      renderMyGroupIconList();
+      try{ renderGroupList(); }catch(err){}
+      return;
+    }
+  }, true);
+  document.addEventListener('change', function(e){
+    var t = e.target;
+    if(!t || t.id !== 'myGroupIconFile') return;
+    var f = t.files && t.files[0];
+    var gid = t._gid || '';
+    t.value = '';
+    if(!f || !gid) return;
+    var fr = new FileReader();
+    fr.onload = function(){
+      var img = new Image();
+      img.onload = function(){
+        var MAX = 160;
+        var w = img.naturalWidth || img.width || MAX;
+        var h = img.naturalHeight || img.height || MAX;
+        if(w > MAX || h > MAX){
+          var k = Math.min(MAX / w, MAX / h);
+          w = Math.max(1, Math.round(w * k));
+          h = Math.max(1, Math.round(h * k));
+        }
+        var cv = document.createElement('canvas');
+        cv.width = w; cv.height = h;
+        cv.getContext('2d').drawImage(img, 0, 0, w, h);
+        var url = cv.toDataURL('image/jpeg', 0.85);
+        var m = getGroupIconsMap();
+        m[gid] = url;
+        saveGroupIconsMap(m);
+        renderMyGroupIconList();
+        try{ renderGroupList(); }catch(err){}
+        toast('图标已更新');
+      };
+      img.onerror = function(){ toast('图片解析失败'); };
+      img.src = fr.result;
+    };
+    fr.onerror = function(){ toast('读取失败'); };
+    fr.readAsDataURL(f);
+  }, true);
+})();
+
+function renderSpGroupIconList(){
+  var box = document.getElementById('spGroupIconList');
+  if(!box) return;
+  var groups = getGroupsByOwner('public').filter(function(g){
+    return g && g.id !== 'g-sign';
+  });
+  var m = getGroupIconsMap();
+  if(!groups.length){
+    box.innerHTML = '<div style="padding:20px;text-align:center;color:#bbb;font-size:12.5px">还没有分组</div>';
+    return;
+  }
+  box.innerHTML = groups.map(function(g){
+    var thumb = m[g.id] ? '<img src="' + m[g.id] + '">' : groupIconHTML(g.id);
+    var name = escapeHTML(g.name || '未命名');
+    return '<div class="gicon-row">' +
+      '<div class="gicon-th">' + thumb + '</div>' +
+      '<div class="gicon-nm">' + name + '</div>' +
+      '<button class="gicon-btn" type="button" data-gicon-up="' + escapeHTML(g.id) + '">换图</button>' +
+      (m[g.id] ? '<button class="gicon-btn g" type="button" data-gicon-del="' + escapeHTML(g.id) + '">恢复</button>' : '') +
+    '</div>';
+  }).join('');
+}
+
+(function bindSpGroupIconEvents(){
+  if(window.__spGroupIconBound) return;
+  window.__spGroupIconBound = true;
+  var curGid = '';
+  document.addEventListener('click', function(e){
+    var t = e.target;
+    if(!t || !t.closest) return;
+    var up = t.closest('[data-gicon-up]');
+    if(up){
+      e.preventDefault(); e.stopPropagation();
+      curGid = up.dataset.giconUp;
+      var fi = document.getElementById('spGroupIconFile');
+      if(fi){ fi._gid = curGid; fi.value = ''; fi.click(); }
+      return;
+    }
+    var del = t.closest('[data-gicon-del]');
+    if(del){
+      e.preventDefault(); e.stopPropagation();
+      var m = getGroupIconsMap();
+      delete m[del.dataset.giconDel];
+      saveGroupIconsMap(m);
+      renderSpGroupIconList();
+      try{ renderGroupList(); }catch(err){}
+      return;
+    }
+  }, true);
+  document.addEventListener('change', function(e){
+    var t = e.target;
+    if(!t || t.id !== 'spGroupIconFile') return;
+    var f = t.files && t.files[0];
+    var gid = t._gid || '';
+    t.value = '';
+    if(!f || !gid) return;
+    var fr = new FileReader();
+    fr.onload = function(){
+      var img = new Image();
+      img.onload = function(){
+        var MAX = 160;
+        var w = img.naturalWidth || img.width || MAX;
+        var h = img.naturalHeight || img.height || MAX;
+        if(w > MAX || h > MAX){
+          var k = Math.min(MAX / w, MAX / h);
+          w = Math.max(1, Math.round(w * k));
+          h = Math.max(1, Math.round(h * k));
+        }
+        var cv = document.createElement('canvas');
+        cv.width = w; cv.height = h;
+        cv.getContext('2d').drawImage(img, 0, 0, w, h);
+        var url = cv.toDataURL('image/jpeg', 0.85);
+        var m = getGroupIconsMap();
+        m[gid] = url;
+        saveGroupIconsMap(m);
+        renderSpGroupIconList();
+        try{ renderGroupList(); }catch(err){}
+        toast('图标已更新');
+      };
+      img.onerror = function(){ toast('图片解析失败'); };
+      img.src = fr.result;
+    };
+    fr.onerror = function(){ toast('读取失败'); };
+    fr.readAsDataURL(f);
+  }, true);
+})();
+
 /* ===== 上传图片 · 聊天背景 / 顶部栏背景 ===== */
 const CHAT_BG_KEY = 'mj_chat_bg_v1';
 const TOPBAR_BG_KEY = 'mj_topbar_bg_v1';
@@ -21780,13 +22088,44 @@ function getCat(group,cid){ if(!group) return null; return (group.cats||[]).find
 function isMoodGroup(g){ return g && g.id==='g-mood'; }
 function currentGroupObj(){ return getGroup(curOwner,curGroupId); }
 function currentCatObj(){ return getCat(currentGroupObj(), curCatId); }
-const ICONS = {
-  doc:'<svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z"/><path d="M15 3v5h5"/><path d="M9 13h6M9 17h4"/></svg>',
-  heart:'<svg viewBox="0 0 24 24"><path d="M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.5A4 4 0 0 1 19 10c0 5.5-7 10-7 10z"/></svg>',
-  note:'<svg viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="16" rx="2"/><path d="M9 9h6M9 13h6M9 17h4"/></svg>',
-  star:'<svg viewBox="0 0 24 24"><path d="M12 3l2.5 6 6.5.5-5 4.3 1.5 6.2L12 16.8 6.5 20l1.5-6.2-5-4.3 6.5-.5z"/></svg>'
+const GROUP_ICONS = {
+  'g-normal':'<svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z"/><path d="M15 3v5h5"/><path d="M9 13h6M9 17h4"/></svg>',
+  'g-mood':'<svg viewBox="0 0 24 24"><path d="M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.5A4 4 0 0 1 19 10c0 5.5-7 10-7 10z"/></svg>',
+  'g-timed':'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+  'g-weather':'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M19 5l-1.5 1.5M6.5 17.5L5 19"/></svg>',
+  'g-status':'<svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg>',
+  'g-moment':'<svg viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="15" rx="2.5"/><circle cx="8.5" cy="10" r="1.6"/><path d="M3.5 17l5-5 4 4 3-3 5 5"/></svg>',
+  'g-sign':'<svg viewBox="0 0 24 24"><path d="M12 3l2.5 6 6.5.5-5 4.3 1.5 6.2L12 16.8 6.5 20l1.5-6.2-5-4.3 6.5-.5z"/></svg>',
+  'g-divine':'<svg viewBox="0 0 24 24"><path d="M2.5 12C5 7.5 8.5 5.5 12 5.5S19 7.5 21.5 12C19 16.5 15.5 18.5 12 18.5S5 16.5 2.5 12z"/><circle cx="12" cy="12" r="3.2"/></svg>',
+  'g-tags':'<svg viewBox="0 0 24 24"><path d="M20 12l-8 8-9-9V4h7z"/><circle cx="7.5" cy="7.5" r="1"/></svg>',
+  'g-groupchat':'<svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><circle cx="16" cy="9" r="2.5"/><path d="M3 19c0-3 2.5-5 6-5s6 2 6 5"/><path d="M14 19c0-2 1.5-3.5 4-3.5 1.2 0 2 .2 3 .8"/></svg>',
+  'g-namecard':'<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2.5"/><circle cx="12" cy="12" r="3"/><path d="M8 9h.01M16 15h.01"/></svg>',
+  'g-demand':'<svg viewBox="0 0 24 24"><path d="M12 3l2.5 6 6.5.5-5 4.3 1.5 6.2L12 16.8 6.5 20l1.5-6.2-5-4.3 6.5-.5z"/></svg>',
+  'g-share':'<svg viewBox="0 0 24 24"><path d="M10 14L21 3"/><path d="M15 3h6v6"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>',
+  'g-festival':'<svg viewBox="0 0 24 24"><path d="M12 2v20M8 5h8M6 12h12M4 19h16"/><path d="M12 2c-2 0-4 2-4 4s2 4 4 4 4-2 4-4-2-4-4-4z"/></svg>',
+  'g-special':'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 6v6l3 3"/></svg>',
+  'g-yesno':'<svg viewBox="0 0 24 24"><circle cx="7" cy="12" r="4"/><circle cx="17" cy="12" r="4"/><path d="M8.5 10.5l-1 1 1 1M15.5 10.5l1 1-1 1"/></svg>',
+  'g-period':'<svg viewBox="0 0 24 24"><path d="M12 2s-6 6.5-6 12a6 6 0 0 0 12 0c0-5.5-6-12-6-12z"/></svg>'
 };
-function iconSVG(key){ return ICONS[key] || ICONS.doc; }
+const GROUP_ICON_FALLBACK = GROUP_ICONS['g-normal'];
+const GROUP_ICON_KEY = 'mj_group_icons_v1';
+function getGroupIconsMap(){
+  let m = lsGet(GROUP_ICON_KEY, null);
+  if(!m || typeof m !== 'object') m = {};
+  return m;
+}
+function saveGroupIconsMap(m){ lsSet(GROUP_ICON_KEY, m); }
+function groupIconHTML(gid){
+  if(!gid) return GROUP_ICON_FALLBACK;
+  const m = getGroupIconsMap();
+  const url = m[gid];
+  if(url) return '<img src="' + url + '">';
+  return GROUP_ICONS[gid] || GROUP_ICON_FALLBACK;
+}
+function iconSVG(key){
+  if(GROUP_ICONS[key]) return GROUP_ICONS[key];
+  return GROUP_ICON_FALLBACK;
+}
 function openCardLib(){
   showScreen('cardLibScreen');
   renderTopBar({
@@ -21867,11 +22206,10 @@ function renderGroupList(){
 
   var html = orderedGroups.map(g=>{
 	const total = (g.cats||[]).reduce((n,c)=>n+(c.list||[]).length,0);
-	const iconKey = (g && g.icon) ? g.icon : 'doc';
 	const gid = (g && g.id) ? g.id : '';
 	const gname = (g && g.name) ? g.name : '未命名';
 	const gsub = (g && g.sub) ? g.sub : '';
-	var card = `<div class="group-card" data-open="${escapeHTML(gid)}"><div class="g-ic">${iconSVG(iconKey)}</div><div class="g-name">${escapeHTML(gname)}<span class="g-sub">${escapeHTML(gsub)}</span></div><div class="g-count">${total}</div><div class="g-arrow">›</div></div>`;
+	var card = `<div class="group-card" data-open="${escapeHTML(gid)}"><div class="g-ic">${groupIconHTML(gid)}</div><div class="g-name">${escapeHTML(gname)}<span class="g-sub">${escapeHTML(gsub)}</span></div><div class="g-count">${total}</div><div class="g-arrow">›</div></div>`;
 	/* ★ 只有角色专属字卡（curOwner !== 'public'），才在普通字卡后面插入语音入口 */
 	if(curOwner !== 'public' && g && g.id === 'g-normal'){
 	  card += voiceEntryHTML;
@@ -25880,66 +26218,7 @@ on('#btnNfUploadAv','click',()=>{
   }, true);
 })();
 
-/* ============================================================
-   ★ 全站统一头像上传总入口 (重构版)
-   - 抛弃容易丢失的隐藏 input，改为全站唯一动态生成
-   - 彻底解决“换几个角色就传不上图”的 bug
-   ============================================================ */
-window.triggerAvatarUpload = function(context) {
-  window.__uploadContext = context || '';
-  
-  // 移除任何可能残留的旧文件选择器
-  var oldInput = document.getElementById('__globalAvatarInput');
-  if (oldInput) oldInput.remove();
-
-  var f = document.createElement('input');
-  f.type = 'file';
-  f.accept = 'image/*';
-  f.id = '__globalAvatarInput';
-  f.style.display = 'none';
-  document.body.appendChild(f);
-
-  f.addEventListener('change', function() {
-    var file = f.files && f.files[0];
-    if (!file) {
-      f.remove();
-      return;
-    }
-    
-    // 统一走裁剪，裁剪完再交回给原来的处理逻辑
-    openCrop(file, 'square', function(dataUrl) {
-      // 兼容旧逻辑：借用原有的 editAvFile change 事件机制
-      var evtInput = document.getElementById('editAvFile');
-      if (evtInput) {
-        // 手动挂载上下文，触发原有的事件处理
-        evtInput._forBuiltinEdit = (context === 'builtin' && document.getElementById('mNewBuiltin') && document.getElementById('mNewBuiltin').classList.contains('show'));
-        
-        // 模拟一个假的文件，并把 Base64 塞进去让原有的 change 逻辑能跑通
-        // 为了兼容，直接调用内部的赋值逻辑
-        var blob = (function(u){ 
-          var parts = String(u).split(','); 
-          var mime = (parts[0].match(/:(.*?);/) || [])[1] || 'image/png'; 
-          var bstr = atob(parts[1]); 
-          var n = bstr.length; 
-          var u8 = new Uint8Array(n); 
-          while(n--){ u8[n] = bstr.charCodeAt(n); } 
-          return new Blob([u8], { type: mime }); 
-        })(dataUrl);
-        
-        var dt = new DataTransfer();
-        dt.items.add(new File([blob], 'avatar.png', { type: blob.type }));
-        evtInput.files = dt.files;
-        
-        evtInput.dispatchEvent(new Event('change', { bubbles: true }));
-      } else {
-        console.warn('找不到原有的头像处理挂载点 editAvFile');
-      }
-      f.remove();
-    });
-  });
-
-  f.click();
-};
+ 
 
  
 

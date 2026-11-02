@@ -722,7 +722,16 @@ function renderDeskEdit(tab){
   });
   if(deCurrentTab === 'date') renderDeDate(body);
   else if(deCurrentTab === 'todo') renderDeTodo(body);
-  else if(deCurrentTab === 'weather') renderDeWeather(body);
+  else if(deCurrentTab === 'weather') {
+    renderDeWeather(body);
+    /* ★ 新增：第一次点进来，自动帮你点一下刷新按钮 */
+    setTimeout(() => {
+      const btn = document.getElementById('deWeatherRefresh');
+      if(btn && (!getWeatherCfg().cache || Date.now() - getWeatherCfg().cache.fetchedAt > 30*60*1000)){
+        btn.click(); /* 自动触发弹窗，免得你再去找按钮 */
+      }
+    }, 300);
+  }
   else if(deCurrentTab === 'role') renderDeRole(body);
   else if(deCurrentTab === 'setting') renderDeSetting(body);
 }
@@ -943,65 +952,73 @@ function renderDeWeather(body){
   const cfg = getWeatherCfg();
   const cache = cfg.cache;
   let html = '<div class="de-sec"><span class="tt">天 气 设 置</span><span class="tt-en">WEATHER</span></div>';
-  html += '<div class="de-city-row"><span class="lbl">城市</span><input type="text" id="deCityInput" placeholder="例如：广州" value="' + escapeHTML(cfg.city || '') + '"></div>';
-  html += '<div class="de-sw-row"><div class="sw-main"><div class="t1">自动定位</div><div class="t2">打开时尝试用浏览器定位</div></div><label class="switch"><input type="checkbox" id="deAutoLocate" ' + (cfg.autoLocate ? 'checked' : '') + '><span class="slider"></span></label></div>';
+  
+  /* 城市行：如果已经有缓存城市，显示出来；否则显示“未定位” */
+  html += '<div class="de-city-row"><span class="lbl">当前城市</span><div style="flex:1;display:flex;justify-content:flex-end;align-items:center;font-size:13.5px;color:#1a1a1a">' + escapeHTML(cfg.city || '未定位') + '</div></div>';
+  
   if(cache){
     html += '<div class="de-sec"><span class="tt">最 近 一 次</span><span class="tt-en">CACHED</span></div>';
     html += '<div class="de-row"><div class="r-ic">' + weatherIconSVG(cache.icon) + '</div><div class="r-main"><div class="r-tt">' + cache.text + ' · ' + cache.temp + '°C</div><div class="r-sub">' + cache.city + ' · ' + new Date(cache.fetchedAt).toLocaleString('zh-CN', {month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}) + '</div></div></div>';
   }
-  html += '<button class="de-primary-btn" id="deWeatherRefresh">刷 新 天 气</button>';
+  
+  html += '<button class="de-primary-btn" id="deLocateBtn">精 准 定 位 并 刷 新</button>';
   body.innerHTML = html;
 
-  const cityInput = body.querySelector('#deCityInput');
-  if(cityInput){
-    cityInput.onchange = () => {
-      const v = cityInput.value.trim();
-      const c = getWeatherCfg();
-      c.city = v;
-      if(!v){
-        c.lat = 0;
-        c.lon = 0;
-        saveWeatherCfg(c);
-        toast('已清空城市');
-        return;
-      }
-      /* 有城市名 → 用 geocoding 查坐标 */
-      toast('正在查坐标…');
-      geocodeCity(v).then(pos => {
+  const locateBtn = body.querySelector('#deLocateBtn');
+  if(locateBtn){
+    locateBtn.onclick = () => {
+      locateBtn.textContent = '定 位 中...';
+      locateBtn.disabled = true;
+      locateBtn.style.opacity = '0.6';
+      
+      // 直接调用浏览器系统的定位 API，浏览器会自动弹窗问“是否允许获取位置”
+      locateUser().then(pos => {
+        const c = getWeatherCfg();
         c.lat = pos.lat;
         c.lon = pos.lon;
-        c.city = pos.city;
+        c.city = '定位中…';
         saveWeatherCfg(c);
-        toast('已保存：' + pos.city);
-        /* 立刻拉一次天气 */
-        refreshWeather(true).then(() => {
-          renderDeskEdit('weather');
+        
+        return fetchWeather(c.lat, c.lon, '定位中…').then(w => {
+          return reverseGeocode(c.lat, c.lon).then(city => {
+            c.city = city;
+            if(w) w.city = city;
+            saveWeatherCfg(c);
+            return w;
+          });
         });
-      }).catch(e => {
-        console.warn('城市名查不到', e);
-        c.lat = 0;
-        c.lon = 0;
-        saveWeatherCfg(c);
-        toast('找不到「' + v + '」，请换个写法');
-      });
-    };
-  }
-  const autoLocate = body.querySelector('#deAutoLocate');
-  if(autoLocate){
-    autoLocate.onchange = () => {
-      const c = getWeatherCfg();
-      c.autoLocate = autoLocate.checked;
-      saveWeatherCfg(c);
-      toast(autoLocate.checked ? '已开启自动定位' : '已关闭自动定位');
-    };
-  }
-  const btn = body.querySelector('#deWeatherRefresh');
-  if(btn){
-    btn.onclick = () => {
-      btn.textContent = '获 取 中…';
-      refreshWeather(true).then(() => {
-        btn.textContent = '刷 新 天 气';
+      }).then(w => {
+        locateBtn.textContent = '精 准 定 位 并 刷 新';
+        locateBtn.disabled = false;
+        locateBtn.style.opacity = '1';
         renderDeskEdit('weather');
+        renderBigCardWeather(w || cache);
+        toast('定位成功：' + (w ? w.city : '当前城市'));
+      }).catch(err => {
+        console.warn('定位失败', err);
+        locateBtn.textContent = '精 准 定 位 并 刷 新';
+        locateBtn.disabled = false;
+        locateBtn.style.opacity = '1';
+        // 某些手机不认 GPS，退回到用网络 IP 定位
+        toast('GPS定位失败，尝试用网络获取…');
+        fetch('https://ipapi.co/json/')
+          .then(r => r.json())
+          .then(ipData => {
+             if(ipData && ipData.latitude){
+                const c = getWeatherCfg();
+                c.lat = ipData.latitude;
+                c.lon = ipData.longitude;
+                c.city = ipData.city || '当前位置';
+                saveWeatherCfg(c);
+                return fetchWeather(c.lat, c.lon, c.city).then(w => {
+                   renderDeskEdit('weather');
+                   renderBigCardWeather(w);
+                   toast('已通过网络获取：' + c.city);
+                });
+             } else {
+                toast('获取位置彻底失败，请检查网络');
+             }
+          }).catch(() => toast('无法获取位置，请检查网络权限'));
       });
     };
   }
