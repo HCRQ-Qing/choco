@@ -1,6 +1,6 @@
 /* ============ 备忘页 · 多模板 ============ */
 #memoScreen{
-  background:var(--th-bg0,#ffffff);
+  background:var(--theme-surface, var(--th-bg0, #ffffff));
   flex-direction:column;
   z-index:100;
 }
@@ -34,11 +34,9 @@
 }
 .memo-wrap::-webkit-scrollbar{display:none}
 
- 
-
 .memo-tabs{
   display:flex;align-items:center;gap:22px;
   padding:20px 0 16px;
-  border-bottom:0.6px dashed #ececec;
+  border-bottom:0.6px dashed var(--theme-divider, var(--c-line, #ececec));
   margin-bottom:20px;
 }
