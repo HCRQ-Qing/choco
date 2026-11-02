@@ -6630,60 +6630,59 @@ function applyKeepAliveSwitch(on){
 
 let _msgNotifyTimer = null;
 function showMsgNotify(roleName, text, roleAvatar, targetRoleId){
-  /* ★ 优先用备注名（有备注就显示备注） */
-  if(targetRoleId){
-    const r = getRoleById(targetRoleId);
-    if(r) roleName = displayName(r);
-  }
+  /* 1. 严格校验：必须有目标角色，且去库里拿到真实数据 */
+  if(!targetRoleId) return;
+  const r = getRoleById(targetRoleId);
+  if(!r) return; // 角色被删了或数据异常，坚决不弹
+  const realName = displayName(r) || r.name;
+  if(!realName) return;
+
+  /* 2. 严格校验：必须真的有一条消息文本，且不是空内容 */
+  const safeText = String(text || '').trim();
+  if(!safeText) return;
+
+  /* 3. 校验防抖：当前角色如果是静音/免打扰状态，绝不弹 */
+  if(typeof getRoleMute === 'function' && getRoleMute(targetRoleId)) return;
+  if(typeof window.__globalDnd !== 'undefined' && window.__globalDnd) return;
+
   /* ★ 收到消息 → 播收消息音效 */
   try{ playSoundOnce('inMsg'); }catch(e){}
-  /* ★ 直接去掉前台判断，让 showSystemNotify 内部的 isBg 自己决定 */
-  /* 原因：手机浏览器切后台时 visibilityState 经常不更新，导致误判成"还在前台" */
-  /* 不再用 isViewingRole 挡系统通知：切后台时页面栈还是停在聊天页，
-     但用户其实已经不在看了，应该弹系统通知 */
-  /* 正在看这个角色的聊天页 → 不弹顶部横幅。
-     但如果页面已经切到后台，还是要走系统通知，所以这里不能直接 return，
-     只跳过顶部横幅部分。 */
-  const _viewingCur = (targetRoleId && typeof isViewingRole === 'function' && isViewingRole(targetRoleId));
-  const _pageHidden = isPageInBackground();
-  if(_viewingCur && !_pageHidden){
-    /* 前台且正在看：什么都不做 */
-    return;
-  }
+
+  /* 4. 判定页面状态，决定弹横幅还是系统通知 */
+  const _viewingCur = (typeof isViewingRole === 'function' && isViewingRole(targetRoleId));
+  const _pageHidden = typeof isPageInBackground === 'function' && isPageInBackground();
+
+  if(_viewingCur && !_pageHidden) return;
+
   if(_pageHidden){
-    /* ★ 页面在后台：直接走系统通知。
-       注意这里不受「聊天界面通知」开关影响——那个开关只管前台横幅，
-       关了它不应该把后台系统通知也一起挡掉（之前就是这里 return 导致收不到）。 */
-    showSystemNotify(roleName, text);
+    if(typeof showSystemNotify === 'function') showSystemNotify(realName, safeText);
     return;
   }
-  /* 前台，但没在看这个角色的聊天：走顶部横幅，受聊天通知开关控制 */
-  if(!getNotifyChat()) return;
+
+  /* 5. 前台，但没在看这个角色的聊天：走顶部横幅 */
+  if(typeof getNotifyChat === 'function' && !getNotifyChat()) return;
   const el = document.getElementById('msgNotify');
   if(!el) return;
 
-  /* 头像：优先用传入的，没传就用当前角色的 */
   let avHTML = '';
   if(roleAvatar){
     avHTML = avatarHTML(roleAvatar);
   } else {
-    const r = getRole();
-    avHTML = avatarHTML(r && r.avatar);
+    avHTML = avatarHTML(r.avatar);
   }
 
   el.innerHTML =
     '<div class="mn-av">' + avHTML + '</div>' +
     '<div class="mn-main">' +
-      '<div class="mn-name">' + escapeHTML(roleName || '角色') + '</div>' +
-      '<div class="mn-text">' + escapeHTML(String(text || '').slice(0, 40)) + '</div>' +
+      '<div class="mn-name">' + escapeHTML(realName) + '</div>' +
+      '<div class="mn-text">' + escapeHTML(safeText.slice(0, 40)) + '</div>' +
     '</div>' +
     '<div class="mn-time">现在</div>';
 
-  /* 点这条提示 → 统一走 jumpToRoleChat */
   el.onclick = function(){
     el.classList.remove('show');
     clearTimeout(_msgNotifyTimer);
-    if(targetRoleId) jumpToRoleChat(targetRoleId);
+    jumpToRoleChat(targetRoleId);
   };
 
   el.classList.add('show');
@@ -6692,8 +6691,7 @@ function showMsgNotify(roleName, text, roleAvatar, targetRoleId){
     el.classList.remove('show');
   }, 2000);
 
-  /* 同时尝试发系统通知（切后台时才会真的弹出来） */
-  showSystemNotify(roleName, text);
+  if(typeof showSystemNotify === 'function') showSystemNotify(realName, safeText);
 }
 
  
@@ -7269,26 +7267,24 @@ function showSystemNotify(title, body){
   try{
     if(!('Notification' in window)) return;
     if(Notification.permission !== 'granted') return;
-    if(!getSysNotifyOn()) return;
+    if(typeof getSysNotifyOn === 'function' && !getSysNotifyOn()) return;
 
-    try{
-      if(typeof getCurrentRoleId === 'function'){ window.__lastNotifyRoleId = getCurrentRoleId(); }
-    }catch(e){}
+    if(typeof isPageInBackground === 'function' && !isPageInBackground()) return;
 
-    /* 只在页面不可见时才弹系统通知（前台判断交给上层总闸） */
-    if(!isPageInBackground()) return;
+    /* ★ 核心修复：严格从消息源头拿真实名字，拿不到宁可不弹，绝不用“梦角”兜底 */
+    let finalTitle = '';
+    let finalBody = String(body || '').trim();
+    if(!finalBody) return;
 
-    let finalTitle = String(title || '角色').trim() || '角色';
-    try {
-      const rid = window.__lastNotifyRoleId || getCurrentRoleId();
+    const rid = window.__lastNotifyRoleId;
+    if(rid){
       const r = getRoleById(rid);
-      if (r && typeof displayName === 'function') {
+      if(r && typeof displayName === 'function'){
         finalTitle = displayName(r);
       }
-    } catch(e){}
-    const finalBody  = String(body || '').trim();
+    }
+    if(!finalTitle) return; /* 如果没有拿到目标角色真名，直接返回，杜绝幽灵通知 */
 
-    /* 构造基础 options */
     var __notifyTag = 'mj-msg-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 6);
     var swOpts = {
       body: finalBody.slice(0, 60),
@@ -7297,65 +7293,51 @@ function showSystemNotify(title, body){
       silent: false,
       requireInteraction: true,
       urgency: 'high',
-      data: { roleId: window.__lastNotifyRoleId || '' }
+      data: { roleId: rid }
     };
 
-    /* 走 SW 通道 */
     if('serviceWorker' in navigator && navigator.serviceWorker){
       kaSWReady().then(function(reg){
         if(!reg){
-          /* SW 没就绪：挂队列，60 秒内就绪就补发；同时退回 page 弹 */
-          swNotifyLater(finalTitle, swOpts, null);
-          _fallbackNewNotification(finalTitle, {
-            body: finalBody.slice(0, 60),
-            tag: __notifyTag
-          });
-          swNotifyNote('page');
+          if(typeof swNotifyLater === 'function') swNotifyLater(finalTitle, swOpts, null);
+          if(typeof _fallbackNewNotification === 'function') _fallbackNewNotification(finalTitle, { body: finalBody.slice(0, 60), tag: __notifyTag });
+          if(typeof swNotifyNote === 'function') swNotifyNote('page');
           return;
         }
-        /* 四级降级：从完整 options 一路剥到只剩 title + body */
+        
         const STRIP_LADDER = [[], ['image'], ['image', 'badge'], ['image', 'badge', 'icon']];
         let ladderIdx = 0;
         const tryNext = function(){
           if(ladderIdx >= STRIP_LADDER.length){
-            swNotifyNote('none');
-            _fallbackNewNotification(finalTitle, {
-              body: finalBody.slice(0, 60),
-              tag: __notifyTag
-            });
+            if(typeof swNotifyNote === 'function') swNotifyNote('none');
+            if(typeof _fallbackNewNotification === 'function') _fallbackNewNotification(finalTitle, { body: finalBody.slice(0, 60), tag: __notifyTag });
             return;
           }
           const attempt = Object.assign({}, swOpts);
           STRIP_LADDER[ladderIdx++].forEach(function(k){ delete attempt[k]; });
-          prepMediaBlobs(attempt, function(){
-            kaWithTimeout(function(){ return reg.showNotification(finalTitle, attempt); }, 4000)
-            .then(function(){
-              swNotifyNote('sw');
-            }, function(e){
-              if(e && e.kaTimeout){
-                /* 超时：内核回执没落地 → 按"已挂出"收手，绝不重发 */
-                swNotifyNote('sw');
-                return;
-              }
-              /* 其它错误 → 进下一级降级 */
-              tryNext();
+          if(typeof prepMediaBlobs === 'function'){
+            prepMediaBlobs(attempt, function(){
+              kaWithTimeout(function(){ return reg.showNotification(finalTitle, attempt); }, 4000)
+              .then(function(){
+                if(typeof swNotifyNote === 'function') swNotifyNote('sw');
+              }, function(e){
+                if(e && e.kaTimeout){
+                  if(typeof swNotifyNote === 'function') swNotifyNote('sw');
+                  return;
+                }
+                tryNext();
+              });
             });
-          });
+          }
         };
         tryNext();
       }).catch(function(){
-        _fallbackNewNotification(finalTitle, {
-          body: finalBody.slice(0, 60),
-          tag: __notifyTag
-        });
-        swNotifyNote('page');
+        if(typeof _fallbackNewNotification === 'function') _fallbackNewNotification(finalTitle, { body: finalBody.slice(0, 60), tag: __notifyTag });
+        if(typeof swNotifyNote === 'function') swNotifyNote('page');
       });
     } else {
-      _fallbackNewNotification(finalTitle, {
-        body: finalBody.slice(0, 60),
-        tag: __notifyTag
-      });
-      swNotifyNote('page');
+      if(typeof _fallbackNewNotification === 'function') _fallbackNewNotification(finalTitle, { body: finalBody.slice(0, 60), tag: __notifyTag });
+      if(typeof swNotifyNote === 'function') swNotifyNote('page');
     }
   }catch(e){
     console.error('系统通知失败', e);
@@ -25880,14 +25862,64 @@ on('#btnNfUploadAv','click',()=>{
 })();
 
 /* ============================================================
-   ★ 全站统一头像上传总入口
-   - 不管在哪点上传，只要调 triggerAvatarUpload() 就行
-   - 以后加新功能传头像，直接绑这个函数，不用再写文件选择器了
+   ★ 全站统一头像上传总入口 (重构版)
+   - 抛弃容易丢失的隐藏 input，改为全站唯一动态生成
+   - 彻底解决“换几个角色就传不上图”的 bug
    ============================================================ */
 window.triggerAvatarUpload = function(context) {
   window.__uploadContext = context || '';
-  var f = document.getElementById('editAvFile');
-  if(f){ f.value = ''; f.click(); }
+  
+  // 移除任何可能残留的旧文件选择器
+  var oldInput = document.getElementById('__globalAvatarInput');
+  if (oldInput) oldInput.remove();
+
+  var f = document.createElement('input');
+  f.type = 'file';
+  f.accept = 'image/*';
+  f.id = '__globalAvatarInput';
+  f.style.display = 'none';
+  document.body.appendChild(f);
+
+  f.addEventListener('change', function() {
+    var file = f.files && f.files[0];
+    if (!file) {
+      f.remove();
+      return;
+    }
+    
+    // 统一走裁剪，裁剪完再交回给原来的处理逻辑
+    openCrop(file, 'square', function(dataUrl) {
+      // 兼容旧逻辑：借用原有的 editAvFile change 事件机制
+      var evtInput = document.getElementById('editAvFile');
+      if (evtInput) {
+        // 手动挂载上下文，触发原有的事件处理
+        evtInput._forBuiltinEdit = (context === 'builtin' && document.getElementById('mNewBuiltin') && document.getElementById('mNewBuiltin').classList.contains('show'));
+        
+        // 模拟一个假的文件，并把 Base64 塞进去让原有的 change 逻辑能跑通
+        // 为了兼容，直接调用内部的赋值逻辑
+        var blob = (function(u){ 
+          var parts = String(u).split(','); 
+          var mime = (parts[0].match(/:(.*?);/) || [])[1] || 'image/png'; 
+          var bstr = atob(parts[1]); 
+          var n = bstr.length; 
+          var u8 = new Uint8Array(n); 
+          while(n--){ u8[n] = bstr.charCodeAt(n); } 
+          return new Blob([u8], { type: mime }); 
+        })(dataUrl);
+        
+        var dt = new DataTransfer();
+        dt.items.add(new File([blob], 'avatar.png', { type: blob.type }));
+        evtInput.files = dt.files;
+        
+        evtInput.dispatchEvent(new Event('change', { bubbles: true }));
+      } else {
+        console.warn('找不到原有的头像处理挂载点 editAvFile');
+      }
+      f.remove();
+    });
+  });
+
+  f.click();
 };
 
  
