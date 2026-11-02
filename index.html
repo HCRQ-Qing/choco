@@ -6,9 +6,11 @@
 <title>choco</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%23bde8f5'/%3E%3Cpath d='M62 22 A30 30 0 1 0 62 78 A24 24 0 1 1 62 22 Z' fill='%23ffffff'/%3E%3Ccircle cx='76' cy='34' r='2.6' fill='%23ffffff'/%3E%3Ccircle cx='82' cy='50' r='1.8' fill='%23ffffff'/%3E%3Ccircle cx='74' cy='64' r='1.4' fill='%23ffffff'/%3E%3C/svg%3E">
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#ffffff">
+<meta name="theme-color" content="#ffffff" id="metaThemeColor">
 
-<!-- ===== 设计常量表（唯一变量来源） ===== -->
+<!-- ===== 主题系统（唯一颜色变量来源，必须最先加载） ===== -->
+<link rel="stylesheet" href="css/theme.css">
+<!-- ===== 设计常量表（字体 / 间距 / 圆角，不含颜色） ===== -->
 <link rel="stylesheet" href="css/tokens.css">
 <!-- ===== 基础重置 + app 外壳 ===== -->
 <link rel="stylesheet" href="css/base.css">
@@ -38,7 +40,6 @@
 <link rel="stylesheet" href="css/groupchat.css">
 <link rel="stylesheet" href="css/media.css">
 <link rel="stylesheet" href="css/truth.css">
-<link rel="stylesheet" href="css/truth.css">
 </head>
 <body>
 <div id="app">
@@ -47,7 +48,7 @@
 	  <div class="fr-wrap">
 		<div class="fr-toprow">
 		  <div class="search-box">
-			<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#1a1a1a" stroke-width="1.6"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
+			<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="var(--th-text)" stroke-width="1.6"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
 			<input type="text" id="searchInput" placeholder="搜索角色名字…">
 		  </div>
 		  <button class="add-btn" id="btnAdd">＋</button>
@@ -73,9 +74,9 @@
 		<div class="topbar-actions">
 		  <button class="topbar-btn" id="moreBtn" type="button" title="更多">
 			<svg viewBox="0 0 24 24">
-			  <circle cx="5" cy="12" r="1" fill="#1a1a1a" stroke="none"/>
-			  <circle cx="12" cy="12" r="1" fill="#1a1a1a" stroke="none"/>
-			  <circle cx="19" cy="12" r="1" fill="#1a1a1a" stroke="none"/>
+			  <circle cx="5" cy="12" r="1" fill="var(--th-text)" stroke="none"/>
+			  <circle cx="12" cy="12" r="1" fill="var(--th-text)" stroke="none"/>
+			  <circle cx="19" cy="12" r="1" fill="var(--th-text)" stroke="none"/>
 			</svg>
 		  </button>
 		  <button class="topbar-btn pink-icon" id="roleSwitchBtn" type="button" title="切换角色">
@@ -83,7 +84,7 @@
 			  <path d="M17 2l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/>
 			  <path d="M7 22l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>
 			</svg>
-			<span class="unread-badge" id="switchBadge" style="position:absolute; top:2px; right:2px; background:#1a1a1a; color:#fff; font-size:10px; padding:0 5px; min-width:16px; height:16px; border-radius:8px; display:none; align-items:center; justify-content:center; border:1.5px solid #fff; box-sizing:border-box; font-family:Arial,sans-serif;">0</span>
+			<span class="unread-badge" id="switchBadge" style="position:absolute; top:2px; right:2px; background:var(--th-text); color:var(--th-bg1); font-size:10px; padding:0 5px; min-width:16px; height:16px; border-radius:8px; display:none; align-items:center; justify-content:center; border:1.5px solid var(--th-bg1); box-sizing:border-box; font-family:Arial,sans-serif;">0</span>
 		  </button>
 		</div>
 		<div class="topbar-row">
@@ -243,9 +244,9 @@
 	<button class="sel-btn" id="selCancelBtn" type="button">取消</button>
   </div>
   <div id="cdGcStrategyBar" style="display:none;padding:0 22px 12px;flex:none">
-    <div id="cdGcStrategyBtn" style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:14px;border:0.7px solid rgba(0,0,0,.12);background:#fff;cursor:pointer">
-      <span style="font-size:11px;color:#999;letter-spacing:1px">字卡策略</span>
-      <span id="cdGcStrategyVal" style="font-size:11.5px;color:#1a1a1a;letter-spacing:1px">只用角色专属</span>
+    <div id="cdGcStrategyBtn" style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:14px;border:0.7px solid var(--th-line);background:var(--th-bg1);cursor:pointer">
+      <span style="font-size:11px;color:var(--th-text-soft);letter-spacing:1px">字卡策略</span>
+      <span id="cdGcStrategyVal" style="font-size:11.5px;color:var(--th-text);letter-spacing:1px">只用角色专属</span>
       <span style="font-size:9px;color:#ccc">▾</span>
     </div>
   </div>
@@ -290,7 +291,7 @@
 <div class="screen" id="chatSearchScreen">
   <div id="utopHostChatSearch"></div>
   <div class="cs-input" style="margin:0 22px 12px;">
-	<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#999" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
+	<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="var(--th-text-soft)" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
 	<input type="text" id="csInput" placeholder="搜索聊天记录…">
   </div>
 
@@ -726,7 +727,7 @@
   <div class="sheet" style="
     max-width:320px;
     border-radius:20px;
-    box-shadow:0 20px 60px rgba(0,0,0,.18);
+    box-shadow:0 20px 60px var(--th-accent-line);
     padding:24px 22px 20px;
     overflow:visible;
   ">
@@ -742,8 +743,8 @@
         font-size:15px;
         font-weight:300;
         letter-spacing:4px;
-        color:#1a1a1a;
-        -webkit-text-stroke:0.15px #1a1a1a;
+        color:var(--th-text);
+        -webkit-text-stroke:0.15px var(--th-text);
         -webkit-font-smoothing:antialiased;
         -moz-osx-font-smoothing:grayscale;
         text-align:center;
@@ -772,16 +773,16 @@
         -webkit-font-smoothing:antialiased;
       ">视频链接</label>
       <style>
-        #vuUrl::placeholder{font-size:12px;color:#c8c8c8}
+        #vuUrl::placeholder{font-size:12px;color:var(--th-faint)}
       </style>
       <input type="text" id="vuUrl" placeholder="粘贴视频链接（抖音 / B站 / 小红书 / 微博等）" style="
         width:100%;
         border:none;
-        border-bottom:0.7px solid rgba(0,0,0,.15);
+        border-bottom:0.7px solid var(--th-accent-line);
         background:transparent;
         padding:10px 2px;
         font-size:14px;
-        color:#1a1a1a;
+        color:var(--th-text);
         font-family:inherit;
         outline:none;
         letter-spacing:.5px;
@@ -794,15 +795,15 @@
         padding:14px 0;
         border:none;
         border-radius:22px;
-        background:#1a1a1a;
-        color:#fff;
+        background:var(--th-text);
+        color:var(--th-bg1);
         font-size:13.5px;
         font-family:inherit;
         letter-spacing:6px;
         text-indent:6px;
         font-weight:300;
         cursor:pointer;
-        box-shadow:0 2px 8px rgba(0,0,0,.12);
+        box-shadow:0 2px 8px var(--th-line);
         transition:opacity .18s;
       ">上 传</button>
     </div>
@@ -1087,10 +1088,10 @@
 
 <!-- ★ 角色可调参数 · 全屏页 -->
 <div class="screen" id="roleFloorScreen">
-  <div class="rf-wrap" style="display:flex;flex-direction:column;height:100%;background:#fff;">
+  <div class="rf-wrap" style="display:flex;flex-direction:column;height:100%;background:var(--th-bg1);">
     <div class="rf-top" style="flex:none;display:flex;align-items:center;padding:20px 22px 12px;border-bottom:0.6px solid #f2f2f2;">
-      <button class="rf-back" id="roleFloorBackBtn" type="button" style="width:38px;height:38px;border:none;background:transparent;color:#1a1a1a;font-size:22px;line-height:1;display:flex;align-items:center;justify-content:center;padding:0 0 4px;font-family:inherit;cursor:pointer;opacity:.55;">‹</button>
-      <div class="rf-title" style="flex:1;text-align:center;font-size:15px;font-weight:300;letter-spacing:6px;color:#1a1a1a;margin-left:-38px;">角 色 可 调 参 数</div>
+      <button class="rf-back" id="roleFloorBackBtn" type="button" style="width:38px;height:38px;border:none;background:transparent;color:var(--th-text);font-size:22px;line-height:1;display:flex;align-items:center;justify-content:center;padding:0 0 4px;font-family:inherit;cursor:pointer;opacity:.55;">‹</button>
+      <div class="rf-title" style="flex:1;text-align:center;font-size:15px;font-weight:300;letter-spacing:6px;color:var(--th-text);margin-left:-38px;">角 色 可 调 参 数</div>
     </div>
     <div class="rf-body" id="roleFloorBody" style="flex:1;overflow-y:auto;padding:10px 22px 40px;scrollbar-width:none;"></div>
   </div>
@@ -1353,8 +1354,8 @@
   
   <div class="line-row">
 	<span class="lb">关系网</span>
-	<div id="nfRelPick" style="display:flex;align-items:center;flex:1;cursor:pointer;border-bottom:0.7px solid rgba(0,0,0,.12);padding:6px 2px 8px;">
-	  <span id="nfRelVal" style="flex:1;font-size:13.5px;color:#999;letter-spacing:.5px;">未设置</span>
+	<div id="nfRelPick" style="display:flex;align-items:center;flex:1;cursor:pointer;border-bottom:0.7px solid var(--th-line);padding:6px 2px 8px;">
+	  <span id="nfRelVal" style="flex:1;font-size:13.5px;color:var(--th-text-soft);letter-spacing:.5px;">未设置</span>
 	  <span style="color:#ccc;font-size:14px;font-family:Arial;margin-left:auto;">›</span>
 	</div>
   </div>
@@ -1531,10 +1532,10 @@
 <div id="bubblePreviewBox" style="
   margin:0 0 18px;
   padding:20px 16px;
-  background:#ffffff;
+  background:var(--th-bg1);
   border-radius:16px;
-  border:0.7px solid rgba(0,0,0,.06);
-  box-shadow:0 1px 5px rgba(0,0,0,.02);
+  border:0.7px solid var(--th-bubble-me);
+  box-shadow:0 1px 5px var(--th-divider);
   display:flex;flex-direction:column;gap:14px;
 ">
   <div style="font-size:10px;color:#ccc;letter-spacing:4px;
@@ -1544,15 +1545,15 @@
   <!-- ta 的气泡 -->
   <div style="display:flex;align-items:flex-start;gap:8px">
     <div style="width:28px;height:28px;border-radius:50%;
-                background:#f0f0f0;flex:none;overflow:hidden;
+                background:var(--th-divider);flex:none;overflow:hidden;
                 display:flex;align-items:center;justify-content:center">
       <svg viewBox="0 0 100 100" style="width:100%;height:100%">
-        <circle fill="#c8c8c8" cx="50" cy="38" r="19"/>
-        <path fill="#c8c8c8" d="M12 100 C12 74 28 62 50 62 C72 62 88 74 88 100 Z"/>
+        <circle fill="var(--th-faint)" cx="50" cy="38" r="19"/>
+        <path fill="var(--th-faint)" d="M12 100 C12 74 28 62 50 62 C72 62 88 74 88 100 Z"/>
       </svg>
     </div>
     <div style="display:flex;flex-direction:column;gap:4px;max-width:70%">
-      <div style="font-size:9px;color:#d0d0d0;letter-spacing:1px;
+      <div style="font-size:9px;color:var(--th-faint);letter-spacing:1px;
                   font-family:Georgia,serif">07:24</div>
       <div class="preview-bubble preview-bubble-in">在呢，怎么啦？</div>
     </div>
@@ -1561,15 +1562,15 @@
   <!-- 我的气泡 -->
   <div style="display:flex;align-items:flex-start;gap:8px;flex-direction:row-reverse">
     <div style="width:28px;height:28px;border-radius:50%;
-                background:#f0f0f0;flex:none;overflow:hidden;
+                background:var(--th-divider);flex:none;overflow:hidden;
                 display:flex;align-items:center;justify-content:center">
       <svg viewBox="0 0 100 100" style="width:100%;height:100%">
-        <circle fill="#c8c8c8" cx="50" cy="38" r="19"/>
-        <path fill="#c8c8c8" d="M12 100 C12 74 28 62 50 62 C72 62 88 74 88 100 Z"/>
+        <circle fill="var(--th-faint)" cx="50" cy="38" r="19"/>
+        <path fill="var(--th-faint)" d="M12 100 C12 74 28 62 50 62 C72 62 88 74 88 100 Z"/>
       </svg>
     </div>
     <div style="display:flex;flex-direction:column;gap:4px;max-width:70%;align-items:flex-end">
-      <div style="font-size:9px;color:#d0d0d0;letter-spacing:1px;
+      <div style="font-size:9px;color:var(--th-faint);letter-spacing:1px;
                   font-family:Georgia,serif">07:24</div>
       <div class="preview-bubble preview-bubble-out">没什么，就是想你了</div>
     </div>
@@ -1589,7 +1590,7 @@
   <div style="font-size:11px;color:var(--th-text-mute);letter-spacing:1px;margin-bottom:8px">
     编辑样式 · 支持 CSS / JSON / 变量串，粘贴即自动识别
   </div>
-  <textarea id="customCssInput" rows="10" placeholder="支持 4 种格式（任选其一）：&#10;1) 原生 CSS：.message-sent{ background:#fff5f9; border-radius:16px }&#10;2) 扁平 JSON：{&quot;background&quot;:&quot;#fff5f9&quot;,&quot;border-radius&quot;:&quot;16px&quot;}&#10;3) 带选择器 JSON：{&quot;.message-sent&quot;:{&quot;background&quot;:&quot;#fff&quot;}}&#10;4) CSS 变量：--bubble-bg:#ffc0cb; --bubble-radius:16px;" style="width:100%;border:1.5px solid var(--th-accent-line);border-radius:12px;padding:12px 14px;font-size:12px;font-family:ui-monospace,Menlo,Consolas,monospace;color:var(--th-text);background:var(--th-accent-soft);outline:none;resize:vertical;line-height:1.6"></textarea>
+  <textarea id="customCssInput" rows="10" placeholder="支持 4 种格式（任选其一）：&#10;1) 原生 CSS：.message-sent{ background:#fff5f9; border-radius:16px }&#10;2) 扁平 JSON：{&quot;background&quot;:&quot;#fff5f9&quot;,&quot;border-radius&quot;:&quot;16px&quot;}&#10;3) 带选择器 JSON：{&quot;.message-sent&quot;:{&quot;background&quot;:&quot;var(--th-bg1)&quot;}}&#10;4) CSS 变量：--bubble-bg:#ffc0cb; --bubble-radius:16px;" style="width:100%;border:1.5px solid var(--th-accent-line);border-radius:12px;padding:12px 14px;font-size:12px;font-family:ui-monospace,Menlo,Consolas,monospace;color:var(--th-text);background:var(--th-accent-soft);outline:none;resize:vertical;line-height:1.6"></textarea>
   <div style="display:flex;gap:8px;margin-top:10px">
     <button class="ghost-btn" id="customCssSave" type="button" style="flex:1">保 存</button>
     <button class="primary-btn" id="customCssApply" type="button" style="flex:1;margin-top:0">应 用</button>
@@ -1732,11 +1733,11 @@
       
       <div class="preview-box" id="chatBarPreview" style="margin-top:12px;height:100px;border-radius:12px;background:#f8f8f8;">
         <div class="preview-bg" id="chatBarPreviewBg" style="position:absolute;inset:0;background-size:cover;background-position:center;transition:background .2s;"></div>
-        <div class="preview-bar" id="chatBarPreviewBar" style="height:40px;padding:0 12px;position:absolute;bottom:0;left:0;right:0;display:flex;align-items:center;gap:8px;border-top:0.6px solid rgba(0,0,0,.06);transition:background .18s;">
-          <div class="pv-icon" style="width:20px;height:20px;border-radius:50%;background:rgba(0,0,0,.08);flex:none;"></div>
-          <div class="pv-icon" style="width:20px;height:20px;border-radius:50%;background:rgba(0,0,0,.08);flex:none;"></div>
-          <div class="pv-input" style="flex:1;height:24px;border-radius:12px;background:rgba(0,0,0,.04);border:0.6px solid rgba(0,0,0,.08);"></div>
-          <div class="pv-send" style="width:28px;height:24px;border-radius:12px;background:#1a1a1a;flex:none;"></div>
+        <div class="preview-bar" id="chatBarPreviewBar" style="height:40px;padding:0 12px;position:absolute;bottom:0;left:0;right:0;display:flex;align-items:center;gap:8px;border-top:0.6px solid var(--th-bubble-me);transition:background .18s;">
+          <div class="pv-icon" style="width:20px;height:20px;border-radius:50%;background:var(--th-accent-soft-2);flex:none;"></div>
+          <div class="pv-icon" style="width:20px;height:20px;border-radius:50%;background:var(--th-accent-soft-2);flex:none;"></div>
+          <div class="pv-input" style="flex:1;height:24px;border-radius:12px;background:var(--th-accent-soft);border:0.6px solid var(--th-accent-soft-2);"></div>
+          <div class="pv-send" style="width:28px;height:24px;border-radius:12px;background:var(--th-text);flex:none;"></div>
         </div>
       </div>
     </div>
@@ -1819,57 +1820,57 @@
     <div class="bp-head-right"></div>
   </div>
   <div class="sp-body">
-    <div style="font-size:11.5px;color:#999;margin-bottom:16px;letter-spacing:.5px;">切换后立刻生效，如果你中途想换回原版，选默认即可。</div>
+    <div style="font-size:11.5px;color:var(--th-text-soft);margin-bottom:16px;letter-spacing:.5px;">切换后立刻生效，如果你中途想换回原版，选默认即可。</div>
     
     <div style="display:flex; flex-direction:column; gap:12px; padding:0 4px;">
       
-      <div style="display:flex; align-items:center; justify-content:space-between; padding:12px 16px; background:#fafafa; border:0.7px solid #eee; border-radius:14px; margin-bottom:8px;">
-        <span style="font-size:14px; font-weight:500; color:#1a1a1a;">居中时显示头像</span>
+      <div style="display:flex; align-items:center; justify-content:space-between; padding:12px 16px; background:var(--th-accent-soft); border:0.7px solid #eee; border-radius:14px; margin-bottom:8px;">
+        <span style="font-size:14px; font-weight:500; color:var(--th-text);">居中时显示头像</span>
         <label class="switch"><input type="checkbox" id="centerShowAvatarSw"><span class="slider"></span></label>
       </div>
 
       <!-- 默认 -->
-      <div class="topbar-layout-card" data-toplayout="default" style="height:auto !important; flex:none !important; padding:16px; background:#fafafa; border:0.7px solid #eee; border-radius:14px; cursor:pointer; display:flex; align-items:center; gap:12px; box-sizing:border-box;">
-        <div style="width:56px; height:36px; background:#fff; border-radius:6px; border:0.5px solid #ebebeb; display:flex; flex-direction:column; align-items:center; justify-content:center; flex:none; gap:2px;">
+      <div class="topbar-layout-card" data-toplayout="default" style="height:auto !important; flex:none !important; padding:16px; background:var(--th-accent-soft); border:0.7px solid #eee; border-radius:14px; cursor:pointer; display:flex; align-items:center; gap:12px; box-sizing:border-box;">
+        <div style="width:56px; height:36px; background:var(--th-bg1); border-radius:6px; border:0.5px solid #ebebeb; display:flex; flex-direction:column; align-items:center; justify-content:center; flex:none; gap:2px;">
            <div style="width:28px; height:2px; background:#ddd; border-radius:2px;"></div>
            <div style="width:38px; height:6px; background:#eee; border-radius:2px; display:flex; align-items:center; padding:0 2px;"><div style="width:6px; height:6px; background:#ccc; border-radius:50%;"></div></div>
         </div>
         <div style="flex:1;">
-          <div style="font-size:14px; font-weight:500; color:#1a1a1a;">默认经典</div>
-          <div style="font-size:11px; color:#999; margin-top:4px;">标题居中，头像在左</div>
+          <div style="font-size:14px; font-weight:500; color:var(--th-text);">默认经典</div>
+          <div style="font-size:11px; color:var(--th-text-soft); margin-top:4px;">标题居中，头像在左</div>
         </div>
-        <div style="width:20px; height:20px; border-radius:50%; border:1.5px solid #ccc; display:flex; align-items:center; justify-content:center; flex:none;" class="chk"><div style="width:10px; height:10px; border-radius:50%; background:#1a1a1a; display:none;"></div></div>
+        <div style="width:20px; height:20px; border-radius:50%; border:1.5px solid #ccc; display:flex; align-items:center; justify-content:center; flex:none;" class="chk"><div style="width:10px; height:10px; border-radius:50%; background:var(--th-text); display:none;"></div></div>
       </div>
 
       <!-- 靠左极简 -->
-      <div class="topbar-layout-card" data-toplayout="left" style="height:auto !important; flex:none !important; padding:16px; background:#fafafa; border:0.7px solid #eee; border-radius:14px; cursor:pointer; display:flex; align-items:center; gap:12px; box-sizing:border-box;">
-        <div style="width:56px; height:36px; background:#fff; border-radius:6px; border:0.5px solid #ebebeb; display:flex; align-items:center; padding:0 4px; flex:none; gap:4px;">
+      <div class="topbar-layout-card" data-toplayout="left" style="height:auto !important; flex:none !important; padding:16px; background:var(--th-accent-soft); border:0.7px solid #eee; border-radius:14px; cursor:pointer; display:flex; align-items:center; gap:12px; box-sizing:border-box;">
+        <div style="width:56px; height:36px; background:var(--th-bg1); border-radius:6px; border:0.5px solid #ebebeb; display:flex; align-items:center; padding:0 4px; flex:none; gap:4px;">
            <div style="width:10px; height:10px; background:#ccc; border-radius:50%;"></div>
            <div style="width:20px; height:2px; background:#ddd; border-radius:2px;"></div>
         </div>
         <div style="flex:1;">
-          <div style="font-size:14px; font-weight:500; color:#1a1a1a;">靠左极简</div>
-          <div style="font-size:11px; color:#999; margin-top:4px;">从头排到尾，无状态</div>
+          <div style="font-size:14px; font-weight:500; color:var(--th-text);">靠左极简</div>
+          <div style="font-size:11px; color:var(--th-text-soft); margin-top:4px;">从头排到尾，无状态</div>
         </div>
-        <div style="width:20px; height:20px; border-radius:50%; border:1.5px solid #ccc; display:flex; align-items:center; justify-content:center; flex:none;" class="chk"><div style="width:10px; height:10px; border-radius:50%; background:#1a1a1a; display:none;"></div></div>
+        <div style="width:20px; height:20px; border-radius:50%; border:1.5px solid #ccc; display:flex; align-items:center; justify-content:center; flex:none;" class="chk"><div style="width:10px; height:10px; border-radius:50%; background:var(--th-text); display:none;"></div></div>
       </div>
 
       <!-- 居中显示 -->
-      <div class="topbar-layout-card" data-toplayout="center" style="height:auto !important; flex:none !important; padding:16px; background:#fafafa; border:0.7px solid #eee; border-radius:14px; cursor:pointer; display:flex; align-items:center; gap:12px; box-sizing:border-box;">
-        <div style="width:56px; height:36px; background:#fff; border-radius:6px; border:0.5px solid #ebebeb; display:flex; align-items:center; justify-content:center; position:relative; flex:none;">
+      <div class="topbar-layout-card" data-toplayout="center" style="height:auto !important; flex:none !important; padding:16px; background:var(--th-accent-soft); border:0.7px solid #eee; border-radius:14px; cursor:pointer; display:flex; align-items:center; gap:12px; box-sizing:border-box;">
+        <div style="width:56px; height:36px; background:var(--th-bg1); border-radius:6px; border:0.5px solid #ebebeb; display:flex; align-items:center; justify-content:center; position:relative; flex:none;">
            <div style="width:20px; height:2px; background:#ddd; border-radius:2px;"></div>
            <div style="position:absolute; right:6px; width:10px; height:10px; background:#ccc; border-radius:50%;"></div>
         </div>
         <div style="flex:1;">
-          <div style="font-size:14px; font-weight:500; color:#1a1a1a;">居中显示</div>
-          <div style="font-size:11px; color:#999; margin-top:4px;">名字居中，头像靠右</div>
+          <div style="font-size:14px; font-weight:500; color:var(--th-text);">居中显示</div>
+          <div style="font-size:11px; color:var(--th-text-soft); margin-top:4px;">名字居中，头像靠右</div>
         </div>
-        <div style="width:20px; height:20px; border-radius:50%; border:1.5px solid #ccc; display:flex; align-items:center; justify-content:center; flex:none;" class="chk"><div style="width:10px; height:10px; border-radius:50%; background:#1a1a1a; display:none;"></div></div>
+        <div style="width:20px; height:20px; border-radius:50%; border:1.5px solid #ccc; display:flex; align-items:center; justify-content:center; flex:none;" class="chk"><div style="width:10px; height:10px; border-radius:50%; background:var(--th-text); display:none;"></div></div>
       </div>
 
       <div style="padding:4px 4px 8px;">
         <div style="font-size:11px; color:#bbb; letter-spacing:.5px; margin-bottom:8px; padding-left:2px;">居中时名字下方那行字</div>
-        <input type="text" id="centerCustomLineInput" maxlength="20" placeholder="写点什么…" style="width:100%; border:none; border-bottom:0.7px solid rgba(0,0,0,.15); background:transparent; padding:8px 2px; font-size:14px; font-family:inherit; color:#1a1a1a; outline:none; letter-spacing:1px; transition:border-color .2s ease; box-sizing:border-box;">
+        <input type="text" id="centerCustomLineInput" maxlength="20" placeholder="写点什么…" style="width:100%; border:none; border-bottom:0.7px solid var(--th-accent-line); background:transparent; padding:8px 2px; font-size:14px; font-family:inherit; color:var(--th-text); outline:none; letter-spacing:1px; transition:border-color .2s ease; box-sizing:border-box;">
       </div>
 
     </div>
@@ -1990,7 +1991,7 @@
 	</div>
 	<div class="profile-cta">
 	  <button class="profile-cta-main" id="profileGoChat">
-		<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-8.5 8.3 9 9 0 0 1-3.6-.7L4 20.5l1.4-4.1a8.1 8.1 0 0 1-1.3-4.4A8.4 8.4 0 0 1 12.5 3.2 8.4 8.4 0 0 1 21 11.5z"/></svg>
+		<svg viewBox="0 0 24 24" fill="none" stroke="var(--th-bg1)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-8.5 8.3 9 9 0 0 1-3.6-.7L4 20.5l1.4-4.1a8.1 8.1 0 0 1-1.3-4.4A8.4 8.4 0 0 1 12.5 3.2 8.4 8.4 0 0 1 21 11.5z"/></svg>
 		发消息
 	  </button>
 	  <button class="btn-ghost" id="profileVoice">语音</button>
@@ -2296,10 +2297,10 @@
 	  <textarea id="postText" placeholder="这一刻的想法…" style="min-height:120px"></textarea>
 	  <div id="postImgPreview" style="display:none;margin:10px 0;position:relative">
 		<img id="postImgEl" src="" style="max-width:100%;max-height:200px;border-radius:10px;display:block">
-		<button id="postImgRemove" type="button" style="position:absolute;top:-8px;right:-8px;width:24px;height:24px;border-radius:50%;background:#333;color:#fff;border:none;font-size:14px;cursor:pointer">✕</button>
+		<button id="postImgRemove" type="button" style="position:absolute;top:-8px;right:-8px;width:24px;height:24px;border-radius:50%;background:var(--th-text);color:var(--th-bg1);border:none;font-size:14px;cursor:pointer">✕</button>
 	  </div>
 	  <div style="display:flex;align-items:center;gap:12px;margin:8px 0">
-		<button id="postImgBtn" type="button" style="display:flex;align-items:center;gap:6px;padding:8px 14px;border-radius:10px;border:0.7px solid rgba(0,0,0,.12);background:#f7f7f7;font-size:12px;color:#666;font-family:inherit;cursor:pointer">📷 添加图片</button>
+		<button id="postImgBtn" type="button" style="display:flex;align-items:center;gap:6px;padding:8px 14px;border-radius:10px;border:0.7px solid var(--th-line);background:var(--th-accent-soft);font-size:12px;color:var(--th-text-soft);font-family:inherit;cursor:pointer">📷 添加图片</button>
 	  </div>
 	  <input type="file" id="postImgFile" accept="image/*" style="display:none">
 	  <label>谁可以看</label>
@@ -2382,9 +2383,9 @@
     <div class="sheet-head"><h3>写 信</h3><button class="x" data-close type="button">✕</button></div>
     <div class="sheet-body">
       <label>寄给</label>
-      <select id="ltToRole" style="width:100%;padding:10px;border-radius:8px;border:0.7px solid rgba(0,0,0,.12);font-family:inherit;font-size:14px;margin-bottom:14px"></select>
+      <select id="ltToRole" style="width:100%;padding:10px;border-radius:8px;border:0.7px solid var(--th-line);font-family:inherit;font-size:14px;margin-bottom:14px"></select>
       <label>内容</label>
-      <textarea id="ltContent" placeholder="写下你想说的话…" style="min-height:140px;width:100%;padding:10px;border-radius:8px;border:0.7px solid rgba(0,0,0,.12);font-family:inherit;font-size:14px;resize:vertical"></textarea>
+      <textarea id="ltContent" placeholder="写下你想说的话…" style="min-height:140px;width:100%;padding:10px;border-radius:8px;border:0.7px solid var(--th-line);font-family:inherit;font-size:14px;resize:vertical"></textarea>
       <button class="primary-btn" id="ltSendBtn" type="button">寄 出</button>
     </div>
   </div>
@@ -2394,7 +2395,7 @@
   <div class="overlay" data-close></div>
   <div class="sheet">
     <div class="sheet-head"><h3 id="ltViewTitle">信 件</h3><button class="x" data-close type="button">✕</button></div>
-    <div class="sheet-body" id="ltViewBody" style="white-space:pre-wrap;line-height:1.8;font-size:14px;color:#1a1a1a"></div>
+    <div class="sheet-body" id="ltViewBody" style="white-space:pre-wrap;line-height:1.8;font-size:14px;color:var(--th-text)"></div>
   </div>
 </div>
 
@@ -2704,7 +2705,7 @@
 }
 /* ===== 问卷桌面 ===== */
 #quizDeskScreen{
-  background:#ffffff;
+  background:var(--th-bg1);
   flex-direction:column;
   font-family:"Songti SC","STSong","SimSun","宋体",serif;
 }
@@ -2728,18 +2729,18 @@
 .qd-list::-webkit-scrollbar{display:none}
 .qd-item{
   padding:18px 2px;
-  border-bottom:.6px dashed rgba(0,0,0,.06);
+  border-bottom:.6px dashed var(--th-bubble-me);
   cursor:pointer;
   transition:background .18s ease;
 }
 .qd-item:last-child{border-bottom:none}
-.qd-item:active{background:rgba(0,0,0,.02)}
+.qd-item:active{background:var(--th-divider)}
 .qd-item .qd-name{
   font-size:15px;
   font-weight:300;
   letter-spacing:1.5px;
-  color:#1a1a1a;
-  -webkit-text-stroke:.1px #1a1a1a;
+  color:var(--th-text);
+  -webkit-text-stroke:.1px var(--th-text);
   -webkit-font-smoothing:antialiased;
   margin-bottom:6px;
 }
@@ -2757,15 +2758,15 @@
 }
 .qd-empty .big{
   display:block;font-size:26px;
-  color:#e0e0e0;margin-bottom:20px;
+  color:var(--th-border);margin-bottom:20px;
 }
 </style>
 <style>
 #mQuiz .sheet#quizSheet{
   max-width:340px;
   border-radius:20px;
-  border:0.7px solid rgba(0,0,0,.08);
-  box-shadow:0 20px 60px rgba(0,0,0,.14);
+  border:0.7px solid var(--th-accent-soft-2);
+  box-shadow:0 20px 60px var(--th-accent-line);
   padding:22px 20px 18px;
   box-sizing:border-box;
   font-family:"Songti SC","STSong","SimSun","宋体",serif;
@@ -2781,24 +2782,24 @@
   position:absolute;top:12px;right:12px;
   width:26px;height:26px;
   border:none;background:transparent;
-  color:#c8c8c8;font-size:14px;
+  color:var(--th-faint);font-size:14px;
   display:flex;align-items:center;justify-content:center;
   cursor:pointer;font-family:inherit;
   transition:color .18s;
 }
-#mQuiz .quiz-close:active{color:#1a1a1a}
+#mQuiz .quiz-close:active{color:var(--th-text)}
 #mQuiz .quiz-title{
   text-align:center;
   font-family:"Songti SC","STSong","SimSun","宋体",serif;
   font-size:15px;font-weight:300;
-  letter-spacing:6px;color:#1a1a1a;
+  letter-spacing:6px;color:var(--th-text);
   margin-bottom:4px;
 }
 #mQuiz .quiz-sub{
   text-align:center;
   font-family:"Songti SC","STSong","SimSun","宋体",serif;
   font-size:8.5px;letter-spacing:5px;
-  color:#d0d0d0;font-weight:400;
+  color:var(--th-faint);font-weight:400;
   margin-bottom:22px;
 }
 #mQuiz .quiz-field{margin-bottom:16px}
@@ -2815,12 +2816,12 @@
 #mQuiz .quiz-numrow{
   width:100%;
   border:none;
-  background:#fafafa;
+  background:var(--th-accent-soft);
   border-radius:12px;
   padding:14px 16px;
   font-size:14px;
   font-family:"Songti SC","STSong","SimSun","宋体",serif;
-  color:#1a1a1a;
+  color:var(--th-text);
   outline:none;
   resize:none;
   line-height:1.7;
@@ -2828,36 +2829,36 @@
   box-sizing:border-box;
 }
 #mQuiz .quiz-input{min-height:72px}
-#mQuiz .quiz-input::placeholder{color:#d0d0d0}
-#mQuiz .quiz-input:focus{background:#f5f5f5}
+#mQuiz .quiz-input::placeholder{color:var(--th-faint)}
+#mQuiz .quiz-input:focus{background:var(--th-accent-soft)}
 #mQuiz .quiz-numrow{display:flex;align-items:center;gap:8px}
 #mQuiz .quiz-numrow .lbl{
   font-family:"Songti SC","STSong","SimSun","宋体",serif;
-  font-size:12px;color:#999;
+  font-size:12px;color:var(--th-text-soft);
   letter-spacing:.3px;flex:1;
 }
 #mQuiz .quiz-numrow input[type=number]{
   width:46px;
   border:none;
-  border-bottom:0.7px solid #d8d8d8;
+  border-bottom:0.7px solid var(--th-border);
   background:transparent;
   text-align:center;
   font-size:14px;
   font-family:"Songti SC","STSong","SimSun","宋体",serif;
-  color:#1a1a1a;
+  color:var(--th-text);
   outline:none;
   padding:2px 0;
 }
-#mQuiz .quiz-numrow input[type=number]:focus{border-bottom-color:#1a1a1a}
-#mQuiz .quiz-numrow .unit{font-family:"Songti SC","STSong","SimSun","宋体",serif;font-size:11px;color:#c8c8c8;flex:none}
-#mQuiz .quiz-numrow .to{font-family:"Songti SC","STSong","SimSun","宋体",serif;font-size:11px;color:#c8c8c8;flex:none;margin:0 2px}
+#mQuiz .quiz-numrow input[type=number]:focus{border-bottom-color:var(--th-text)}
+#mQuiz .quiz-numrow .unit{font-family:"Songti SC","STSong","SimSun","宋体",serif;font-size:11px;color:var(--th-faint);flex:none}
+#mQuiz .quiz-numrow .to{font-family:"Songti SC","STSong","SimSun","宋体",serif;font-size:11px;color:var(--th-faint);flex:none;margin:0 2px}
 #mQuiz .quiz-btn{
   width:100%;
   padding:14px 0;
   border-radius:22px;
   border:none;
-  background:#1a1a1a;
-  color:#fff;
+  background:var(--th-text);
+  color:var(--th-bg1);
   font-size:13.5px;
   letter-spacing:6px;
   text-indent:6px;
@@ -2871,10 +2872,10 @@
 
 /* ===== 试卷卡（聊天里发出来的样子） ===== */
 #chatList .paper{
-  width:248px;background:#fff;
-  border:0.7px solid rgba(0,0,0,.14);
+  width:248px;background:var(--th-bg1);
+  border:0.7px solid var(--th-accent-line);
   border-radius:14px;
-  box-shadow:0 1px 4px rgba(0,0,0,.04);
+  box-shadow:0 1px 4px var(--th-accent-soft);
   padding:14px 14px 12px;
   display:flex;flex-direction:column;gap:10px;
   box-sizing:border-box;position:relative;overflow:hidden;
@@ -2882,30 +2883,30 @@
 #chatList .paper::after{
   content:"";position:absolute;right:-28px;top:-28px;
   width:70px;height:70px;border-radius:50%;
-  border:0.6px solid rgba(0,0,0,.05);pointer-events:none;
+  border:0.6px solid var(--th-accent-soft);pointer-events:none;
 }
 #chatList .paper-head{
   display:flex;align-items:baseline;justify-content:space-between;
-  padding-bottom:9px;border-bottom:0.6px dashed rgba(0,0,0,.10);
+  padding-bottom:9px;border-bottom:0.6px dashed var(--th-line);
 }
-#chatList .paper-head .pt{font-size:12px;letter-spacing:3px;color:#1a1a1a;font-weight:300}
-#chatList .paper-head .pe{font-size:7.5px;letter-spacing:3px;color:#d0d0d0;font-family:Georgia,serif}
+#chatList .paper-head .pt{font-size:12px;letter-spacing:3px;color:var(--th-text);font-weight:300}
+#chatList .paper-head .pe{font-size:7.5px;letter-spacing:3px;color:var(--th-faint);font-family:Georgia,serif}
 #chatList .paper-asker{display:flex;align-items:center;gap:7px;
-  font-size:10.5px;color:#999;letter-spacing:1px}
+  font-size:10.5px;color:var(--th-text-soft);letter-spacing:1px}
 #chatList .paper-asker .tag{flex:none;font-size:8.5px;letter-spacing:1.5px;
   color:#bbb;font-family:Georgia,serif}
-#chatList .paper-asker .who{color:#1a1a1a;font-weight:400;font-size:11.5px;letter-spacing:.5px}
+#chatList .paper-asker .who{color:var(--th-text);font-weight:400;font-size:11.5px;letter-spacing:.5px}
 #chatList .paper-asker .mini-av{width:22px;height:22px;border-radius:var(--avatar-radius,12%);
-  background:#f0f0f0;overflow:hidden;flex:none;
+  background:var(--th-divider);overflow:hidden;flex:none;
   display:flex;align-items:center;justify-content:center;position:relative}
 #chatList .paper-asker .mini-av svg{position:absolute;inset:0;width:100%;height:100%}
 #chatList .paper-asker .mini-av img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
 #chatList .paper-asker .mini-av .sil,
-#chatList .paper-asker .mini-av .silhouette{fill:#c8c8c8}
-#chatList .paper-q{font-size:13.5px;line-height:1.65;color:#1a1a1a;
+#chatList .paper-asker .mini-av .silhouette{fill:var(--th-faint)}
+#chatList .paper-q{font-size:13.5px;line-height:1.65;color:var(--th-text);
   letter-spacing:.3px;padding:2px 0 4px;word-break:break-word}
 #chatList .paper-ans{
-  border:0.7px dashed rgba(0,0,0,.14);
+  border:0.7px dashed var(--th-accent-line);
   border-radius:10px;padding:10px 12px;
   min-height:44px;display:flex;flex-direction:column;gap:5px;
   position:relative;background:#fcfcfc;
@@ -2913,14 +2914,14 @@
   box-sizing:border-box;
 }
 #chatList .paper-ans.done{
-  border-style:solid;border-color:rgba(0,0,0,.10);background:#fff;
+  border-style:solid;border-color:var(--th-line);background:var(--th-bg1);
 }
 #chatList .paper-ans .ans-label{font-size:8.5px;letter-spacing:2px;
-  color:#c8c8c8;font-family:Georgia,serif}
-#chatList .paper-ans .ans-empty{font-size:12.5px;color:#d0d0d0;
+  color:var(--th-faint);font-family:Georgia,serif}
+#chatList .paper-ans .ans-empty{font-size:12.5px;color:var(--th-faint);
   letter-spacing:1px;font-style:italic;padding:4px 0 2px}
 #chatList .paper-ans .ans-main{
-  font-size:14.5px;line-height:1.8;color:#1a1a1a;
+  font-size:14.5px;line-height:1.8;color:var(--th-text);
   letter-spacing:.4px;
   word-break:break-word;
   white-space:normal;
@@ -2929,11 +2930,11 @@
 }
 #chatList .paper-foot{
   display:flex;align-items:baseline;justify-content:space-between;
-  font-size:8.5px;letter-spacing:2px;color:#d0d0d0;
+  font-size:8.5px;letter-spacing:2px;color:var(--th-faint);
   font-family:Georgia,serif;padding-top:2px;
 }
 #chatList .paper-foot .status{color:#bbb}
-#chatList .paper-foot .status.ok{color:#1a1a1a}
+#chatList .paper-foot .status.ok{color:var(--th-text)}
 
  
 </style>
@@ -2976,32 +2977,32 @@
 
     <!-- ★ 弹窗内的回答区：点发出后显示「正在填写 → 答案」 -->
     <div id="quizResultWrap" style="display:none;margin-top:6px;margin-bottom:4px;">
-      <div id="quizResultBox" style="border:none;border-radius:12px;padding:14px 16px;background:#fff;transition:background .25s ease, border-color .25s ease;">
-        <div style="font-size:8.5px;letter-spacing:2px;color:#c8c8c8;font-family:'Songti SC','STSong','SimSun','宋体',serif;margin-bottom:8px;">ANSWER</div>
-        <div id="quizResultText" style="font-family:'Songti SC','STSong','SimSun','宋体',serif;font-size:14.5px;line-height:1.9;color:#1a1a1a;letter-spacing:.4px;word-break:break-word;overflow-wrap:anywhere;">正在填写…</div>
+      <div id="quizResultBox" style="border:none;border-radius:12px;padding:14px 16px;background:var(--th-bg1);transition:background .25s ease, border-color .25s ease;">
+        <div style="font-size:8.5px;letter-spacing:2px;color:var(--th-faint);font-family:'Songti SC','STSong','SimSun','宋体',serif;margin-bottom:8px;">ANSWER</div>
+        <div id="quizResultText" style="font-family:'Songti SC','STSong','SimSun','宋体',serif;font-size:14.5px;line-height:1.9;color:var(--th-text);letter-spacing:.4px;word-break:break-word;overflow-wrap:anywhere;">正在填写…</div>
       </div>
     </div>
 
     <button class="quiz-btn" id="btnQuizStart" type="button">发 出 问 卷</button>
-    <button class="quiz-btn" id="btnQuizResend" type="button" style="display:none;background:#fff;color:#1a1a1a;border:0.7px solid rgba(0,0,0,.15);margin-top:10px;">再 发 一 次</button>
+    <button class="quiz-btn" id="btnQuizResend" type="button" style="display:none;background:var(--th-bg1);color:var(--th-text);border:0.7px solid var(--th-accent-line);margin-top:10px;">再 发 一 次</button>
   </div>
 </div>
 
 <!-- ============ 问卷类型选择弹窗 ============ -->
 <div class="modal" id="mQuizPick">
   <div class="overlay" data-close></div>
-  <div class="sheet" style="max-width:300px;border-radius:20px;padding:24px 20px 16px;box-shadow:0 20px 60px rgba(0,0,0,.14);border:0.7px solid rgba(0,0,0,.06);font-family:'Songti SC','STSong','SimSun','宋体',serif;">
+  <div class="sheet" style="max-width:300px;border-radius:20px;padding:24px 20px 16px;box-shadow:0 20px 60px var(--th-accent-line);border:0.7px solid var(--th-bubble-me);font-family:'Songti SC','STSong','SimSun','宋体',serif;">
     <div class="sheet-head" style="display:block;padding:0;border-bottom:none;text-align:center;margin-bottom:22px;position:relative;">
-      <h3 style="font-family:'Songti SC','STSong','SimSun','宋体',serif;font-size:15px;font-weight:300;letter-spacing:6px;color:#1a1a1a;margin:0;">问 卷</h3>
+      <h3 style="font-family:'Songti SC','STSong','SimSun','宋体',serif;font-size:15px;font-weight:300;letter-spacing:6px;color:var(--th-text);margin:0;">问 卷</h3>
       <button class="x" id="quizPickCloseBtn2" type="button" onclick="document.getElementById('mQuizPick').classList.remove('show')" style="font-family:'Songti SC','STSong','SimSun','宋体',serif;position:absolute;top:-6px;right:-4px;width:28px;height:28px;border:none;background:transparent;color:#ccc;font-size:14px;display:flex;align-items:center;justify-content:center;cursor:pointer;">✕</button>
     </div>
     <div class="sheet-body" style="padding:0;">
-      <div class="chk-row" id="qpSingle" style="border-radius:12px;margin-bottom:10px;font-family:'Songti SC','STSong','SimSun','宋体',serif;border:0.7px solid #e8e8e8;background:#fff;">
-        <div class="nm" style="font-family:'Songti SC','STSong','SimSun','宋体',serif;font-size:14px;font-weight:300;letter-spacing:2px;color:#1a1a1a;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;">单 问</div>
+      <div class="chk-row" id="qpSingle" style="border-radius:12px;margin-bottom:10px;font-family:'Songti SC','STSong','SimSun','宋体',serif;border:0.7px solid var(--th-border);background:var(--th-bg1);">
+        <div class="nm" style="font-family:'Songti SC','STSong','SimSun','宋体',serif;font-size:14px;font-weight:300;letter-spacing:2px;color:var(--th-text);-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;">单 问</div>
         <span class="chev" style="color:#ccc;font-weight:300;">›</span>
       </div>
-      <div class="chk-row" id="qpMulti" style="border-radius:12px;font-family:'Songti SC','STSong','SimSun','宋体',serif;border:0.7px solid #e8e8e8;background:#fff;">
-        <div class="nm" style="font-family:'Songti SC','STSong','SimSun','宋体',serif;font-size:14px;font-weight:300;letter-spacing:2px;color:#1a1a1a;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;">多 问</div>
+      <div class="chk-row" id="qpMulti" style="border-radius:12px;font-family:'Songti SC','STSong','SimSun','宋体',serif;border:0.7px solid var(--th-border);background:var(--th-bg1);">
+        <div class="nm" style="font-family:'Songti SC','STSong','SimSun','宋体',serif;font-size:14px;font-weight:300;letter-spacing:2px;color:var(--th-text);-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;">多 问</div>
         <span class="chev" style="color:#ccc;font-weight:300;">›</span>
       </div>
     </div>
@@ -3011,9 +3012,9 @@
 <!-- 问卷 · 加号菜单 -->
 <div class="modal" id="mQuizMenu">
   <div class="overlay" data-close></div>
-  <div class="sheet" style="max-width:320px;border-radius:20px;padding:22px 20px 16px;box-shadow:0 20px 60px rgba(0,0,0,.14);border:.7px solid rgba(0,0,0,.06);font-family:'Songti SC','STSong','SimSun','宋体',serif;">
+  <div class="sheet" style="max-width:320px;border-radius:20px;padding:22px 20px 16px;box-shadow:0 20px 60px var(--th-accent-line);border:.7px solid var(--th-bubble-me);font-family:'Songti SC','STSong','SimSun','宋体',serif;">
     <div class="sheet-head" style="display:block;padding:0;border-bottom:none;text-align:center;margin-bottom:18px;position:relative;">
-      <h3 style="font-family:inherit;font-size:15px;font-weight:300;letter-spacing:6px;color:#1a1a1a;margin:0;">问 卷</h3>
+      <h3 style="font-family:inherit;font-size:15px;font-weight:300;letter-spacing:6px;color:var(--th-text);margin:0;">问 卷</h3>
       <button class="x" data-close type="button" style="position:absolute;top:-6px;right:-4px;width:28px;height:28px;border:none;background:transparent;color:#ccc;font-size:14px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-family:inherit;">✕</button>
     </div>
     <div class="sheet-body" style="padding:0;">
@@ -3127,7 +3128,7 @@
     <button class="a-act" id="nfYouKnow" type="button" style="font-size:11px;width:auto;padding:0 4px;letter-spacing:1px;">你可能认识</button>
   </div>
   <div class="nf-search">
-    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#1a1a1a" stroke-width="1.6"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
+    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="var(--th-text)" stroke-width="1.6"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
     <input type="text" id="nfSearchInput" placeholder="搜索 账号 / 名字">
   </div>
   <div class="nf-list" id="nfList"></div>
@@ -3210,7 +3211,7 @@
 
       <div class="nf-form-row" style="display:flex;align-items:center;gap:12px">
         <div style="flex:1;min-width:0">
-          <div style="font-size:13px;color:#1a1a1a;letter-spacing:1px;font-weight:300">允许 Ta 发动态</div>
+          <div style="font-size:13px;color:var(--th-text);letter-spacing:1px;font-weight:300">允许 Ta 发动态</div>
           <div style="font-size:10.5px;color:#bbb;margin-top:3px;letter-spacing:.3px;font-weight:300">默认关闭</div>
         </div>
         <label class="switch"><input type="checkbox" id="blEditAllowMoment"><span class="slider"></span></label>
@@ -3273,7 +3274,7 @@
   flex:none;display:flex;align-items:center;justify-content:space-between;
   padding:12px 14px;background:#111;border-bottom:1px solid rgba(255,255,255,.12);
 }
-.tcon-title{font-size:14px;font-weight:700;letter-spacing:1px;color:#fff}
+.tcon-title{font-size:14px;font-weight:700;letter-spacing:1px;color:var(--th-bg1)}
 .tcon-hbtn{
   background:transparent;border:1px solid rgba(255,255,255,.25);color:#fff;
   border-radius:8px;padding:5px 11px;font-size:12px;font-family:inherit;
@@ -3284,9 +3285,9 @@
   flex:none;padding:10px 14px calc(10px + env(safe-area-inset-bottom));
   border-top:1px solid rgba(255,255,255,.12);background:#111;text-align:center;
 }
-.tcon-tip{font-size:11px;color:#888}
+.tcon-tip{font-size:11px;color:var(--th-text-soft)}
 .tcon-group{
-  font-size:12px;color:#fff;letter-spacing:1.5px;font-weight:700;
+  font-size:12px;color:var(--th-bg1);letter-spacing:1.5px;font-weight:700;
   margin:18px 0 8px;padding-bottom:6px;border-bottom:1px solid rgba(255,255,255,.15);
 }
 .tcon-group:first-child{margin-top:0}
@@ -3296,35 +3297,35 @@
 }
 .tcon-row:last-child{border-bottom:none}
 .tcon-row .k{flex:1;color:#ccc;word-break:break-all}
-.tcon-row .v{flex:none;color:#fff;font-weight:700;min-width:54px;text-align:right}
+.tcon-row .v{flex:none;color:var(--th-bg1);font-weight:700;min-width:54px;text-align:right}
 .tcon-row input[type=range]{
   flex:1.4;-webkit-appearance:none;appearance:none;height:3px;
   border-radius:2px;background:rgba(255,255,255,.18);outline:none;
 }
 .tcon-row input[type=range]::-webkit-slider-thumb{
   -webkit-appearance:none;width:16px;height:16px;border-radius:50%;
-  background:#fff;cursor:pointer;
+  background:var(--th-bg1);cursor:pointer;
 }
 .tcon-row input[type=number]{
   width:64px;background:#1a1a1a;border:1px solid rgba(255,255,255,.25);
-  color:#fff;border-radius:6px;padding:5px 8px;font-size:12px;
+  color:var(--th-bg1);border-radius:6px;padding:5px 8px;font-size:12px;
   font-family:inherit;text-align:center;outline:none;
 }.cl-line.just-moved .txt{
-  color:#1a1a1a;
+  color:var(--th-text);
   font-weight:600;
-  background:rgba(0,0,0,.04);
+  background:var(--th-accent-soft);
   border-radius:4px;
   padding:1px 6px;
   animation:justMovedPulse 1.6s ease-out 2;
 }
 @keyframes justMovedPulse{
-  0%{background:rgba(0,0,0,.12)}
-  100%{background:rgba(0,0,0,.04)}
+  0%{background:var(--th-line)}
+  100%{background:var(--th-accent-soft)}
 }
 /* 已读 / 未读 / 已读不回 标记 */
 .read-tag{
   font-size:10.5px;
-  color:#999;
+  color:var(--th-text-soft);
   letter-spacing:1px;
   margin-top:4px;
   padding:0 2px;
@@ -3333,7 +3334,7 @@
   -moz-osx-font-smoothing:grayscale;
 }
 .read-tag.unread{
-  color:#d0d0d0;
+  color:var(--th-faint);
   font-weight:300;
 }
 .read-tag.noreply{
@@ -3351,10 +3352,10 @@
 #mRead .read-sheet-a{
   width:100%;
   max-width:400px;
-  background:#ffffff;
+  background:var(--th-bg1);
   border-radius:22px;
   border:none;
-  box-shadow:0 20px 60px rgba(0,0,0,.18);
+  box-shadow:0 20px 60px var(--th-accent-line);
   padding:22px 20px 20px;
   animation:pop .28s cubic-bezier(.22,1,.36,1);
   box-sizing:border-box;
@@ -3378,8 +3379,8 @@
   font-size:16px;
   font-weight:300;
   letter-spacing:3px;
-  color:#1a1a1a;
-  -webkit-text-stroke:0.15px #1a1a1a;
+  color:var(--th-text);
+  -webkit-text-stroke:0.15px var(--th-text);
   -webkit-font-smoothing:antialiased;
   -moz-osx-font-smoothing:grayscale;
 }
@@ -3387,19 +3388,19 @@
 #mRead .read-a-close{
   width:30px;height:30px;border-radius:0;
   border:none;
-  background:transparent;color:#999;font-size:14px;
+  background:transparent;color:var(--th-text-soft);font-size:14px;
   cursor:pointer;display:flex;align-items:center;justify-content:center;
   font-family:inherit;padding:0;
   transition:color .2s;
 }
-#mRead .read-a-close:active{color:#1a1a1a;border-color:#1a1a1a;}
+#mRead .read-a-close:active{color:var(--th-text);border-color:var(--th-text);}
 
 #mRead .read-a-q{
   font-size:12px;
-  color:#999;
+  color:var(--th-text-soft);
   font-style:italic;
   padding:10px 14px;
-  background:#fafafa;
+  background:var(--th-accent-soft);
   border-radius:12px;
   margin-bottom:14px;
   line-height:1.7;
@@ -3408,7 +3409,7 @@
   -webkit-font-smoothing:antialiased;
 }
 #mRead .read-a-q b{
-  color:#1a1a1a;
+  color:var(--th-text);
   font-style:normal;
   margin-right:6px;
   font-weight:400;
@@ -3417,14 +3418,14 @@
 #mRead .read-a-textarea{
   width:100%;
   min-height:140px;
-  border:0.7px solid rgba(0,0,0,.12);
+  border:0.7px solid var(--th-line);
   border-radius:14px;
   padding:14px 16px;
   font-size:14px;
   font-family:inherit;
-  color:#1a1a1a;
+  color:var(--th-text);
   outline:none;
-  background:#fdfdfd;
+  background:var(--th-bg1);
   resize:vertical;
   line-height:1.7;
   box-sizing:border-box;
@@ -3434,11 +3435,11 @@
   transition:border-color .2s, background .2s;
 }
 #mRead .read-a-textarea:focus{
-  border-color:#1a1a1a;
-  background:#fff;
+  border-color:var(--th-text);
+  background:var(--th-bg1);
 }
 #mRead .read-a-textarea::placeholder{
-  color:#c8c8c8;
+  color:var(--th-faint);
   font-weight:300;
 }
 
@@ -3463,15 +3464,15 @@
 }
 #mRead .read-a-btn.cancel{
   background:transparent;
-  border:0.7px solid rgba(0,0,0,.15);
-  color:#999;
+  border:0.7px solid var(--th-accent-line);
+  color:var(--th-text-soft);
 }
 #mRead .read-a-btn.cancel:active{
-  background:#fafafa;
+  background:var(--th-accent-soft);
 }
 #mRead .read-a-btn.ok{
-  background:#1a1a1a;
-  color:#ffffff;
+  background:var(--th-text);
+  color:var(--th-bg1);
 }
 #mRead .read-a-btn.ok:active{
   opacity:.85;
@@ -3480,7 +3481,7 @@
 
 /* ===== 动态页 · 方案 2 细体极简 ===== */
 #momentsScreen{
-  background:#ffffff;
+  background:var(--th-bg1);
 }
  
 
@@ -3488,8 +3489,8 @@
   display:flex;
   gap:22px;
   padding:4px 22px 14px;
-  background:#ffffff;
-  border-bottom:0.6px dashed #e8e8e8;
+  background:var(--th-bg1);
+  border-bottom:0.6px dashed var(--th-border);
   overflow-x:auto;
   scrollbar-width:none;
 }
@@ -3511,7 +3512,7 @@
   -moz-osx-font-smoothing:grayscale;
 }
 #momentsScreen .mm-tab.on{
-  color:#1a1a1a;
+  color:var(--th-text);
   font-weight:300;
   background:transparent;
   border:none;
@@ -3523,7 +3524,7 @@
   bottom:-14px;
   transform:translateX(-50%);
   width:16px;height:1.5px;
-  background:#1a1a1a;
+  background:var(--th-text);
   border-radius:2px;
 }
 
@@ -3531,7 +3532,7 @@
   flex:1;
   overflow-y:auto;
   padding:20px 22px 30px;
-  background:#ffffff;
+  background:var(--th-bg1);
   scrollbar-width:none;
 }
 #momentsScreen .mm-wrap::-webkit-scrollbar{display:none}
@@ -3554,7 +3555,7 @@
 #momentsScreen .mm-av{
   width:32px;height:32px;
   border-radius:var(--mm-av-radius, 50%);
-  background:#f5f5f5;
+  background:var(--th-accent-soft);
   overflow:hidden;
   position:relative;
   flex:none;
@@ -3564,7 +3565,7 @@
   position:absolute;inset:0;
   width:100%;height:100%;
 }
-#momentsScreen .mm-av .silhouette{fill:#c8c8c8}
+#momentsScreen .mm-av .silhouette{fill:var(--th-faint)}
 #momentsScreen .mm-av img{
   position:absolute;inset:0;
   width:100%;height:100%;
@@ -3578,11 +3579,11 @@
   font-family:var(--app-font);
   font-weight:300;
   letter-spacing:2.5px;
-  -webkit-text-stroke:0.15px #1a1a1a;
+  -webkit-text-stroke:0.15px var(--th-text);
   -webkit-font-smoothing:antialiased;
   -moz-osx-font-smoothing:grayscale;
   font-size:14px;
-  color:#1a1a1a;
+  color:var(--th-text);
   line-height:1.2;
 }
 #momentsScreen .lb-time{
@@ -3599,14 +3600,14 @@
   font-family:var(--app-font);
   font-weight:300;
   letter-spacing:1px;
-  -webkit-text-stroke:0.1px #1a1a1a;
+  -webkit-text-stroke:0.1px var(--th-text);
   -webkit-font-smoothing:antialiased;
   -moz-osx-font-smoothing:grayscale;
   font-size:14.5px;
   line-height:1.9;
   padding-left:14px;
   position:relative;
-  color:#1a1a1a;
+  color:var(--th-text);
   white-space:pre-wrap;
   word-break:break-word;
 }
@@ -3616,7 +3617,7 @@
   left:0;top:9px;
   width:5px;height:5px;
   border-radius:50%;
-  background:#1a1a1a;
+  background:var(--th-text);
   opacity:.5;
 }
 #momentsScreen .lb-vis{
@@ -3626,7 +3627,7 @@
   margin-top:10px;
   margin-left:14px;
   font-size:10.5px;
-  color:#999;
+  color:var(--th-text-soft);
   background:transparent;
   border:none;
   padding:0;
@@ -3654,7 +3655,7 @@
   font-weight:300;
   letter-spacing:1px;
   font-size:12px;
-  color:#999;
+  color:var(--th-text-soft);
   display:inline-flex;
   align-items:center;
   gap:5px;
@@ -3668,10 +3669,10 @@
   stroke-linecap:round;stroke-linejoin:round;
 }
 #momentsScreen .lb-act-item.liked{
-  color:#1a1a1a;
+  color:var(--th-text);
 }
 #momentsScreen .lb-act-item.liked svg{
-  fill:#1a1a1a;stroke:#1a1a1a;
+  fill:var(--th-text);stroke:var(--th-text);
 }
 #momentsScreen .lb-reply-btn{
   margin-left:auto;
@@ -3681,7 +3682,7 @@
   font-weight:300;
   letter-spacing:1px;
   font-size:12px;
-  color:#1a1a1a;
+  color:var(--th-text);
   display:inline-flex;
   align-items:center;
   gap:5px;
@@ -3709,29 +3710,29 @@
   align-items:flex-start;
   gap:8px;
   line-height:1.7;
-  color:#999;
+  color:var(--th-text-soft);
   -webkit-font-smoothing:antialiased;
   -moz-osx-font-smoothing:grayscale;
 }
 #momentsScreen .like-row .heart{
   flex:none;
   font-size:11px;
-  color:#999;
+  color:var(--th-text-soft);
   margin-top:1px;
 }
 #momentsScreen .like-row .names{
   flex:1;
-  color:#999;
+  color:var(--th-text-soft);
   word-break:break-word;
 }
 #momentsScreen .like-row .names b{
   font-weight:400;
-  color:#1a1a1a;
+  color:var(--th-text);
   margin:0 2px;
 }
 
 #momentsScreen .cmt{
-  border-top:0.6px dashed #f0f0f0;
+  border-top:0.6px dashed var(--th-divider);
   padding-left:14px;
   margin-top:12px;
   padding-top:10px;
@@ -3742,13 +3743,13 @@
   font-size:12px;
   line-height:1.9;
   padding:2px 0;
-  color:#1a1a1a;
+  color:var(--th-text);
   -webkit-font-smoothing:antialiased;
   -moz-osx-font-smoothing:grayscale;
 }
 #momentsScreen .cn{
   font-weight:400;
-  color:#1a1a1a;
+  color:var(--th-text);
   margin-right:2px;
 }
 
@@ -3773,15 +3774,15 @@
   width:52px;height:52px;
   border-radius:50%;
   border:none;
-  background:#1a1a1a;
-  color:#ffffff;
+  background:var(--th-text);
+  color:var(--th-bg1);
   font-size:24px;
   line-height:1;
   display:flex;
   align-items:center;
   justify-content:center;
   cursor:pointer;
-  box-shadow:0 2px 12px rgba(0,0,0,.18);
+  box-shadow:0 2px 12px var(--th-accent-line);
   font-family:inherit;
 }
 #momentsScreen .mm-post-btn.hide{display:none}
@@ -3792,14 +3793,14 @@
   align-items:center;
   gap:14px;
   padding:4px 22px 18px;
-  border-bottom:0.6px dashed #ececec;
+  border-bottom:0.6px dashed var(--th-bg0);
   margin-bottom:20px;
 }
 #momentsScreen .role-av{
   width:52px;
   height:52px;
   flex:none;
-  background:#f0f0f0;
+  background:var(--th-divider);
   overflow:hidden;
   position:relative;
   display:flex;
@@ -3809,14 +3810,14 @@
   border-radius:var(--avatar-radius, 12%);
 }
 #momentsScreen .role-av svg{position:absolute;inset:0;width:100%;height:100%}
-#momentsScreen .role-av .silhouette{fill:#c8c8c8}
+#momentsScreen .role-av .silhouette{fill:var(--th-faint)}
 #momentsScreen .role-av img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;border-radius:inherit}
 #momentsScreen .role-info{flex:1;min-width:0}
 #momentsScreen .role-name{
   font-size:16px;
   font-weight:300;
   letter-spacing:1.5px;
-  color:#1a1a1a;
+  color:var(--th-text);
   line-height:1.2;
   -webkit-font-smoothing:antialiased;
   -moz-osx-font-smoothing:grayscale;
@@ -3848,17 +3849,17 @@
 .chat-info-panel .cip-nav h1{
   font-weight:300;
   letter-spacing:3px;
-  -webkit-text-stroke:0.15px #1a1a1a;
+  -webkit-text-stroke:0.15px var(--th-text);
 }
 .chat-info-panel .cip-hero-name{
   font-weight:300;
   letter-spacing:1.5px;
-  -webkit-text-stroke:0.15px #1a1a1a;
+  -webkit-text-stroke:0.15px var(--th-text);
 }
 .chat-info-panel .cip-tt{
   font-weight:300;
   letter-spacing:1.5px;
-  -webkit-text-stroke:0.15px #1a1a1a;
+  -webkit-text-stroke:0.15px var(--th-text);
 }
 .chat-info-panel .cip-sub{
   font-weight:300;
@@ -3867,7 +3868,7 @@
 .chat-info-panel .cip-sh-main{
   font-weight:300;
   letter-spacing:1px;
-  -webkit-text-stroke:0.15px #1a1a1a;
+  -webkit-text-stroke:0.15px var(--th-text);
 }
 .chat-info-panel .cip-sh-title{
   font-weight:300;
@@ -3877,7 +3878,7 @@
 .cip-confirm-av{
   width:46px;height:46px;
   border-radius:var(--avatar-radius,12%);
-  background:#f0f0f0;
+  background:var(--th-divider);
   display:none;
   align-items:center;justify-content:center;
   margin:0 auto 14px;
@@ -3885,12 +3886,12 @@
   flex:none;
 }
 .cip-confirm-av svg{position:absolute;inset:0;width:100%;height:100%}
-.cip-confirm-av .silhouette{fill:#c8c8c8}
+.cip-confirm-av .silhouette{fill:var(--th-faint)}
 .cip-confirm-av img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
 .cip-confirm-title{
   font-weight:300;
   letter-spacing:2px;
-  -webkit-text-stroke:0.15px #1a1a1a;
+  -webkit-text-stroke:0.15px var(--th-text);
 }
 .cip-confirm-desc{
   font-weight:300;
@@ -3919,7 +3920,7 @@
 #videoPoolScreen,
 #newFriendsScreen,
 #youKnowScreen{
-  background:#ffffff;
+  background:var(--th-bg1);
 }
 
 /* 2. 统一顶部栏容器（把各页面自己的那一套吃掉） */
@@ -3963,8 +3964,8 @@
   font-weight:300;
   letter-spacing:6px;
   text-align:center;
-  color:#1a1a1a;
-  -webkit-text-stroke:0.15px #1a1a1a;
+  color:var(--th-text);
+  -webkit-text-stroke:0.15px var(--th-text);
   -webkit-font-smoothing:antialiased;
   -moz-osx-font-smoothing:grayscale;
   margin:0;
@@ -3988,7 +3989,7 @@
   flex:none;
   border:none;
   background:transparent;
-  color:#1a1a1a;
+  color:var(--th-text);
   font-size:22px;
   line-height:1;
   display:flex;
@@ -4028,7 +4029,7 @@
   flex:none;
   border:none;
   background:transparent;
-  color:#1a1a1a;
+  color:var(--th-text);
   font-size:20px;
   display:flex;
   align-items:center;
@@ -4067,7 +4068,7 @@
   padding:6px 8px;
   border:none;
   background:transparent;
-  color:#1a1a1a;
+  color:var(--th-text);
   font-size:12px;
   font-family:inherit;
   letter-spacing:1px;
@@ -4095,19 +4096,19 @@
 .set-row{
   display:flex;align-items:center;gap:14px;
   padding:20px 4px;
-  border-bottom:0.6px dashed rgba(0,0,0,.06);
+  border-bottom:0.6px dashed var(--th-bubble-me);
   cursor:pointer;border-radius:8px;
   transition:background .18s ease;
 }
 .set-row:last-child{border-bottom:none}
 .set-row:active{background:rgba(0,0,0,.025)}
 .set-row .num{
-  font-size:9.5px;color:#d8d8d8;font-family:Georgia,serif;
+  font-size:9.5px;color:var(--th-border);font-family:Georgia,serif;
   letter-spacing:1.5px;width:24px;flex:none;font-weight:400;
 }
 .set-row .name{
   flex:1;font-size:16px;font-weight:300;letter-spacing:2.5px;
-  color:#1a1a1a;-webkit-text-stroke:.15px #1a1a1a;
+  color:var(--th-text);-webkit-text-stroke:.15px var(--th-text);
   -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;
 }
 .set-row .val{
@@ -4115,11 +4116,11 @@
   flex:none;font-weight:300;margin-right:6px;
 }
 .set-row .en{
-  font-size:9px;letter-spacing:3.5px;color:#d0d0d0;
+  font-size:9px;letter-spacing:3.5px;color:var(--th-faint);
   font-family:Georgia,serif;flex:none;font-weight:300;
 }
 .set-row .arr{
-  font-size:12px;color:#e0e0e0;flex:none;margin-left:10px;
+  font-size:12px;color:var(--th-border);flex:none;margin-left:10px;
   transition:transform .18s ease;
 }
 .set-row:active .arr{transform:translateX(2px)}
@@ -4127,13 +4128,13 @@
 .sw-row{
   display:flex;align-items:center;gap:14px;
   padding:20px 4px;
-  border-bottom:0.6px dashed rgba(0,0,0,.06);
+  border-bottom:0.6px dashed var(--th-bubble-me);
 }
 .sw-row:last-child{border-bottom:none}
 .sw-row .sw-main{flex:1;min-width:0}
 .sw-row .sw-main .t1{
-  font-size:15px;font-weight:300;letter-spacing:2px;color:#1a1a1a;
-  -webkit-text-stroke:.15px #1a1a1a;
+  font-size:15px;font-weight:300;letter-spacing:2px;color:var(--th-text);
+  -webkit-text-stroke:.15px var(--th-text);
   -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;
 }
 .sw-row .sw-main .t2{
@@ -4144,71 +4145,71 @@
 .about-version{
   font-size:11px;letter-spacing:4px;color:#bbb;font-family:Georgia,serif;
   text-align:center;padding:20px 0 26px;
-  border-bottom:0.6px dashed #ececec;margin-bottom:26px;
+  border-bottom:0.6px dashed var(--th-bg0);margin-bottom:26px;
 }
 .sec-title{
   font-size:10.5px;letter-spacing:5px;color:#ccc;font-family:Georgia,serif;
   text-align:center;padding:0 0 12px;
 }
 .sec-title-cn{
-  font-size:11px;letter-spacing:6px;color:#1a1a1a;
+  font-size:11px;letter-spacing:6px;color:var(--th-text);
   text-align:center;padding:0 0 16px;font-weight:300;
-  -webkit-text-stroke:.15px #1a1a1a;
+  -webkit-text-stroke:.15px var(--th-text);
   -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;
 }
 .notice{
-  font-size:13.5px;line-height:2.05;color:#333;letter-spacing:.5px;
+  font-size:13.5px;line-height:2.05;color:var(--th-text);letter-spacing:.5px;
   padding:0 4px 30px;font-weight:300;text-align:center;
   -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;
 }
 .notice p{margin-bottom:14px}
 .notice p:last-child{margin-bottom:0}
 .thanks{
-  font-size:12.5px;line-height:2;color:#888;letter-spacing:.5px;
+  font-size:12.5px;line-height:2;color:var(--th-text-soft);letter-spacing:.5px;
   padding:0 4px 24px;font-weight:300;text-align:center;
   -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;
 }
-.thanks b{color:#1a1a1a;font-weight:400}
+.thanks b{color:var(--th-text);font-weight:400}
 .thanks .id{font-size:11px;color:#bbb}
 .end{
   text-align:center;font-size:11px;color:#bbb;letter-spacing:3px;
-  padding-top:14px;border-top:0.6px dashed #ececec;font-weight:300;
+  padding-top:14px;border-top:0.6px dashed var(--th-bg0);font-weight:300;
   -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;
 }
 
 /* ============ 共享池 + 视频卡片 ============ */
 .video-card{
-  background:#fff;
-  border:0.7px solid #d0d0d0;
+  background:var(--th-bg1);
+  border:0.7px solid var(--th-faint);
   border-radius:10px;
-  box-shadow:0 1px 4px rgba(0,0,0,.06);
+  box-shadow:0 1px 4px var(--th-bubble-me);
   padding:14px 16px;
   max-width:240px;
   display:flex;flex-direction:column;gap:8px;
   cursor:pointer;
   transition:all .18s ease;
 }
-.video-card:active{background:#fafafa}
+.video-card:active{background:var(--th-accent-soft)}
 .video-card .vc-head{
   display:flex;align-items:center;gap:8px;
-  font-size:11px;color:#999;letter-spacing:1px;
+  font-size:11px;color:var(--th-text-soft);letter-spacing:1px;
 }
 .video-card .vc-platform{
   display:inline-flex;align-items:center;gap:4px;
   padding:2px 8px;border-radius:20px;
   font-size:10px;letter-spacing:1px;
-  background:#f5f5f5;color:#1a1a1a;
+  background:var(--th-accent-soft);color:var(--th-text);
 }
-.video-card .vc-platform.douyin{background:#1a1a1a;color:#fff}
+.video-card .vc-platform.douyin{background:var(--th-text);color:var(--th-bg1)}
 .video-card .vc-platform.xhs{background:#DD1440;color:#fff}
-.video-card .vc-platform.kuaishou{background:#FF5000;color:#fff}
-.video-card .vc-platform.youtube{background:#FF0000;color:#fff}
+.video-card .vc-platform.kuaishou{background:#FF5000;color:var(--th-bg1)}
+.video-card .vc-platform.youtube{background:#FF0000;color:var(--th-bg1)}
 .video-card .vc-title{
-  font-size:14px;line-height:1.5;color:#1a1a1a;
+  font-size:14px;line-height:1.5;color:var(--th-text);
   font-weight:500;
 }
 .video-card .vc-desc{
-  font-size:12px;line-height:1.5;color:#666;
+  font-size:12px;line-height:1.5;color:var(--th-text-soft);
 }
 .video-card .vc-foot{
   display:flex;align-items:center;justify-content:space-between;
@@ -4217,7 +4218,7 @@
 }
 
 #videoPoolScreen{
-  background:#f5f5f5;
+  background:var(--th-accent-soft);
   flex-direction:column;
   z-index:100;
 }
@@ -4249,23 +4250,23 @@
 .vp-item{
   display:flex;align-items:flex-start;gap:12px;
   padding:14px 4px;
-  border-bottom:0.7px dashed rgba(0,0,0,.1);
+  border-bottom:0.7px dashed var(--th-line);
 }
 .vp-item:last-child{border-bottom:none}
 .vp-item .vp-ic{
   width:36px;height:36px;border-radius:10px;flex:none;
-  border:0.7px solid #d0d0d0;
+  border:0.7px solid var(--th-faint);
   display:flex;align-items:center;justify-content:center;
   font-size:16px;
-  background:#fff;
+  background:var(--th-bg1);
 }
 .vp-item .vp-main{flex:1;min-width:0}
 .vp-item .vp-name{
-  font-size:13.5px;color:#1a1a1a;font-weight:500;
+  font-size:13.5px;color:var(--th-text);font-weight:500;
   line-height:1.5;word-break:break-word;
 }
 .vp-item .vp-url{
-  font-size:11px;color:#999;
+  font-size:11px;color:var(--th-text-soft);
   margin-top:4px;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
 }
@@ -4277,7 +4278,7 @@
 .vp-item .vp-del{
   width:26px;height:26px;flex:none;
   border:none;background:transparent;
-  color:#999;font-size:13px;cursor:pointer;
+  color:var(--th-text-soft);font-size:13px;cursor:pointer;
   display:flex;align-items:center;justify-content:center;
   padding:0;
   transition:opacity .18s ease;
@@ -4289,11 +4290,11 @@
   font-size:10.5px;color:#bbb;
   margin-top:4px;
 }
-.vp-desc-count b{color:#1a1a1a;font-family:Georgia,serif}
+.vp-desc-count b{color:var(--th-text);font-family:Georgia,serif}
 
 /* ===== 回复设置 · 整页 ===== */
 .screen#mReply{
-  background:#fff;
+  background:var(--th-bg1);
   flex-direction:column;
   align-items:stretch;
   justify-content:flex-start;
@@ -4308,8 +4309,8 @@
   font-size:15px;font-weight:300;
   letter-spacing:6px;
   text-align:center;
-  color:#1a1a1a;
-  -webkit-text-stroke:.15px #1a1a1a;
+  color:var(--th-text);
+  -webkit-text-stroke:.15px var(--th-text);
   -webkit-font-smoothing:antialiased;
   -moz-osx-font-smoothing:grayscale;
 }
@@ -4349,7 +4350,7 @@
 }
 .rs-item .unit{
   font-size:11.5px;
-  color:#c8c8c8;
+  color:var(--th-faint);
   letter-spacing:.5px;
   flex:none;
   font-weight:300;
@@ -4357,12 +4358,12 @@
 .rs-item .rs-num{
   width:46px;
   border:none;
-  border-bottom:0.8px solid rgba(0,0,0,.15);
+  border-bottom:0.8px solid var(--th-accent-line);
   background:transparent;
   padding:2px 0 4px;
   font-size:15px;
   font-family:Georgia,serif;
-  color:#1a1a1a;
+  color:var(--th-text);
   text-align:center;
   outline:none;
   letter-spacing:.5px;
@@ -4370,7 +4371,7 @@
   -webkit-appearance:none;
   border-radius:0;
 }
-.rs-item .rs-num:focus{border-bottom-color:#1a1a1a}
+.rs-item .rs-num:focus{border-bottom-color:var(--th-text)}
 /* 去掉数字输入框的上下箭头 */
 .rs-item .rs-num::-webkit-outer-spin-button,
 .rs-item .rs-num::-webkit-inner-spin-button{
@@ -4393,12 +4394,12 @@
   padding:4px 0 5px;
   margin:0;
   border:none;
-  border-bottom:0.8px solid rgba(0,0,0,.15);
+  border-bottom:0.8px solid var(--th-accent-line);
   border-radius:0;
   background:transparent;
   font-size:15px;
   font-family:Georgia,serif;
-  color:#1a1a1a;
+  color:var(--th-text);
   text-align:center;
   letter-spacing:.5px;
   outline:none;
@@ -4409,7 +4410,7 @@
   -moz-appearance:textfield;
 }
 #mReply #replyBody input[type=number]:focus{
-  border-bottom-color:#1a1a1a;
+  border-bottom-color:var(--th-text);
 }
 #mReply #replyBody input[type=number]::-webkit-outer-spin-button,
 #mReply #replyBody input[type=number]::-webkit-inner-spin-button{
@@ -4455,7 +4456,7 @@
 #mReply #replyBody .rs-row .to,
 #mReply #replyBody .rs-row-main .unit,
 #mReply #replyBody .rs-item .unit{
-  color:#c8c8c8;
+  color:var(--th-faint);
 }
 
 /* 数字行容器：统一横排 */
@@ -4521,22 +4522,22 @@
   align-items:center !important;
   justify-content:space-between !important;
   padding:0 0 16px !important;
-  border-bottom:0.6px dashed #ececec !important;
+  border-bottom:0.6px dashed var(--th-bg0) !important;
   margin-bottom:8px !important;
 }
 #mSignSwitch .sheet-head h3{
   font-size:15px !important;
   font-weight:300 !important;
   letter-spacing:4px !important;
-  color:#1a1a1a !important;
-  -webkit-text-stroke:0.15px #1a1a1a;
+  color:var(--th-text) !important;
+  -webkit-text-stroke:0.15px var(--th-text);
 }
 #mSignSwitch .sheet-head .x{
   width:26px !important;
   height:26px !important;
   border:none !important;
   background:transparent !important;
-  color:#c8c8c8 !important;
+  color:var(--th-faint) !important;
   font-size:14px !important;
   cursor:pointer !important;
   font-family:inherit !important;
@@ -4545,11 +4546,11 @@
   justify-content:center !important;
   padding:0 !important;
 }
-#mSignSwitch .sheet-head .x:active{color:#1a1a1a !important}
+#mSignSwitch .sheet-head .x:active{color:var(--th-text) !important}
 
 #mSignSwitch .section{
   padding:16px 2px !important;
-  border-bottom:0.6px dashed #ececec !important;
+  border-bottom:0.6px dashed var(--th-bg0) !important;
   background:transparent !important;
   margin-bottom:0 !important;
   border-radius:0 !important;
@@ -4568,7 +4569,7 @@
   font-size:14px !important;
   font-weight:300 !important;
   letter-spacing:1.5px !important;
-  color:#1a1a1a !important;
+  color:var(--th-text) !important;
   line-height:1.4 !important;
 }
 #mSignSwitch .t2{
@@ -4602,13 +4603,13 @@
   width:16px !important;
   height:16px !important;
   border-radius:50% !important;
-  background:#fff !important;
+  background:var(--th-bg1) !important;
   top:3px !important;
   left:3px !important;
   transition:.22s !important;
-  box-shadow:0 1px 3px rgba(0,0,0,.15) !important;
+  box-shadow:0 1px 3px var(--th-accent-line) !important;
 }
-#mSignSwitch .switch input:checked + .slider{background:#1a1a1a !important}
+#mSignSwitch .switch input:checked + .slider{background:var(--th-text) !important}
 #mSignSwitch .switch input:checked + .slider:before{transform:translateX(16px) !important}
 
 /* 邀请按钮 */
@@ -4616,9 +4617,9 @@
 #mSignSwitch #signInviteUserBtn{
   padding:7px 14px !important;
   border-radius:12px !important;
-  border:0.7px solid rgba(0,0,0,.14) !important;
+  border:0.7px solid var(--th-accent-line) !important;
   background:transparent !important;
-  color:#1a1a1a !important;
+  color:var(--th-text) !important;
   font-size:12.5px !important;
   font-family:inherit !important;
   letter-spacing:1.5px !important;
@@ -4628,8 +4629,8 @@
 }
 #mSignSwitch #signInviteRoleBtn:active,
 #mSignSwitch #signInviteUserBtn:active{
-  background:#f7f7f7 !important;
-  border-color:#1a1a1a !important;
+  background:var(--th-accent-soft) !important;
+  border-color:var(--th-text) !important;
 }
 
 /* 关闭按钮：无边框、无圆角 */
@@ -4638,14 +4639,14 @@
   border-radius:0 !important;
   border:none !important;
   background:transparent !important;
-  color:#999 !important;
+  color:var(--th-text-soft) !important;
   font-size:13px !important;
   font-family:inherit !important;
   letter-spacing:2px !important;
   cursor:pointer !important;
   transition:color .18s ease !important;
 }
-#mSignSwitch #signSwCloseBtn:active{color:#1a1a1a !important}
+#mSignSwitch #signSwCloseBtn:active{color:var(--th-text) !important}
 
 /* ★ 强制压缩弹窗高度：干掉所有大间距 */
 #mSignSwitch .sheet-body,
@@ -4720,19 +4721,19 @@
 }
 #mTimedRate .sheet-head{
   padding:0 0 14px !important;
-  border-bottom:0.6px dashed #ececec !important;
+  border-bottom:0.6px dashed var(--th-bg0) !important;
   margin-bottom:0 !important;
 }
 #mTimedRate .sheet-head h3{
   font-size:15px !important;
   font-weight:300 !important;
   letter-spacing:3px !important;
-  color:#1a1a1a !important;
+  color:var(--th-text) !important;
 }
 #mTimedRate .sheet-head .x{
   width:26px !important;
   height:26px !important;
-  color:#c8c8c8 !important;
+  color:var(--th-faint) !important;
   font-size:13px !important;
 }
 #mTimedRate .sheet-body{
@@ -4750,7 +4751,7 @@
 }
 #mTimedRate .tmr-name{
   font-size:13.5px;
-  color:#1a1a1a;
+  color:var(--th-text);
   letter-spacing:1px;
   font-weight:300;
   flex:none;
@@ -4784,14 +4785,14 @@
   width:16px !important;
   height:16px !important;
   border-radius:50% !important;
-  background:#fff !important;
+  background:var(--th-bg1) !important;
   top:3px !important;
   left:3px !important;
   transition:.22s !important;
-  box-shadow:0 1px 3px rgba(0,0,0,.15) !important;
+  box-shadow:0 1px 3px var(--th-accent-line) !important;
 }
 #mTimedRate .switch input:checked + .slider{
-  background:#1a1a1a !important;
+  background:var(--th-text) !important;
 }
 #mTimedRate .switch .slider:before{
   left:3px !important;
@@ -4803,7 +4804,7 @@
 }
 #page-chat {
   position: relative;
-  background-color: #ffffff;
+  background-color: var(--th-bg1);
   overflow: hidden;
 }
 #page-chat::before {
@@ -4825,7 +4826,7 @@
   position: absolute;
   inset: 0;
   z-index: 1;
-  background: #ffffff;
+  background: var(--th-bg1);
   opacity: calc(1 - var(--chat-bg-opacity, 1));
   pointer-events: none;
   transition: opacity 0.2s ease;
@@ -4851,7 +4852,7 @@
   border-radius: 10px;
   overflow: hidden;
   position: relative;
-  background: #f0f0f0;
+  background: var(--th-divider);
   transition: background 0.3s;
 }
 .img-wrapper.loading::before{
@@ -4877,35 +4878,35 @@
 /* ===== 极简纯文字版确认弹窗 ===== */
 .mj-confirm-mask{
   position:fixed;inset:0;z-index:2147483647;
-  background:rgba(0,0,0,.4);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);
+  background:var(--mask-strong);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);
   display:none;align-items:center;justify-content:center;padding:24px;
 }
 .mj-confirm-mask.show{display:flex}
 .mj-confirm-sheet{
-  width:100%;max-width:280px;background:#fff;border-radius:20px;
+  width:100%;max-width:280px;background:var(--th-bg1);border-radius:20px;
   padding:28px 22px 20px;text-align:center;
   animation:pop .24s cubic-bezier(.22,1,.36,1);
 }
 .mj-confirm-title{
-  font-size:14px;font-weight:300;letter-spacing:2px;color:#1a1a1a;
+  font-size:14px;font-weight:300;letter-spacing:2px;color:var(--th-text);
 }
 .mj-confirm-desc{
-  font-size:13px;color:#999;margin-top:10px;letter-spacing:.5px;
+  font-size:13px;color:var(--th-text-soft);margin-top:10px;letter-spacing:.5px;
 }
 .mj-confirm-acts{display:flex;gap:10px;margin-top:28px}
 .mj-confirm-acts button{
   flex:1;padding:12px 0;border-radius:22px;font-size:13px;
   font-family:inherit;letter-spacing:1px;cursor:pointer;border:none;font-weight:400;
 }
-.mj-confirm-cancel{background:#f5f5f5;color:#666}
-.mj-confirm-ok{background:#1a1a1a;color:#fff}
+.mj-confirm-cancel{background:var(--th-accent-soft);color:var(--th-text-soft)}
+.mj-confirm-ok{background:var(--th-text);color:var(--th-bg1)}
 
 /* ============================================================
    统一顶部栏 · 全站唯一样式
    - 左边 38px 返回箭头
    - 中间 15px 细体标题，字距 6px
    - 右边 38px 空位（有按钮放按钮，没按钮留空）
-   - 底部 0.6px 虚线 #ececec
+   - 底部 0.6px 虚线 var(--th-bg0)
    以后新页面只要写：
      <div class="utop" data-title="页面名"></div>
      或者
@@ -4918,15 +4919,15 @@
   align-items:center;
   gap:12px;
   padding:20px 22px 12px;
-  background:#ffffff;
-  border-bottom:0.6px dashed #ececec;
+  background:var(--th-bg1);
+  border-bottom:0.6px dashed var(--th-bg0);
   box-sizing:border-box;
   width:100%;
 }
 .utop-back{
   width:38px;height:38px;flex:none;
   border:none;background:transparent;
-  color:#1a1a1a;font-size:22px;line-height:1;
+  color:var(--th-text);font-size:22px;line-height:1;
   display:flex;align-items:center;justify-content:center;
   padding:0 0 4px;font-family:inherit;cursor:pointer;
   opacity:.55;transition:opacity .18s ease;
@@ -4940,8 +4941,8 @@
   letter-spacing:6px;
   text-indent:6px;
   text-align:center;
-  color:#1a1a1a;
-  -webkit-text-stroke:0.15px #1a1a1a;
+  color:var(--th-text);
+  -webkit-text-stroke:0.15px var(--th-text);
   -webkit-font-smoothing:antialiased;
   -moz-osx-font-smoothing:grayscale;
   white-space:nowrap;
@@ -4955,7 +4956,7 @@
 .utop-act{
   width:38px;height:38px;flex:none;
   border:none;background:transparent;
-  color:#1a1a1a;font-size:20px;line-height:1;
+  color:var(--th-text);font-size:20px;line-height:1;
   display:flex;align-items:center;justify-content:center;
   padding:0;font-family:inherit;cursor:pointer;
   opacity:.55;transition:opacity .18s ease;
@@ -4966,13 +4967,13 @@
 /* ===== 统一顶部栏 · 新版 ===== */
 .utop{
   flex:none;display:flex;align-items:center;gap:12px;
-  padding:20px 22px 12px;background:#ffffff;
-  border-bottom:0.6px dashed #ececec;
+  padding:20px 22px 12px;background:var(--th-bg1);
+  border-bottom:0.6px dashed var(--th-bg0);
   box-sizing:border-box;width:100%;
 }
 .utop-back{
   width:38px;height:38px;flex:none;border:none;
-  background:transparent;color:#1a1a1a;font-size:22px;
+  background:transparent;color:var(--th-text);font-size:22px;
   line-height:1;display:flex;align-items:center;justify-content:center;
   padding:0 0 4px;font-family:inherit;cursor:pointer;
   opacity:.55;transition:opacity .18s ease;border-radius:0;
@@ -4980,8 +4981,8 @@
 .utop-back:active{opacity:1}
 .utop-title{
   flex:1;font-size:15px;font-weight:300;letter-spacing:6px;
-  text-indent:6px;text-align:center;color:#1a1a1a;
-  -webkit-text-stroke:0.15px #1a1a1a;
+  text-indent:6px;text-align:center;color:var(--th-text);
+  -webkit-text-stroke:0.15px var(--th-text);
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
 }
 .utop-right{
@@ -4990,7 +4991,7 @@
 }
 .utop-act{
   width:38px;height:38px;flex:none;border:none;
-  background:transparent;color:#1a1a1a;font-size:20px;
+  background:transparent;color:var(--th-text);font-size:20px;
   line-height:1;display:flex;align-items:center;justify-content:center;
   padding:0;font-family:inherit;cursor:pointer;
   opacity:.55;transition:opacity .18s ease;border-radius:0;
@@ -5010,7 +5011,7 @@
   border-radius:var(--avatar-radius,50%);
 }
 .utop-av svg{position:absolute;inset:0;width:100%;height:100%}
-.utop-av .silhouette{fill:#c8c8c8}
+.utop-av .silhouette{fill:var(--th-faint)}
 .utop-av img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
 </style>
 
