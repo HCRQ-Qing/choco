@@ -10209,139 +10209,18 @@ function saveDivinePref(p){ lsSet(DIVINE_PREF_KEY, p); }
 
 let divineCount=3, divineWho='self';
 
-/* ============================================================
-   真心话功能
-   - 仅一对一可用
-   - 可输入问题（可选）
-   - 只抽「普通字卡」，以塔罗牌形式洗牌抽牌
-   - 可无限抽，抽完自动洗牌
-   - 输入问题后必须重新洗未抽出的牌
-   ============================================================ */
-let _truthDeck = [];
-let _truthDrawn = [];
-let _truthQuestion = '';
-
 function openTruthDare(){
-  /* 仅一对一可用 */
-  const rid = getCurrentRoleId();
-  if(!rid){
+  if(!getCurrentRoleId()){
     toast('真心话仅在一对一聊天中可用');
     return;
   }
-  const role = getRoleById(rid);
-  if(!role){
-    toast('真心话仅在一对一聊天中可用');
-    return;
+  if(typeof window.TruthDare !== 'undefined'){
+    window.TruthDare.bindEvents();
+    window.TruthDare.open();
+    closeAllThings('drawer');
+  } else {
+    toast('真心话模块还没加载好');
   }
-  _truthQuestion = '';
-  _initTruthDeck();
-  _renderTruthPanel();
-  const mask = document.getElementById('mTruth');
-  if(mask) mask.classList.add('show');
-}
-
-function _initTruthDeck(){
-  /* 只从普通字卡池抽 */
-  const rid = getCurrentRoleId();
-  let pool = [];
-  try{
-    const pub = getAllNormalCards('public');
-    pool = pool.concat(pub);
-    if(rid){
-      const roleCards = getAllNormalCards(rid);
-      pool = pool.concat(roleCards);
-    }
-  }catch(e){}
-  pool = Array.from(new Set(pool.filter(Boolean)));
-  if(!pool.length) pool = ['嗯','在呢','好呀'];
-  _truthDeck = pool.slice();
-  _truthDrawn = [];
-}
-
-function _renderTruthPanel(){
-  let mask = document.getElementById('mTruth');
-  if(!mask){
-    mask = document.createElement('div');
-    mask.id = 'mTruth';
-    mask.className = 'truth-mask';
-    document.body.appendChild(mask);
-  }
-  const deckCount = _truthDeck.length;
-  const drawnCount = _truthDrawn.length;
-
-  const drawnHTML = _truthDrawn.length
-    ? '<div class="truth-drawn">' + _truthDrawn.map(function(t){
-        return '<div class="truth-card">' + escapeHTML(t) + '</div>';
-      }).join('') + '</div>'
-    : '';
-
-  mask.innerHTML =
-    '<div class="truth-panel">' +
-      '<div class="truth-top">' +
-        '<div class="truth-title">真 心 话</div>' +
-        '<button class="truth-close" type="button">×</button>' +
-      '</div>' +
-      '<div class="truth-q-row">' +
-        '<label>问题（可不填）</label>' +
-        '<input type="text" class="truth-q-input" id="truthQInput" placeholder="想问角色什么？留空也行" value="' + escapeHTML(_truthQuestion) + '">' +
-      '</div>' +
-      '<div class="truth-deck" id="truthDeck">' +
-        '<div class="truth-card-back"></div>' +
-        '<div class="truth-card-back"></div>' +
-        '<div class="truth-card-back"></div>' +
-      '</div>' +
-      '<div class="truth-count">牌堆 ' + deckCount + ' 张 · 已抽 ' + drawnCount + ' 张</div>' +
-      drawnHTML +
-      '<div class="truth-actions">' +
-        '<button class="truth-btn" id="truthShuffleBtn" type="button">洗 牌</button>' +
-        '<button class="truth-btn primary" id="truthDrawBtn" type="button" ' + (deckCount ? '' : 'disabled') + '>抽 一 张</button>' +
-      '</div>' +
-    '</div>';
-
-  /* 关闭 */
-  mask.querySelector('.truth-close').onclick = function(){ mask.classList.remove('show'); };
-  mask.onclick = function(e){ if(e.target === mask) mask.classList.remove('show'); };
-
-  /* 抽牌 */
-  const drawBtn = mask.querySelector('#truthDrawBtn');
-  if(drawBtn) drawBtn.onclick = function(){ _truthDrawCard(); };
-
-  /* 点牌堆也能抽 */
-  const deck = mask.querySelector('#truthDeck');
-  if(deck) deck.onclick = function(){ _truthDrawCard(); };
-
-  /* 洗牌 */
-  const shufBtn = mask.querySelector('#truthShuffleBtn');
-  if(shufBtn) shufBtn.onclick = function(){
-    /* 输入问题后必须重新洗未抽出的牌 */
-    const qInput = mask.querySelector('#truthQInput');
-    const q = qInput ? qInput.value.trim() : '';
-    if(q){
-      _truthQuestion = q;
-      /* 重新洗未抽出的牌 */
-      _truthDeck = _truthDeck.sort(function(){ return Math.random() - 0.5; });
-      toast('已洗未抽出的牌');
-    } else {
-      /* 没输入问题：全部重洗 */
-      _initTruthDeck();
-      toast('已重新洗牌');
-    }
-    _renderTruthPanel();
-  };
-}
-
-function _truthDrawCard(){
-  if(!_truthDeck.length){
-    /* 抽完了，自动洗牌 */
-    toast('牌抽完了，自动洗牌');
-    _initTruthDeck();
-    _renderTruthPanel();
-    return;
-  }
-  const idx = Math.floor(Math.random() * _truthDeck.length);
-  const card = _truthDeck.splice(idx, 1)[0];
-  _truthDrawn.push(card);
-  _renderTruthPanel();
 }
 
 function openDivine(){
@@ -12790,7 +12669,7 @@ function openBeauty(mode){
                 cv.getContext('2d').drawImage(img, 0, 0, w, h);
                 var url = cv.toDataURL('image/jpeg', 0.82);
                 __tarotImgCache[key] = url;
-                lsSet('mj_tarot_imgs_v1', __tarotImgCache);
+                lsSet('mj_tarot_imgs_v2', __tarotImgCache);
                 window.renderTarotGrid();
                 toast('已更新');
               };
@@ -12841,7 +12720,7 @@ function openBeauty(mode){
                 cv.getContext('2d').drawImage(img, 0, 0, w, h);
                 var url = cv.toDataURL('image/jpeg', 0.82);
                 __tarotImgCache[key] = url;
-                lsSet('mj_tarot_imgs_v1', __tarotImgCache);
+                lsSet('mj_tarot_imgs_v2', __tarotImgCache);
                 window.renderTarotGrid();
                 toast('已更新');
               };
@@ -20600,6 +20479,7 @@ function applyTopbarBg(){
 	     需要支持左右滑切页。屏幕内的 button/input 仍会被拦截。 */
 	return !!el.closest(
 	  'button, input, textarea, select, ' +
+	  '#chatInput, .d-bar, ' +
 	  '.d-icon, .send-btn, .topbar-btn, .topbar-actions, .tabbar, .switch, ' +
 	  '.drawer, .drawer.open, ' +
 	  '.modal, .modal.show, .rd-modal, .rd-modal.show, ' +
@@ -20610,10 +20490,24 @@ function applyTopbarBg(){
   }
   function onStart(e){
 	if(isInteractive(e.target)) return;
+	var act = document.activeElement;
+	if(act && (act.id === 'chatInput' || act.tagName === 'INPUT' || act.tagName === 'TEXTAREA')){
+	  return;
+	}
+	var appEl = document.getElementById('app');
+	if(appEl && appEl.classList.contains('kb-open-real')){
+	  return;
+	}
 	const p=e.touches?e.touches[0]:e; sx=p.clientX; sy=p.clientY; dragging=true; dx=0;
   }
   function onMove(e){ if(!dragging) return; const p=e.touches?e.touches[0]:e; dx=p.clientX-sx; const dy=Math.abs(p.clientY-sy); if(dy>Math.abs(dx)){ dragging=false; return; } stack.style.transition='none'; stack.style.transform=`translateX(calc(${-(cur)*100}% + ${dx}px))`; if(e.cancelable) e.preventDefault(); }
-  function onEnd(){ if(!dragging) return; dragging=false; stack.style.transition=''; if(Math.abs(dx)>60){ if(dx>0) go(cur-1); else go(cur+1); } else go(cur); dx=0; }
+  function onEnd(){
+	if(!dragging) return;
+	dragging=false;
+	stack.style.transition='';
+	if(Math.abs(dx)>60){ if(dx>0) go(cur-1); else go(cur+1); } else go(cur);
+	dx=0;
+  }
   app.addEventListener('touchstart',onStart,{passive:true});
   app.addEventListener('touchmove',onMove,{passive:false});
   app.addEventListener('touchend',onEnd,{passive:true});
@@ -27019,6 +26913,16 @@ document.addEventListener('click', function(e){
 		if(contentOpen || funcOpen) closeAllThings('drawer');
 	  }, {passive:true});
 
+	  /* 键盘收起时解除滑动锁定 */
+	  chatInput.addEventListener('blur', function(){
+		setTimeout(function(){
+		  var active = document.activeElement;
+		  if(!active || (active.tagName !== 'INPUT' && active.tagName !== 'TEXTAREA')){
+			document.getElementById('app').classList.remove('kb-open');
+		  }
+		}, 100);
+	  });
+
 	  /* 点表情 / 加号 / 麦克风时，让输入框主动失焦一次，
 	     避免键盘和面板同时出现（这个"失焦"是我们自己触发的，
 	     和用户滑动列表造成的失焦不一样） */
@@ -27066,6 +26970,8 @@ document.addEventListener('click', function(e){
 	  window.visualViewport.addEventListener('resize', schedule);
 	  window.visualViewport.addEventListener('scroll', schedule);
 	})();
+
+ 
 
 	/* 跳到底部按钮：点击 + 滚动监听 */
 	(function bindScrollBottomBtn(){
@@ -27346,17 +27252,21 @@ function openExportMenu(){
 			var h = Math.round(vv.height);
 			var keyboardH = Math.max(0, baseHeight - h);
 			if(keyboardH > 60){
-			  /* 高度变化小于 24px 视为抖动，直接忽略 */
 			  if(lastH >= 0 && Math.abs(h - lastH) < 24) return;
 			  lastH = h;
 			  appEl.classList.add('kb-open-real');
+			  appEl.classList.add('kb-open');
 			  appEl.style.height = h + 'px';
 			  appEl.style.top = '0';
 			}else{
 			  lastH = -1;
 			  appEl.classList.remove('kb-open-real');
+			  appEl.classList.remove('kb-open');
 			  appEl.style.height = '';
 			  appEl.style.top = '';
+			  if(document.activeElement && document.activeElement.tagName === 'TEXTAREA'){
+			    document.activeElement.blur();
+			  }
 			}
 		  }
 		  function schedule(){ if(raf === null) raf = requestAnimationFrame(apply); }
