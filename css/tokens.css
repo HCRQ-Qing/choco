@@ -85,6 +85,7 @@
   --z-modal: 600;
   --z-toast: 700;
 
+  /* ===== 颜色变量（照预览取值） ===== */
   --c-bg: #ececec;
   --c-page: #ffffff;
   --c-ink: #1a1a1a;
@@ -100,31 +101,8 @@
   --c-badge: #1a1a1a;
   --c-badge-ink: #ffffff;
   --c-shadow: rgba(0, 0, 0, 0.07);
-  --c-danger: #c62828;
-  --c-warning: #8d6e00;
-  --c-success: #2e7d32;
-  --c-highlight: rgba(255, 213, 74, 0.35);
-  --c-overlay: rgba(0, 0, 0, 0.35);
 
-  --theme-bg: var(--c-bg);
-  --theme-surface: var(--c-page);
-  --theme-surface-raised: var(--c-page);
-  --theme-text: var(--c-ink);
-  --theme-text-secondary: var(--c-ink-2);
-  --theme-text-muted: var(--c-muted);
-  --theme-border: var(--c-border);
-  --theme-divider: var(--c-line);
-  --theme-accent: var(--c-ink);
-  --theme-accent-contrast: var(--c-page);
-  --theme-avatar: var(--c-avatar);
-  --theme-avatar-silhouette: var(--c-silhouette);
-  --theme-danger: var(--c-danger);
-  --theme-warning: var(--c-warning);
-  --theme-success: var(--c-success);
-  --theme-highlight: var(--c-highlight);
-  --theme-overlay: var(--c-overlay);
-  --theme-shadow: var(--c-shadow);
-
+  /* ===== 旧 --th-* 变量别名（统一指向常量表，保持兼容） ===== */
   --app-font: var(--font-cn);
   --avatar-radius: 14%;
 
@@ -149,22 +127,11 @@
   --topbar-c: var(--c-page);
   --topbar-line: rgba(0,0,0,.12);
 
+  /* ===== 遮罩 ===== */
   --mask-bg: rgba(0,0,0,.15);
   --mask-blur: blur(2px);
 }
-
 [data-theme="bw"]{
-  --theme-bg: var(--c-bg);
-  --theme-surface: var(--c-page);
-  --theme-text: var(--c-ink);
-  --theme-text-secondary: var(--c-ink-2);
-  --theme-text-muted: var(--c-muted);
-  --theme-border: var(--c-border);
-  --theme-divider: var(--c-line);
-  --theme-accent: var(--c-ink);
-  --theme-accent-contrast: var(--c-page);
-  --theme-avatar: var(--c-avatar);
-  --theme-avatar-silhouette: var(--c-silhouette);
   --th-av-bg: var(--c-avatar);
   --th-av-sil: var(--c-silhouette);
   --topbar-a: var(--c-bubble);
@@ -174,25 +141,6 @@
 }
 
 [data-theme="dark"]{
-  --theme-bg: #1a1a1a;
-  --theme-surface: #252525;
-  --theme-surface-raised: #2c2c2c;
-  --theme-text: #e8e8e8;
-  --theme-text-secondary: #a8a8a8;
-  --theme-text-muted: #808080;
-  --theme-border: #3a3a3a;
-  --theme-divider: rgba(255,255,255,0.10);
-  --theme-accent: #e8e8e8;
-  --theme-accent-contrast: #1a1a1a;
-  --theme-avatar: #333333;
-  --theme-avatar-silhouette: #5a5a5a;
-  --theme-danger: #ff7b82;
-  --theme-warning: #ffd166;
-  --theme-success: #80cbc4;
-  --theme-highlight: rgba(255, 213, 74, 0.20);
-  --theme-overlay: rgba(0, 0, 0, 0.62);
-  --theme-shadow: rgba(0,0,0,0.35);
-
   --topbar-fade-1: rgba(0,0,0,.55);
   --topbar-fade-2: rgba(0,0,0,.35);
   --c-bg: #1a1a1a;
@@ -217,9 +165,9 @@
   --mb-bg: #e8e8e8;
   --mb-text: #1a1a1a;
   --topbar-line: rgba(255,255,255,0.14);
+
   --mask-bg: rgba(0,0,0,0.55);
 }
-
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
