@@ -667,7 +667,7 @@
 .cd-value{font-size:15px;font-weight:300;letter-spacing:1px;line-height:1.6}
 .cd-value.none{color:#ccc;font-style:italic}
 .cd-delete-list{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
-.cd-del-chip{padding:4px 10px;background:#fafafa;border:0.6px solid rgba(0,0,0,.1);border-radius:4px;font-size:12.5px;color:#1a1a1a;font-weight:300}
+.cd-del-chip{padding:4px 10px;background:var(--th-accent-soft,#fafafa);border:0.6px solid var(--th-accent-line,rgba(0,0,0,.1));border-radius:4px;font-size:12.5px;color:var(--th-text,#1a1a1a);font-weight:300}
 .cd-demand-item{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:0.6px dashed #f5f5f5;font-size:13.5px;line-height:1.5}
 .cd-demand-item:last-child{border-bottom:none}
 .cd-demand-item.done .cd-demand-txt{color:#bbb;text-decoration:line-through}
@@ -689,7 +689,7 @@
   display:none;
   flex-direction:column;
   overflow:hidden;
-  background:#fff;
+  background:var(--th-bg0,#fff);
 }
 #cardDemandScreen.on{
   display:flex;

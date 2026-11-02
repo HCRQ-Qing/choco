@@ -185,6 +185,7 @@
 .preset .p-name{font-size:12px;font-weight:300;color:#fff;letter-spacing:2px;position:relative;z-index:2;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
 .preset.bw{background:linear-gradient(135deg,#f5f5f5,#e0e0e0)}
 .preset.bw .p-name{color:#1a1a1a;letter-spacing:2px}
+.preset.dark{background:linear-gradient(135deg,#2e2e2e,#1a1a1a)}
 .shape-row{display:flex;gap:10px;padding:10px 0}
 .shape-btn{flex:1;padding:16px 0;border-radius:12px;font-size:13px;font-weight:300;letter-spacing:1.5px;cursor:pointer;font-family:inherit;border:1.5px solid var(--th-accent-line);background:var(--th-accent-soft);color:var(--th-text-soft);display:flex;flex-direction:column;align-items:center;gap:8px;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
 .shape-btn.on{background:var(--th-accent);color:#fff;border-color:var(--th-accent);font-weight:300}

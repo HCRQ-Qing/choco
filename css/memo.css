@@ -1,6 +1,6 @@
 /* ============ 备忘页 · 多模板 ============ */
 #memoScreen{
-  background:#ffffff;
+  background:var(--th-bg0,#ffffff);
   flex-direction:column;
   z-index:100;
 }

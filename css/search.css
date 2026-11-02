@@ -2,7 +2,7 @@
  
 #chatSearchScreen .cs-input{
   flex:1;display:flex;align-items:center;gap:8px;
-  padding:10px 16px;background:#f7f7f7;border-radius:24px;
+  padding:10px 16px;background:var(--th-accent-soft,#f7f7f7);border-radius:24px;
   border:none;
 }
 #chatSearchScreen .cs-input input{
@@ -76,7 +76,7 @@
 }
 .cs-date-mask.show{display:flex}
 .cs-date-panel{
-  width:100%;max-width:520px;background:#fff;
+  width:100%;max-width:520px;background:var(--th-card,#fff);
   border-radius:22px 22px 0 0;
   padding:22px 20px calc(20px + env(safe-area-inset-bottom));
   max-height:70vh;display:flex;flex-direction:column;
@@ -108,9 +108,9 @@
 .cs-date-item .dsub{
   font-size:11px;color:#bbb;font-family:Georgia,serif;flex:none;
 }
-.cs-date-item:active{background:#fafafa}
+.cs-date-item:active{background:var(--th-accent-soft,#fafafa)}
 .cs-date-quick{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
-.cs-quick-btn{flex:none;padding:6px 14px;border-radius:16px;border:0.7px solid rgba(0,0,0,.12);background:#f7f7f7;font-size:12px;color:#666;font-family:inherit;cursor:pointer}
+.cs-quick-btn{flex:none;padding:6px 14px;border-radius:16px;border:0.7px solid var(--th-accent-line,rgba(0,0,0,.12));background:var(--th-accent-soft,#f7f7f7);font-size:12px;color:var(--th-text-soft,#666);font-family:inherit;cursor:pointer}
 .cs-quick-btn:active{background:#eee}
 .cs-date-divider{font-size:11px;color:#bbb;letter-spacing:1px;padding:8px 0 4px;border-top:0.6px solid rgba(0,0,0,.06)}
 .cs-item{padding:12px 18px;border-bottom:1px dashed var(--th-accent-line);cursor:pointer}
@@ -121,7 +121,7 @@
 
 /* 美化整页：跟字卡库/收藏页一样，整页铺满，从右滑入 */
 /* 美化整页：跟字卡库/收藏页一样，瞬间显隐，无过渡 */
-.beauty-panel{position:fixed;inset:0;z-index:100;max-width:520px;margin:0 auto;background:#ffffff;display:none;flex-direction:column;visibility:visible}
+.beauty-panel{position:fixed;inset:0;z-index:100;max-width:520px;margin:0 auto;background:var(--th-bg0,#ffffff);display:none;flex-direction:column;visibility:visible}
 .beauty-panel.show{display:flex}
 /* 美化顶部栏：跟字卡库/收藏页一致 —— 左箭头 + 居中标题 + 右侧占位 */
 .bp-head{
@@ -130,7 +130,7 @@
   align-items:center;
   gap:12px;
   padding:20px 22px 12px;
-  background:#ffffff;
+  background:var(--th-bg0,#ffffff);
   border-bottom:none;
 }
 .bp-head .bp-back{
@@ -179,5 +179,5 @@
 .bp-row .r-val{font-size:11px;color:#bbb;flex:none;font-weight:300;letter-spacing:.5px;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
 .bp-row .r-arr{color:#e0e0e0;opacity:1;font-size:12px;transition:transform .18s ease}
 .bp-row:active .r-arr{transform:translateX(2px)}
-.sub-panel{position:fixed;inset:0;z-index:110;max-width:520px;margin:0 auto;background:#ffffff;display:flex;flex-direction:column;transform:translateX(100%);visibility:hidden;transition:none}
+.sub-panel{position:fixed;inset:0;z-index:110;max-width:520px;margin:0 auto;background:var(--th-bg0,#ffffff);display:flex;flex-direction:column;transform:translateX(100%);visibility:hidden;transition:none}
 .sub-panel.show{transform:translateX(0);visibility:visible}

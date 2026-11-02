@@ -1,5 +1,5 @@
 /* ===== 我的页 · 极简透明线条（方案 A） ===== */
-#page-me{background:#ffffff;position:relative;overflow:hidden}
+#page-me{background:var(--th-bg0,#ffffff);position:relative;overflow:hidden}
 #page-me > *{position:relative;z-index:1}
 
 .me-page{width:100%;max-width:520px;height:100%;margin:0 auto;display:flex;flex-direction:column;overflow:hidden;background:transparent;position:relative}

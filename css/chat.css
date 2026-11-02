@@ -10,8 +10,8 @@
 .chat-topbar::before{
   content:"";position:absolute;inset:0;z-index:1;pointer-events:none;
   background:linear-gradient(180deg,
-    rgba(255,255,255,.60) 0%,
-    rgba(255,255,255,.40) 50%,
+    var(--topbar-fade-1, rgba(255,255,255,.60)) 0%,
+    var(--topbar-fade-2, rgba(255,255,255,.40)) 50%,
     rgba(255,255,255,0) 100%);
   transition:opacity .45s ease;
 }
@@ -504,7 +504,7 @@ body[data-bubble="bracket"] .msg .voice-bubble::after{content:none !important}
   100%{transform:scale(1)}
 }
 
-.d-bar{flex:none;display:flex;gap:6px;align-items:center;margin:0 14px 8px;padding:6px 10px;position:relative;z-index:10;background:#ffffff;border:none;border-radius:22px;box-shadow:0 1px 5px rgba(0,0,0,.07)}
+.d-bar{flex:none;display:flex;gap:6px;align-items:center;margin:0 14px 8px;padding:6px 10px;position:relative;z-index:10;background:var(--th-card,#ffffff);border:none;border-radius:22px;box-shadow:0 1px 5px rgba(0,0,0,.07)}
 .d-icon{width:30px;height:30px;border-radius:50%;flex:none;border:none;background:transparent;color:#1a1a1a;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:none}
 .d-icon svg{width:16px;height:16px;stroke:#1a1a1a;fill:none;stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round;pointer-events:none}
 .d-icon:hover{background:rgba(0,0,0,.03)}
@@ -592,7 +592,7 @@ body[data-bubble="bracket"] .msg .voice-bubble::after{content:none !important}
 
 .drawer{
   flex:none;height:0;overflow:hidden;
-  background:#fff;
+  background:var(--th-card,#fff);
   display:flex;flex-direction:column;z-index:11;
   border-radius:22px 22px 0 0;
   transition:height .32s cubic-bezier(.22,1,.36,1),border-top-width .3s ease;

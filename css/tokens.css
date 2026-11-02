@@ -139,6 +139,35 @@
   --topbar-c: var(--c-page);
   --topbar-line: rgba(0,0,0,.12);
 }
+
+[data-theme="dark"]{
+  --topbar-fade-1: rgba(0,0,0,.55);
+  --topbar-fade-2: rgba(0,0,0,.35);
+  --c-bg: #1a1a1a;
+  --c-page: #252525;
+  --c-ink: #e8e8e8;
+  --c-ink-2: #a8a8a8;
+  --c-muted: #808080;
+  --c-faint: #5a5a5a;
+  --c-line: rgba(255,255,255,0.10);
+  --c-border: #3a3a3a;
+  --c-bubble: rgba(255,255,255,0.06);
+  --c-bubble-me: rgba(255,255,255,0.10);
+  --c-avatar: #333333;
+  --c-silhouette: #5a5a5a;
+  --c-badge: #e8e8e8;
+  --c-badge-ink: #1a1a1a;
+  --c-shadow: rgba(0,0,0,0.35);
+
+  --th-accent-deep: #ffffff;
+  --th-accent-line: rgba(255,255,255,0.18);
+  --th-danger: #e8e8e8;
+  --mb-bg: #e8e8e8;
+  --mb-text: #1a1a1a;
+  --topbar-line: rgba(255,255,255,0.14);
+
+  --mask-bg: rgba(0,0,0,0.55);
+}
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;

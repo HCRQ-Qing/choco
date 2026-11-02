@@ -2,8 +2,8 @@
 .fr-toprow .search-box{
   flex:1 1 0;min-width:0;margin:0;display:flex;align-items:center;gap:8px;
   padding:9px 16px;
-  background:#fff;
-  border:0.7px solid #d8d8d8;
+  background:var(--th-card,#fff);
+  border:0.7px solid var(--th-accent-line,#d8d8d8);
   border-radius:22px;
   box-shadow:0 1px 4px rgba(0,0,0,.05);
   transition:border-color .2s ease,box-shadow .2s ease;
@@ -109,48 +109,29 @@
 .cl-big-title{padding:25px 5px 5px;display:block}
 .cl-big-title .cn{font-size:26px;letter-spacing:3px;line-height:1.2;color:#1a1a1a;font-family:var(--app-font);font-weight:400;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
 .cl-big-title .en{font-size:9px;letter-spacing:5px;color:#ccc;font-family:Georgia,serif;margin-top:8px}
-.owner-chips{display:flex;gap:8px;flex-wrap:wrap;padding:0 20px 14px;flex:none}
-.owner-chip{padding:8px 16px;border-radius:14px;font-size:12.5px;color:#999;background:transparent;border:0.7px solid rgba(0,0,0,.2);cursor:pointer;font-family:inherit;white-space:nowrap;transition:all .18s;box-shadow:none}
-.owner-chip.on{color:#ffffff;font-weight:500;background:#1a1a1a;border-color:#1a1a1a}
-.group-list{flex:1 1 0;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:0 20px 40px;scrollbar-width:none}
+.owner-chips{display:flex;gap:20px;flex-wrap:wrap;padding:6px 20px 0;flex:none;border-bottom:none;margin-bottom:0}
+.owner-chip{position:relative;padding:4px 0 8px 0;border:none;background:transparent;font-size:13px;font-weight:300;letter-spacing:1px;color:#c8c8c8;cursor:pointer;font-family:inherit;white-space:nowrap;transition:color .18s ease;-webkit-font-smoothing:antialiased}
+.owner-chip.on{color:#1a1a1a;font-weight:400;-webkit-text-stroke:0.15px #1a1a1a}
+.group-list{flex:1 1 0;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:10px 20px 40px;scrollbar-width:none}
 .group-list::-webkit-scrollbar{display:none}
 .group-card{
   display:flex;align-items:center;gap:14px;
-  background:transparent;
-  border:none;
-  border-bottom:0.7px solid rgba(0,0,0,.1);
-  border-radius:0;
-  box-shadow:none;
-  padding:16px 6px;
-  margin-bottom:0;
-  cursor:pointer;
-  position:relative;
-  overflow:visible;
+  background:transparent;border:none;
+  border-bottom:0.6px dashed #f0f0f0;
+  border-radius:0;box-shadow:none;
+  padding:18px 0;margin-bottom:0;
+  cursor:pointer;position:relative;overflow:visible;
 }
 .group-card:last-child{border-bottom:none}
 .group-card .g-ic{
-  width:36px;height:36px;flex:none;
+  width:26px;height:26px;flex:none;
   display:flex;align-items:center;justify-content:center;
-  background:transparent;
-  border:0.7px solid rgba(0,0,0,.15);
-  border-radius:10px;
-  font-size:16px;
+  background:transparent;border:none;border-radius:0;
 }
-.group-card .g-ic svg{width:18px;height:18px;stroke:#1a1a1a;fill:none;stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round}
-.group-card .g-name{flex:1;font-size:15px;color:#1a1a1a;font-weight:500;font-family:inherit;display:flex;align-items:baseline;gap:10px;min-width:0}
-.group-card .g-name .g-sub{font-size:11.5px;color:#999;font-weight:400;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.group-card .g-count{
-  font-size:11px;
-  color:#999;
-  background:transparent;
-  padding:0;
-  border-radius:0;
-  border:none;
-  font-weight:400;
-  font-family:Georgia,serif;
-  flex:none;
-}
-.group-card .g-arrow{font-size:12px;color:#bbb;opacity:1;flex:none;font-weight:400}
+.group-card .g-ic svg{width:22px;height:22px;stroke:#1a1a1a;fill:none;stroke-width:1.2;stroke-linecap:round;stroke-linejoin:round}
+.group-card .g-name{flex:1;font-size:15px;color:#1a1a1a;font-weight:300;font-family:inherit;display:block;line-height:1.2;min-width:0;-webkit-text-stroke:0.1px #1a1a1a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.group-card .g-count{font-size:11.5px;color:#c8c8c8;background:transparent;padding:0;border-radius:0;border:none;font-weight:400;font-family:var(--font-en);flex:none;min-width:20px;text-align:right}
+.group-card .g-arrow{font-size:12px;color:#d8d8d8;opacity:1;flex:none;font-weight:400;font-family:Arial,sans-serif}
 
 .cd-more{position:absolute;right:0;top:0;width:34px;height:34px;border:none;background:transparent;color:#1a1a1a;font-size:18px;display:flex;align-items:center;justify-content:center;font-family:inherit;cursor:pointer;padding:0 0 6px;opacity:.5;transition:opacity .18s ease;border-radius:0;z-index:2;flex:none}
 .cd-more:active{opacity:1}
