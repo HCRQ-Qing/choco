@@ -20,6 +20,9 @@
 <link rel="stylesheet" href="css/bubble.css">
 <link rel="stylesheet" href="css/me.css">
 <link rel="stylesheet" href="css/friends.css">
+<link rel="stylesheet" href="css/avatar.css">
+<link rel="stylesheet" href="css/variables.css">
+<link rel="stylesheet" href="css/builtin.css">
 <link rel="stylesheet" href="css/card.css">
 <link rel="stylesheet" href="css/divine.css">
 <link rel="stylesheet" href="css/role.css">
@@ -78,6 +81,7 @@
 			  <path d="M17 2l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/>
 			  <path d="M7 22l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>
 			</svg>
+			<span class="unread-badge" id="switchBadge" style="position:absolute; top:2px; right:2px; background:#1a1a1a; color:#fff; font-size:10px; padding:0 5px; min-width:16px; height:16px; border-radius:8px; display:none; align-items:center; justify-content:center; border:1.5px solid #fff; box-sizing:border-box; font-family:Arial,sans-serif;">0</span>
 		  </button>
 		</div>
 		<div class="topbar-row">
@@ -3099,11 +3103,8 @@
 
 <!-- ============ 内置角色一览 ============ -->
 <div class="screen" id="builtinListScreen">
-  <div class="a-top">
-    <button class="a-back" id="blBack" type="button">‹</button>
-    <div class="a-title">内 置 角 色</div>
-  </div>
-  <div class="nf-list" id="blList"></div>
+  <div id="utopHostBuiltinList"></div>
+  <div class="bl-list" id="blList"></div>
 </div>
 
 <!-- ============ 内置角色小菜单（点头像弹出） ============ -->
