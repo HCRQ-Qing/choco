@@ -1,11 +1,11 @@
-@font-face{font-family:'LikeJian';src:url('../fonts/LikeJian.ttf') format('truetype'),url('https://cdn.jsdelivr.net/gh/maoken-fonts/MaokenYingBiKaiShuJ@main/MaokenYingBiKaiShuJ_0.20.ttf') format('truetype');font-display:swap}
+@font-face{font-family:'LikeJian';src:url('../fonts/LikeJian.ttf') format('truetype'),url('https://cdn.jsdelivr.net/gh/maoken-fonts/MaokenYingBiKaiShuJ@main/MaokenYingBiKaiShuJ_0.20.ttf') format('truetype')}
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:rgba(0,0,0,0) !important;-webkit-touch-callout:none;user-select:none}
 /* ★ 开屏启动页样式 */
 #bootLoader {
   position: fixed;
   inset: 0;
   z-index: 2147483647;
-  background: #ffffff;
+  background: var(--theme-surface, #ffffff);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -21,7 +21,7 @@
   font-size: 22px;
   font-weight: 300;
   letter-spacing: 4px;
-  color: #1a1a1a;
+  color: var(--theme-text, #1a1a1a);
   margin-bottom: 8px;
 }
 #bootLoader .boot-sub {
@@ -54,13 +54,13 @@ input:focus,textarea:focus,select:focus,[contenteditable="true"]:focus{outline:n
    根因是 caret-color 跟随主题时，细体字下的光标位置异常。
    这里只针对聊天输入框处理，其余输入框不动。 */
 .d-bar textarea{
-  caret-color: #1a1a1a;
+  caret-color: var(--theme-text, #1a1a1a);
 }
 #page-chat.minimal-mode .d-bar textarea{
-  caret-color: #1a1a1a;
+  caret-color: var(--theme-text, #1a1a1a);
 }
 .gch-bar textarea{
-  caret-color: #1a1a1a;
+  caret-color: var(--theme-text, #1a1a1a);
 }
 /* 兜底：如果还是画黑线，让内核强制重绘输入框 */
 .d-bar, .gch-bar{
@@ -68,11 +68,11 @@ input:focus,textarea:focus,select:focus,[contenteditable="true"]:focus{outline:n
   backface-visibility: hidden;
 }
 html,body{height:100%;overflow:hidden}
-body{font-family:var(--app-font);background:var(--th-bg0,#0a0a0a);color:var(--th-text,#fff0f5)}
+body{font-family:var(--app-font);background:var(--theme-bg, var(--c-bg, #ececec));color:var(--theme-text, var(--c-ink, #1a1a1a))}
 
-#app{position:fixed;inset:0;top:0 !important;left:0;right:0;bottom:0;max-width:780px;margin:0 auto;overflow:hidden;touch-action:pan-y;z-index:1;background:var(--th-bg0,#ffffff)}
+#app{position:fixed;inset:0;top:0 !important;left:0;right:0;bottom:0;max-width:780px;margin:0 auto;overflow:hidden;touch-action:pan-y;z-index:1;background:var(--theme-surface, var(--c-page, #ffffff))}
 #app.kb-open-real{top:0 !important}
-.tabbar{position:absolute;bottom:0;left:0;right:0;height:72px;background:#ffffff;border-top:0.7px solid #1a1a1a;display:flex;align-items:stretch;justify-content:space-around;padding:0 6px;z-index:50;transition:transform .2s ease}
+.tabbar{position:absolute;bottom:0;left:0;right:0;height:72px;background:var(--theme-surface, var(--c-page, #ffffff));border-top:0.7px solid var(--theme-border, var(--c-border, #d8d8d8));display:flex;align-items:stretch;justify-content:space-around;padding:0 6px;z-index:50;transition:transform .2s ease}
 #app.kb-open .tabbar{transform:translateY(100%)}
 #app.kb-open .page-stack{inset:0}
 #app.kb-open{overflow:hidden}
@@ -83,4 +83,3 @@ body{font-family:var(--app-font);background:var(--th-bg0,#0a0a0a);color:var(--th
 /* 键盘弹起时，列表不需要额外底部留白（输入栏是 flex 兄弟项，不会被盖住） */
 #app.kb-open-real #chatList{padding-bottom:20px}
 #app.kb-open-real .gch-list{padding-bottom:20px}
-
