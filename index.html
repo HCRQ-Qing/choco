@@ -1388,7 +1388,7 @@
   <div class="bp-body">
     <div class="bp-row" data-panel="theme"><span class="num">01</span><div class="r-name">主题</div><span class="r-val" id="myThemeVal">黑白</span><span class="r-arr">›</span></div>
     <div class="bp-row" data-panel="avatar"><span class="num">02</span><div class="r-name">头像方圆</div><span class="r-val" id="myAvatarVal">方形</span><span class="r-arr">›</span></div>
-    <div class="bp-row" data-panel="bgimg"><span class="num">03</span><div class="r-name">上传图片</div><span class="r-arr">›</span></div>
+    <div class="bp-row" data-panel="bgimg"><span class="num">03</span><div class="r-name">上传背景</div><span class="r-arr">›</span></div>
     <div class="bp-row" data-panel="titletext"><span class="num">04</span><div class="r-name">文字</div><span class="r-arr">›</span></div>
   </div>
 </div>
@@ -1396,20 +1396,46 @@
 <div class="sub-panel" id="mySpBg">
   <div class="bp-head">
     <button class="bp-back" id="myBgBack" type="button">‹</button>
-    <div class="bp-title">上 传 图 片</div>
+    <div class="bp-title">上 传 背 景</div>
     <div class="bp-head-right"></div>
   </div>
   <div class="sp-body">
-    <div class="up-sec">
-      <div class="up-title">我的页面背景</div>
-      <div class="up-desc">换了以后，「我的」页那层底就变成这张图。</div>
-      <div class="up-prev" id="myBgPrev">还没上传</div>
-      <div class="up-acts">
-        <button class="up-btn primary" id="myBgUpload" type="button">上传图片</button>
-        <button class="up-btn ghost" id="myBgReset" type="button">恢复默认</button>
+    <div class="bg-tabs" id="myBgTabs">
+      <button class="bg-tab on" data-mytab="me" type="button">个人界面</button>
+      <button class="bg-tab" data-mytab="card" type="button">字卡页</button>
+    </div>
+    <div class="bg-pane on" id="myBgPaneMe">
+      <div class="up-sec">
+        <div class="up-title">我的页面背景</div>
+        <div class="up-desc">换了以后，「我的」页那层底就变成这张图。</div>
+        <div class="up-prev" id="myBgPrev">还没上传</div>
+        <div class="up-acts">
+          <button class="up-btn primary" id="myBgUpload" type="button">上传背景</button>
+          <button class="up-btn ghost" id="myBgReset" type="button">恢复默认</button>
+        </div>
+        <div class="op-row"><span class="op-lbl">透明度</span><input type="range" class="op-range" id="myBgOpacity" min="0" max="100" value="85"><span class="op-val" id="myBgOpacityVal">85%</span></div>
+        <div class="op-row"><span class="op-lbl">模糊</span><input type="range" class="op-range" id="myBgBlur" min="0" max="20" value="0"><span class="op-val" id="myBgBlurVal">0px</span></div>
       </div>
-      <div class="op-row"><span class="op-lbl">透明度</span><input type="range" class="op-range" id="myBgOpacity" min="0" max="100" value="85"><span class="op-val" id="myBgOpacityVal">85%</span></div>
-      <div class="op-row"><span class="op-lbl">模糊</span><input type="range" class="op-range" id="myBgBlur" min="0" max="20" value="0"><span class="op-val" id="myBgBlurVal">0px</span></div>
+    </div>
+    <div class="bg-pane" id="myBgPaneCard">
+      <div class="up-sec">
+        <div class="up-title">字卡页背景</div>
+        <div class="up-desc">换了以后，字卡页那层底就变成这张图。</div>
+        <div class="up-prev" id="myCardBgPrev">还没上传</div>
+        <div class="up-acts">
+          <button class="up-btn primary" id="myCardBgUpload" type="button">上传背景</button>
+          <button class="up-btn ghost" id="myCardBgReset" type="button">恢复默认</button>
+        </div>
+        <div class="op-row"><span class="op-lbl">透明度</span><input type="range" class="op-range" id="myCardBgOpacity" min="0" max="100" value="85"><span class="op-val" id="myCardBgOpacityVal">85%</span></div>
+        <div class="op-row"><span class="op-lbl">模糊</span><input type="range" class="op-range" id="myCardBgBlur" min="0" max="20" value="0"><span class="op-val" id="myCardBgBlurVal">0px</span></div>
+      </div>
+      <div class="up-sec" style="margin-top:24px">
+        <div class="up-title">分组图标</div>
+        <div class="up-desc">每个分组单独换图，上传过就会替换掉默认线条图标；点「恢复」回到默认。</div>
+        <div id="myGroupIconList"></div>
+        <input type="file" id="myGroupIconFile" accept="image/*" style="display:none">
+        <input type="file" id="myCardBgFile" accept="image/*" style="display:none">
+      </div>
     </div>
   </div>
 </div>
@@ -1710,6 +1736,7 @@
           <div class="pv-send" style="width:28px;height:24px;border-radius:12px;background:#1a1a1a;flex:none;"></div>
         </div>
       </div>
+    </div>
     </div>
   </div>
 </div>
@@ -4963,6 +4990,7 @@
 <script src="js/diagnose.js"></script>
 <!-- ===== 聊天 / 群聊 · 上传图片 ===== -->
 <script src="js/chat-image.js"></script>
+<script src="js/avatar-upload.js"></script>
 <!-- ===== 气泡通用别名补丁 ===== -->
  
 <!-- ===== 主应用逻辑（聊天/字卡/朋友/我的等） ===== -->
