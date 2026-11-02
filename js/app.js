@@ -132,27 +132,8 @@ function applyBeautyCfg(){
   // 一劳永逸：全站所有头像统一由 CSS 变量控制
   document.documentElement.style.setProperty('--avatar-radius', radius);
 
-  // ★ 每次应用美化都清一次全站头像的 inline 残留
-  //   这样任何地方写过的 border-radius 都会被清掉，--avatar-radius 变量一改立刻生效
-  _lastAvatarShape = shape;
-  document.querySelectorAll('.msg-av, .msg-av-inner, .f-av, .chat-avatar, #meAvatar, #profileAvatar, .cip-av, .nf-av, .mm-av, .mp-av, .nc-av, .bl-av, .pick-av, .pav, .ef-av, .gcc-av, .rel-av, .rel-detail-av, .gchd-mav, .bl-edit-av, .gch-mav, .me-avatar').forEach(el=>{
-    el.style.borderRadius = '';
-    el.style.background = 'transparent';
-    el.style.overflow = 'hidden';
-    el.style.border = 'none';
-    const img = el.querySelector('img');
-    if(img){
-      img.style.borderRadius = '';
-      img.style.width = '100%';
-      img.style.height = '100%';
-    }
-  });
-  // 动态页的 mm-av 单独设（它的半径跟别的不一样，用 --mm-av-radius）
   const mmRadius = (shape === 'circle') ? '50%' : '12%';
   document.documentElement.style.setProperty('--mm-av-radius', mmRadius);
-  document.querySelectorAll('#momentsScreen .mm-av').forEach(el=>{
-    el.style.borderRadius = mmRadius;
-  });
 
   // 布局
   const pageChat = document.getElementById('page-chat');
@@ -321,8 +302,8 @@ const DEFAULT_CARD_GROUPS = [
 	  '在呢','我在','嗯嗯','好呀','好哦','可以呀','没问题','知道啦','收到','来啦',
 	  '我看看','等一下下','马上来','这就去','好，听你的',
 	  '抱抱','要抱','想你了','有点想你','黏你一下','陪我会儿','别走嘛','理理我','看你一眼','就想找你',
-	  '你在干嘛呀','想和你说话','今天也想你','悄悄看你','不许不理我',
-	  '吃饭了吗','记得吃饭','多喝热水','早点休息','别熬夜','累不累','冷不冷','注意身体','好好照顾自己',
+	  '你在干嘛呀','想和你说话','今天也想你','不许不理我',
+	  '吃饭了吗','记得吃饭','多喝热水','早点休息','累不累','注意身体','好好照顾自己',
 	  '有事跟我说','我在听','慢慢来','不着急','辛苦了','今天也辛苦啦',
 	  '开心','有点开心','超级开心','嘿嘿','嘻嘻','好耶','呜','呜呜','委屈','有点难过',
 	  '不开心','生气了','哄我','我没事','才没有',
@@ -422,7 +403,7 @@ const DEFAULT_CARD_GROUPS = [
 	  '下班了吗','回家路上小心','晚饭吃什么','傍晚了','今天累不累','快到家了'
 	] },
 	{ id:'ct-night', name:'晚上', list:[
-	  '晚安','晚安安','睡了吗','该睡啦','做个好梦','明天见','梦里见','闭眼啦','先睡一步','你也早点睡','晚安，想你','晚安，做个好梦','今天也辛苦了，早点休息','在干嘛呢','洗澡了吗','追剧呢','晚上好','今天过得怎么样','想和你说说话','还没睡吗','早点休息','别熬夜了','夜深了'
+	  '晚安','晚安安','睡了吗','该睡啦','做个好梦','明天见','梦里见','闭眼啦','先睡一步','你也早点睡','晚安，想你','晚安，做个好梦','今天也辛苦了，早点休息','在干嘛呢','洗澡了吗','追剧呢','晚上好','今天过得怎么样','想和你说说话','还没睡吗','早点休息','别熬夜','别熬夜了','夜深了'
 	] }
   ]},
   { id:'g-groupchat', name:'群聊字卡', icon:'note', sub:'群聊里角色说话时从这里抽', cats:[
@@ -2332,18 +2313,21 @@ if(typeof window.platformClass !== 'function'){
   };
 }
 var platformClass = function(p){ return typeof window.platformClass === 'function' ? window.platformClass(p) : ''; };
-function avatarHTML(a){ 
-  var inner = '';
+function avatarHTML(a, size){
   var src = String(a || '');
+  var inner = '';
+  
   if(src.startsWith('data:') || src.startsWith('blob:') || src.startsWith('http')) {
-    inner = `<img src="${src}" style="border-radius:inherit;width:100%;height:100%;object-fit:cover;display:block;" onerror="this.style.display='none'">`;
+    inner = `<img src="${src}" onerror="this.style.display='none'" style="width:100%;height:100%;object-fit:cover;border-radius:inherit;">`;
   } else {
-    inner = `<svg viewBox="0 0 100 100" style="width:100%;height:100%;display:block;"><circle fill="#d4d4d4" cx="50" cy="38" r="19"/><path fill="#d4d4d4" d="M12 100 C12 74 28 62 50 62 C72 62 88 74 88 100 Z"/></svg>`;
+    inner = `<svg viewBox="0 0 100 100" style="width:100%;height:100%;border-radius:inherit;"><circle fill="#d4d4d4" cx="50" cy="38" r="19"/><path fill="#d4d4d4" d="M12 100 C12 74 28 62 50 62 C72 62 88 74 88 100 Z"/></svg>`;
   }
-  return `<div style="width:100%;height:100%;border-radius:inherit;background:#f2f2f2;overflow:hidden;display:flex;align-items:center;justify-content:center;">${inner}</div>`;
+  
+  var cls = 'uni-avatar' + (size ? ' ' + size : '');
+  return `<div class="${cls}" style="border-radius: var(--avatar-radius, 12%); overflow: hidden; display: flex; align-items: center; justify-content: center;">${inner}</div>`;
 }
 /* ★ 死代码清理：userAvHTML 直接复用统一入口 avatarHTML，防止两套逻辑打架 */
-function userAvHTML(a){ return avatarHTML(a); }
+function userAvHTML(a){ return avatarHTML(a, 'sm'); }
 function nameClass(name){ const n = Array.from(String(name||'')).length; if(n>=7) return 'xlong-name'; if(n>=5) return 'long-name'; return ''; }
 
 /* ===== 时间戳格式化（微信风） ===== */
@@ -6441,16 +6425,31 @@ function getUnreadMap(){
   return m;
 }
 function saveUnreadMap(m){ lsSet(UNREAD_KEY, m); }
+function updateSwitchBadge(){
+  const el = document.getElementById('switchBadge');
+  if(!el) return;
+  const map = getUnreadMap();
+  let total = 0;
+  Object.keys(map).forEach(k => { total += map[k]; });
+  if(total > 0){
+    el.textContent = total > 99 ? '99+' : total;
+    el.style.display = 'flex';
+  } else {
+    el.style.display = 'none';
+  }
+}
 function bumpUnread(roleId){
   if(!roleId) return;
   const m = getUnreadMap();
   m[roleId] = (m[roleId] || 0) + 1;
   saveUnreadMap(m);
+  if(typeof updateSwitchBadge === 'function') updateSwitchBadge();
 }
 function clearUnread(roleId){
   if(!roleId) return;
   const m = getUnreadMap();
   if(m[roleId]){ delete m[roleId]; saveUnreadMap(m); }
+  if(typeof updateSwitchBadge === 'function') updateSwitchBadge();
 }
 
 /* ===== 三个通知开关读写 ===== */
@@ -10149,15 +10148,22 @@ const RANKS = [
   {num:'♕',name:'王后',en:'QUEEN'},{num:'♔',name:'国王',en:'KING'}
 ];
 const FULL_DECK = [...MAJOR.map(c=>({type:'major',num:c.num,name:c.name,en:c.en})), ...Object.keys(SUITS).flatMap(suit=>RANKS.map(r=>({type:'minor',suit,theme:SUITS[suit].theme,num:r.num,name:SUITS[suit].name+r.name,en:r.en,suitEn:SUITS[suit].en})))];
-let __tarotImgCache = lsGet('mj_tarot_imgs_v1', null) || {};
+let __tarotImgCache = lsGet('mj_tarot_imgs_v2', null) || {};
 
 function tarotHTML(card, reversed){
   const key = card.type === 'major' ? ('m_' + card.num) : (card.suit + '_' + card.num);
-  const customImg = __tarotImgCache[key];
+  const customKey = __tarotImgCache[key];
   
-  if(customImg){
+  if(customKey){
+    const domId = 'timg_' + key + '_' + Math.random().toString(36).slice(2,6);
+    setTimeout(() => {
+      __idb.toURL(customKey).then(url => {
+        const el = document.getElementById(domId);
+        if(el && url) el.src = url;
+      }).catch(()=>{});
+    }, 10);
     return `<div class="tarot ${reversed?'reversed':''}" style="background:none;border:none;overflow:hidden;border-radius:6px;box-shadow:0 2px 8px rgba(0,0,0,0.15);">
-      <img src="${customImg}" style="width:100%;height:100%;object-fit:cover;display:block;transform:${reversed?'rotate(180deg)':'none'};">
+      <img id="${domId}" style="width:100%;height:100%;object-fit:cover;display:block;transform:${reversed?'rotate(180deg)':'none'};">
       ${reversed?'<span class="t-rev-mark" style="z-index:2;">REV</span>':''}
     </div>`;
   }
@@ -10167,10 +10173,17 @@ function tarotHTML(card, reversed){
 }
 
 function tarotBackHTML(){
-  const customBack = __tarotImgCache['back'];
-  if(customBack){
+  const customKey = __tarotImgCache['back'];
+  if(customKey){
+    const domId = 'timg_back_' + Math.random().toString(36).slice(2,6);
+    setTimeout(() => {
+      __idb.toURL(customKey).then(url => {
+        const el = document.getElementById(domId);
+        if(el && url) el.src = url;
+      }).catch(()=>{});
+    }, 10);
     return `<div class="tarot back" style="background:none;border:none;overflow:hidden;border-radius:6px;box-shadow:0 2px 8px rgba(0,0,0,0.15);">
-      <img src="${customBack}" style="width:100%;height:100%;object-fit:cover;display:block;">
+      <img id="${domId}" style="width:100%;height:100%;object-fit:cover;display:block;">
     </div>`;
   }
   return `<div class="tarot back"><div class="pattern-inner"></div><div class="frame-dash"></div><div class="back-center">✦</div></div>`;
@@ -12591,31 +12604,21 @@ function openBeauty(mode){
       var f = __tarotFileInput.files && __tarotFileInput.files[0];
       __tarotFileInput.value = '';
       if(!f || !__tarotPickKey) return;
-      var fr = new FileReader();
-      fr.onload = function(){
-        var img = new Image();
-        img.onload = function(){
-          var MAX = 320;
-          var w = img.naturalWidth || img.width || MAX;
-          var h = img.naturalHeight || img.height || MAX;
-          if(w > MAX || h > MAX){
-            var k = Math.min(MAX / w, MAX / h);
-            w = Math.max(1, Math.round(w * k));
-            h = Math.max(1, Math.round(h * k));
-          }
-          var cv = document.createElement('canvas');
-          cv.width = w; cv.height = h;
-          cv.getContext('2d').drawImage(img, 0, 0, w, h);
-          var url = cv.toDataURL('image/jpeg', 0.82);
-          __tarotImgCache[__tarotPickKey] = url;
-          lsSet('mj_tarot_imgs_v1', __tarotImgCache);
-          if(typeof renderTarotGrid === 'function') renderTarotGrid();
-          toast('已更新');
-        };
-        img.onerror = function(){ toast('图片解析失败'); };
-        img.src = fr.result;
-      };
-      fr.readAsDataURL(f);
+      
+      var key = __tarotPickKey;
+      __idb.set('tarot_' + key, f).then(function() {
+        var meta = lsGet('mj_tarot_imgs_v2', {}) || {};
+        meta[key] = 'tarot_' + key;
+        lsSet('mj_tarot_imgs_v2', meta);
+        
+        if(window.__tarotImgCache) window.__tarotImgCache[key] = 'tarot_' + key;
+        
+        if(typeof window.renderTarotGrid === 'function') window.renderTarotGrid();
+        if(typeof toast === 'function') toast('已更新');
+      }).catch(function(err){
+        console.error(err);
+        if(typeof toast === 'function') toast('上传失败');
+      });
     });
 
     document.addEventListener('click', function(e){
@@ -12642,11 +12645,21 @@ function openBeauty(mode){
       RANKS.forEach(function(r){ keys.push({ k: suit + '_' + r.num, label: SUITS[suit].name + r.name }); });
     });
     grid.innerHTML = keys.map(function(it){
-      var img = __tarotImgCache[it.k];
-      return '<div data-tarot-key="' + it.k + '" style="cursor:pointer;border:0.6px solid #ececec;border-radius:6px;overflow:hidden;aspect-ratio:2/3;background:#fafafa;display:flex;align-items:center;justify-content:center;position:relative">' +
-        (img ? '<img src="' + img + '" style="width:100%;height:100%;object-fit:cover;display:block">'
-             : '<span style="font-size:9px;color:#bbb;text-align:center;padding:4px;line-height:1.3">' + it.label + '</span>') +
-      '</div>';
+      var k = __tarotImgCache[it.k];
+      var imgHtml = '';
+      if(k){
+        var tmpId = 'gridimg_' + it.k;
+        setTimeout(function(){
+          __idb.toURL(k).then(function(url){
+            var el = document.getElementById(tmpId);
+            if(el && url) el.src = url;
+          }).catch(function(){});
+        }, 10);
+        imgHtml = '<img id="' + tmpId + '" style="width:100%;height:100%;object-fit:cover;display:block">';
+      } else {
+        imgHtml = '<span style="font-size:9px;color:#bbb;text-align:center;padding:4px;line-height:1.3">' + it.label + '</span>';
+      }
+      return '<div data-tarot-key="' + it.k + '" style="cursor:pointer;border:0.6px solid #ececec;border-radius:6px;overflow:hidden;aspect-ratio:2/3;background:#fafafa;display:flex;align-items:center;justify-content:center;position:relative">' + imgHtml + '</div>';
     }).join('');
 
     grid.querySelectorAll('[data-tarot-key]').forEach(function(cell){
@@ -19506,32 +19519,41 @@ function renderBuiltinList(){
     return (a.nextBuiltinApplyAt || 0) - (b.nextBuiltinApplyAt || 0);
   });
   if(!list.length){
-    box.innerHTML = '<div class="nf-empty">还没有内置角色<br>去「建立内置角色」创建一个吧</div>';
+    box.innerHTML = '<div style="text-align:center;color:#bbb;font-size:13px;padding:60px 20px;letter-spacing:.5px">还没有内置角色<br>去「建立内置角色」创建一个吧</div>';
     return;
   }
-  const shape = 'var(--avatar-radius,12%)';
+  
   box.innerHTML = list.map(function(f){
-    return '<div class="nf-item" data-bid="' + f.id + '">' +
-      '<div class="nf-av" style="border-radius:' + shape + ';cursor:pointer" data-bl-av="' + f.id + '">' + avatarHTML(f.avatar) + '</div>' +
-      '<div class="nf-info">' +
-        '<div class="nf-name">' + escapeHTML(displayName(f)) + '</div>' +
-        '<div class="nf-sub">' + escapeHTML(getRoleSign(f)) + '</div>' +
+    const finalName = displayName(f) || f.name || '未命名角色';
+    return '<div class="bl-row" data-bid="' + f.id + '">' +
+      '<div style="width:44px;height:44px;flex:none;margin-right:12px;">' + avatarHTML(f.avatar) + '</div>' +
+      '<div class="bl-info" style="flex:1;min-width:0;">' +
+        '<div class="bl-name">' + escapeHTML(finalName) + '</div>' +
+        '<div class="bl-sub">' + escapeHTML(getRoleSign(f)) + '</div>' +
       '</div>' +
+      '<div class="bl-edit" style="padding:6px 14px;border:1px solid #eee;border-radius:12px;font-size:12.5px;color:#666;cursor:pointer;">编辑</div>' +
     '</div>';
   }).join('');
 
-  box.querySelectorAll('[data-bl-av]').forEach(function(av){
-    av.addEventListener('click', function(e){
-      e.stopPropagation();
-      const rid = av.dataset.blAv;
-      blCurRoleId = rid;
-      const role = getRoleById(rid);
-      const titleEl = document.getElementById('blMenuTitle');
-      if(titleEl) titleEl.textContent = role ? role.name : '角色';
-      const m = document.getElementById('mBuiltinMenu');
-      if(m) m.classList.add('show');
+  box.querySelectorAll('.bl-row').forEach(function(row){
+    row.addEventListener('click', function() {
+      blCurRoleId = row.dataset.bid;
+      if (typeof openBuiltinEdit === 'function') openBuiltinEdit(blCurRoleId);
     });
   });
+}
+/* 重写打开内置角色页的入口，绑定统一顶部栏 */
+function openBuiltinList(){
+  showScreen('builtinListScreen');
+  renderTopBar({
+    host: 'utopHostBuiltinList',
+    title: '内 置 角 色',
+    onBack: function(){
+      document.querySelectorAll('.screen.on').forEach(function(s){ s.classList.remove('on'); });
+      document.getElementById('mAdd').classList.remove('show');
+    }
+  });
+  renderBuiltinList();
 }
 
 /* 打开编辑面板 */
@@ -19558,11 +19580,9 @@ function openBuiltinEdit(rid){
 function renderBlEditAvatar(){
   const box = document.getElementById('blEditAvatarPreview');
   if(!box) return;
-  box.innerHTML = blEditAvatarTmp
-    ? '<img src="' + blEditAvatarTmp + '">'
-    : '<svg viewBox="0 0 100 100"><circle class="silhouette" cx="50" cy="38" r="19"/><path class="silhouette" d="M12 100 C12 74 28 62 50 62 C72 62 88 74 88 100 Z"/></svg>';
-  const shape = 'var(--avatar-radius,12%)';
-  box.style.borderRadius = shape;
+  box.innerHTML = avatarHTML(blEditAvatarTmp);
+  box.style.borderRadius = '';
+  box.style.overflow = 'visible';
 }
 
 /* 渲染编辑面板里的关系网勾选 */
@@ -19574,11 +19594,10 @@ function renderBlEditFriendList(){
     box.innerHTML = '<div style="text-align:center;color:#bbb;font-size:12.5px;padding:20px 0">没有可以建立关系的角色</div>';
     return;
   }
-  const shape = 'var(--avatar-radius,12%)';
   box.innerHTML = all.map(function(f){
     const on = blEditSelected.has(f.id);
     return '<div class="ef-friend-row" data-id="' + f.id + '" style="display:flex;align-items:center;gap:12px;padding:11px 4px;border-bottom:0.6px dashed rgba(0,0,0,.06);cursor:pointer">' +
-      '<div class="ef-av" style="width:38px;height:38px;flex:none;border-radius:' + shape + ';background:#f2f2f2;overflow:hidden;position:relative">' + avatarHTML(f.avatar) + '</div>' +
+      '<div style="width:38px;height:38px;flex:none;">' + avatarHTML(f.avatar) + '</div>' +
       '<div style="flex:1;min-width:0">' +
         '<div style="font-size:14px;color:#1a1a1a;letter-spacing:.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + escapeHTML(displayName(f)) + '</div>' +
       '</div>' +
@@ -26072,7 +26091,7 @@ on('#closeNewFriend','click',()=>$('#mNewFriend').classList.remove('show'));
 on('#closeNewGroup','click',()=>$('#mNewGroup').classList.remove('show'));
 function openNewGroup(){
   $('#ngName').value = '';
-  const friends = getFriends();
+  const friends = getFriends().filter(f => !f.builtin && !f.hidden);
   const groups = getGroups();
   const ungrouped = friends.filter(f => !f.group || !groups.includes(f.group));
   const ungroupedIds = ungrouped.map(f => f.id);
@@ -26157,7 +26176,7 @@ function openProfileFor(roleId){
   if(!role) return;
   // 记录当前正在查看的角色（点"发消息"时用）
   window.__profileViewId = roleId;
-  $('#profileAvatar').innerHTML = avatarHTML(role.avatar);
+  $('#profileAvatar').innerHTML = avatarHTML(role.avatar, 'lg');
   $('#profileName').textContent = displayName(role);
   $('#profileSign').textContent = getRoleSign(role);
   // 状态和心情要读那个角色的
@@ -29696,6 +29715,7 @@ function switchToRole(id){
   applyMoodUI();
   applyTopbarBg();
   clearUnread(id);
+  updateSwitchBadge();
   const colScr = document.getElementById('collectScreen');
   if(colScr && colScr.classList.contains('on')){
     const activeTab = document.querySelector('#colTabs .memo-tab.on');
