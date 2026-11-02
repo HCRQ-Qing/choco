@@ -37,6 +37,8 @@
 <link rel="stylesheet" href="css/extra.css">
 <link rel="stylesheet" href="css/groupchat.css">
 <link rel="stylesheet" href="css/media.css">
+<link rel="stylesheet" href="css/truth.css">
+<link rel="stylesheet" href="css/truth.css">
 </head>
 <body>
 <div id="app">
@@ -2650,6 +2652,32 @@
 
 
 
+<!-- ============ 真心话 ============ -->
+<div class="truth-screen" id="truthScreen">
+  <div class="truth-wrap">
+    <div class="truth-utop">
+      <button class="back" id="truthBack" type="button">‹</button>
+      <div class="title">真 心 话</div>
+      <div class="right"></div>
+    </div>
+    <div class="truth-input-block">
+      <div class="truth-input-lbl">QUESTION</div>
+      <div class="truth-input-box">
+        <input type="text" id="truthQInput" placeholder="想问什么？打完按回车切问题">
+      </div>
+      <div class="truth-cur-q" id="truthCurQ"></div>
+    </div>
+    <div class="truth-deck-row">
+      <div class="truth-deck-pile" id="truthDeckPile">
+        <div class="c"></div><div class="c"></div><div class="c"></div>
+      </div>
+      <div class="truth-deck-info" id="truthDeckInfo"></div>
+      <button class="truth-deck-btn" id="truthDrawBtn">抽一张</button>
+    </div>
+    <div class="truth-groups" id="truthGroups"></div>
+  </div>
+</div>
+
 <!-- ============ 字卡需求 ============ -->
 <div class="screen" id="cardDemandScreen">
   <div id="utopHostCardDemand"></div>
@@ -4995,6 +5023,7 @@
  
 <!-- ===== 主应用逻辑（聊天/字卡/朋友/我的等） ===== -->
 <script src="js/app.js"></script>
+<script src="js/truth.js"></script>
 <!-- ===== 回复链 / 已读推平（接管 triggerReply / runReplyChain / ReplyRunner） ===== -->
 <script src="js/reply-core.js"></script>
 <!-- ===== 后台强力保活（Worker 心跳 / 手势解锁 / 冻结补跑） ===== -->
