@@ -241,6 +241,11 @@
   }
 
   function pickImport(){
+    try {
+      var active = document.activeElement;
+      if(active && (active.tagName === 'TEXTAREA' || active.tagName === 'INPUT')) { active.blur(); }
+      document.querySelectorAll('.screen, .modal').forEach(function(el){ el.classList.remove('show', 'on'); });
+    } catch(e) {}
     var f = document.getElementById('bkImportFile');
     if(f){ f.value = ''; f.click(); }
   }
