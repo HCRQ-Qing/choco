@@ -85,7 +85,7 @@
   --z-modal: 600;
   --z-toast: 700;
 
-  /* ===== 颜色变量（照预览取值） ===== */
+  /* ===== 颜色变量：组件应消费语义 token，而不是直接写色值 ===== */
   --c-bg: #ececec;
   --c-page: #ffffff;
   --c-ink: #1a1a1a;
@@ -101,6 +101,29 @@
   --c-badge: #1a1a1a;
   --c-badge-ink: #ffffff;
   --c-shadow: rgba(0, 0, 0, 0.07);
+  --c-danger: #c62828;
+  --c-warning: #8d6e00;
+  --c-success: #2e7d32;
+  --c-highlight: rgba(255, 213, 74, 0.35);
+  --c-overlay: rgba(0, 0, 0, 0.35);
+
+  /* ===== 通用主题接口：新增组件优先使用这些变量 ===== */
+  --theme-bg: var(--c-bg);
+  --theme-surface: var(--c-page);
+  --theme-surface-raised: var(--c-page);
+  --theme-text: var(--c-ink);
+  --theme-text-secondary: var(--c-ink-2);
+  --theme-text-muted: var(--c-muted);
+  --theme-border: var(--c-border);
+  --theme-divider: var(--c-line);
+  --theme-accent: var(--c-ink);
+  --theme-accent-contrast: var(--c-page);
+  --theme-danger: var(--c-danger);
+  --theme-warning: var(--c-warning);
+  --theme-success: var(--c-success);
+  --theme-highlight: var(--c-highlight);
+  --theme-overlay: var(--c-overlay);
+  --theme-shadow: var(--c-shadow);
 
   /* ===== 旧 --th-* 变量别名（统一指向常量表，保持兼容） ===== */
   --app-font: var(--font-cn);
@@ -158,6 +181,11 @@
   --c-badge: #e8e8e8;
   --c-badge-ink: #1a1a1a;
   --c-shadow: rgba(0,0,0,0.35);
+  --c-danger: #ff7b82;
+  --c-warning: #ffd166;
+  --c-success: #80cbc4;
+  --c-highlight: rgba(255, 213, 74, 0.20);
+  --c-overlay: rgba(0, 0, 0, 0.62);
 
   --th-accent-deep: #ffffff;
   --th-accent-line: rgba(255,255,255,0.18);
