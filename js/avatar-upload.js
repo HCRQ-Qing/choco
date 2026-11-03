@@ -39,18 +39,23 @@
           if (rid && typeof saveRoleField === 'function') saveRoleField(rid, 'avatar', dataUrl);
           var cipAv = document.getElementById('cipAvatar');
           if (cipAv) cipAv.innerHTML = typeof avatarHTML === 'function' ? avatarHTML(dataUrl) : '';
+          if (typeof refreshChatRole === 'function') refreshChatRole();
           if (typeof forceRepaintChat === 'function') forceRepaintChat('cip avatar');
         } else if (context === 'profile') {
           var pid = window.__profileViewId || (typeof getCurrentRoleId === 'function' ? getCurrentRoleId() : '');
           if (pid && typeof saveRoleField === 'function') saveRoleField(pid, 'avatar', dataUrl);
           var pAv = document.getElementById('profileAvatar');
           if (pAv) pAv.innerHTML = typeof avatarHTML === 'function' ? avatarHTML(dataUrl) : '';
+          if (pid === (typeof getCurrentRoleId === 'function' ? getCurrentRoleId() : '')) {
+            if (typeof refreshChatRole === 'function') refreshChatRole();
+          }
           if (typeof forceRepaintChat === 'function') forceRepaintChat('profile avatar');
         } else if (context === 'me') {
           if (typeof userProfile !== 'undefined') {
             userProfile.avatar = dataUrl;
             if (typeof saveUser === 'function') saveUser();
             if (typeof renderMePage === 'function') renderMePage();
+            if (typeof refreshChatRole === 'function') refreshChatRole();
             if (typeof forceRepaintChat === 'function') forceRepaintChat('me avatar');
           }
         }
