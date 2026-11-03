@@ -20544,7 +20544,12 @@ function applyTopbarBg(){
   }
   stack.style.transform = `translateX(-100%)`;
   document.addEventListener('visibilitychange', function(){
-    if(document.hidden) return;
+    if(document.hidden){
+      dragging = false;
+      dx = 0;
+      stack.style.transition = '';
+      return;
+    }
     dragging = false;
     dx = 0;
     stack.style.transition = '';
