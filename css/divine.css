@@ -38,6 +38,10 @@
 }
 #mExport .acts button:active{opacity:.85;}
 
+.tarot-pending-img {
+  object-position: top center !important;
+}
+
 /* ===== #mDivine · 方案A 极简细线 ===== */
 #mDivine .sheet{
   position:relative;z-index:1;
