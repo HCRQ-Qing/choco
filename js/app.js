@@ -10375,12 +10375,20 @@ function hydrateTarotImages(container){
     if(customKey.startsWith('data:')){
       img.src = customKey;
       img.onload = () => { img.style.opacity = '1'; };
+      img.onerror = () => {
+        img.style.display = 'none';
+        if(window.__tarotImgCache && window.__tarotImgCache[key] === customKey){
+          delete window.__tarotImgCache[key];
+          lsSet('mj_tarot_imgs_v2', window.__tarotImgCache);
+        }
+      };
       return;
     }
     __idb.toURL(customKey).then(url => {
       if(url){
         img.src = url;
         img.onload = () => { img.style.opacity = '1'; };
+        img.onerror = () => { img.style.display = 'none'; };
       } else {
         img.style.display = 'none';
       }
@@ -12893,6 +12901,12 @@ function openBeauty(mode){
             inp.value = '';
             var key = inp.dataset.pickKey || '';
             if(!f || !key) return;
+
+            if(!window.__idb || typeof window.__idb.set !== 'function'){
+               toast('底层数据库未加载，无法保存图片');
+               return;
+            }
+
             var fr = new FileReader();
             fr.onload = function(){
               var img = new Image();
@@ -12908,11 +12922,18 @@ function openBeauty(mode){
                 var cv = document.createElement('canvas');
                 cv.width = w; cv.height = h;
                 cv.getContext('2d').drawImage(img, 0, 0, w, h);
-                var url = cv.toDataURL('image/jpeg', 0.82);
-                __tarotImgCache[key] = url;
-                lsSet('mj_tarot_imgs_v2', __tarotImgCache);
-                window.renderTarotGrid();
-                toast('已更新');
+                cv.toBlob(function(blob){
+                  var dbKey = 'tarot_' + key + '_' + Date.now();
+                  window.__idb.set(dbKey, blob).then(function(){
+                    __tarotImgCache[key] = dbKey;
+                    lsSet('mj_tarot_imgs_v2', __tarotImgCache);
+                    window.renderTarotGrid();
+                    toast('已更新');
+                  }).catch(function(err){
+                    console.error('存图失败', err);
+                    toast('存图失败：容量不足或浏览器限制');
+                  });
+                }, 'image/jpeg', 0.82);
               };
               img.onerror = function(){ toast('图片解析失败'); };
               img.src = fr.result;
@@ -12944,6 +12965,12 @@ function openBeauty(mode){
             inp.value = '';
             var key = inp.dataset.pickKey || '';
             if(!f || !key) return;
+
+            if(!window.__idb || typeof window.__idb.set !== 'function'){
+               toast('底层数据库未加载，无法保存图片');
+               return;
+            }
+
             var fr = new FileReader();
             fr.onload = function(){
               var img = new Image();
@@ -12959,11 +12986,18 @@ function openBeauty(mode){
                 var cv = document.createElement('canvas');
                 cv.width = w; cv.height = h;
                 cv.getContext('2d').drawImage(img, 0, 0, w, h);
-                var url = cv.toDataURL('image/jpeg', 0.82);
-                __tarotImgCache[key] = url;
-                lsSet('mj_tarot_imgs_v2', __tarotImgCache);
-                window.renderTarotGrid();
-                toast('已更新');
+                cv.toBlob(function(blob){
+                  var dbKey = 'tarot_' + key + '_' + Date.now();
+                  window.__idb.set(dbKey, blob).then(function(){
+                    __tarotImgCache[key] = dbKey;
+                    lsSet('mj_tarot_imgs_v2', __tarotImgCache);
+                    window.renderTarotGrid();
+                    toast('已更新');
+                  }).catch(function(err){
+                    console.error('存图失败', err);
+                    toast('存图失败：容量不足或浏览器限制');
+                  });
+                }, 'image/jpeg', 0.82);
               };
               img.onerror = function(){ toast('图片解析失败'); };
               img.src = fr.result;
