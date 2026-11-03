@@ -7,7 +7,7 @@
   width:100%;
   max-width:780px;
   z-index:1200;
-  background:var(--th-accent-soft);
+  background:var(--th-bg1);
   overflow-y:auto;
   display:none;
   opacity:0;
@@ -26,7 +26,7 @@
 }
 .cip-nav{
   display:flex;align-items:center;gap:12px;
-  padding:16px 20px;background:var(--th-accent-soft);
+  padding:16px 20px;background:var(--th-bg1);
 }
 .cip-nav h1{
   flex:1;font-size:16px;font-weight:500;letter-spacing:2px;

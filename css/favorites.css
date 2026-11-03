@@ -275,7 +275,7 @@
 
 /* ===== 收藏页 ===== */
 #collectScreen{
-  background:var(--th-accent-soft);
+  background:var(--th-bg1);
   flex-direction:column;
   z-index:100;
 }
@@ -286,7 +286,7 @@
 .col-body{
   display:block;
   padding:0 16px 40px;
-  background:var(--th-accent-soft);
+  background:var(--th-bg1);
 }
 .col-item{
   background:var(--th-bg1);
