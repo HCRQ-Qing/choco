@@ -10498,7 +10498,8 @@ function startDivine(){
   const roleName=getCurrentRoleName();
   const enTitle = divineWho==='self' ? 'SHUFFLING' : 'SHUFFLING';
   const cnTitle = divineWho==='self' ? '洗 牌 中' : `${escapeHTML(roleName)} 正 在 洗 牌`;
-  $('#divineBody').innerHTML=`<div class="shuffling"><div class="sh-title">${enTitle}</div><div class="sh-sub">${cnTitle}</div><div class="shuffle-stage"><div class="shuffle-card s1"><div class="mini-pattern"></div></div><div class="shuffle-card s2"><div class="mini-pattern"></div></div><div class="shuffle-card s3"><div class="mini-pattern"></div></div><div class="shuffle-card s4"><div class="mini-pattern"></div></div><div class="shuffle-card s5"><div class="mini-pattern"></div></div></div><div class="sh-track"></div></div>`;
+  $('#divineBody').innerHTML=`<div class="shuffling"><div class="sh-title">${enTitle}</div><div class="sh-sub">${cnTitle}</div><div class="shuffle-stage"><div class="shuffle-card s1">${tarotBackHTML()}</div><div class="shuffle-card s2">${tarotBackHTML()}</div><div class="shuffle-card s3">${tarotBackHTML()}</div><div class="shuffle-card s4">${tarotBackHTML()}</div><div class="shuffle-card s5">${tarotBackHTML()}</div></div><div class="sh-track"></div></div>`;
+  hydrateTarotImages($('#divineBody'));
   setTimeout(()=>{ const picked=[]; const pool=[...FULL_DECK]; for(let i=0;i<divineCount;i++){ const idx=Math.floor(Math.random()*pool.length); const card=pool.splice(idx,1)[0]; const reversed=Math.random()<0.5; picked.push({card,reversed}); } showDrawAnimation(q,picked); },2200);
 }
 function showDrawAnimation(q,picked){
@@ -12847,10 +12848,22 @@ function openBeauty(mode){
       if(!t || !t.closest) return;
       if(t.closest('#tarotResetAll')){
         e.preventDefault(); e.stopPropagation();
+        if(!confirm('确定要清空所有已上传的塔罗牌面/牌背图片吗？')) return;
+        
+        var cache = __tarotImgCache || {};
+        Object.keys(cache).forEach(function(k){
+          var v = cache[k];
+          if(v && !String(v).startsWith('data:') && window.__idb && window.__idb.del){
+            window.__idb.del(v).catch(function(){});
+          }
+        });
+
         __tarotImgCache = {};
+        lsSet('mj_tarot_imgs_v2', {});
         lsSet('mj_tarot_imgs_v1', {});
+        
         if(typeof window.renderTarotGrid === 'function') window.renderTarotGrid();
-        toast('已清空所有塔罗图片');
+        if(typeof toast === 'function') toast('已清空所有塔罗图片');
         return;
       }
     }, true);
