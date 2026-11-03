@@ -662,6 +662,9 @@ body[data-bubble="bracket"] .msg .voice-bubble::after{content:none !important}
   pointer-events: none;
   transition: opacity 0.2s ease;
 }
+[data-theme="dark"] #page-chat::after {
+  background: transparent;
+}
 #page-chat .split-side,
 #page-chat .split-main,
 #page-chat .chat-topbar,
