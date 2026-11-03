@@ -120,6 +120,13 @@ function applyBeautyCfg(){
   if(typeof beautyCfg.padH     !== 'number') beautyCfg.padH     = 14;
   if(typeof beautyCfg.radius   !== 'number') beautyCfg.radius   = 18;
 
+  if(!document.getElementById('imgGlobalSafe')){
+    var st = document.createElement('style');
+    st.id = 'imgGlobalSafe';
+    st.textContent = 'img:not(.d-icon svg), .msg-image-bubble, .img-wrapper, #page-chat::before, .chat-avatar img, .profile-avatar img, .me-avatar img { filter: none !important; opacity: 1 !important; mix-blend-mode: normal !important; }';
+    document.head.appendChild(st);
+  }
+
   // 内置气泡变量
   document.documentElement.style.setProperty('--bubble-font-size', beautyCfg.fontSize + 'px');
   document.documentElement.style.setProperty('--bubble-pad-v',     beautyCfg.padV + 'px');
@@ -2328,12 +2335,12 @@ function avatarHTML(a, size){
   if(src.startsWith('data:') || src.startsWith('blob:') || src.startsWith('http')) {
     inner = `<img src="${src}" onerror="this.style.display='none'" style="width:100%;height:100%;object-fit:cover;border-radius:inherit;">`;
   } else {
-    inner = `<svg viewBox="0 0 100 100" style="width:100%;height:100%;border-radius:inherit;"><circle fill="var(--th-av-sil, #d4d4d4)" cx="50" cy="38" r="19"/><path fill="var(--th-av-sil, #d4d4d4)" d="M12 100 C12 74 28 62 50 62 C72 62 88 74 88 100 Z"/></svg>`;
+    inner = `<svg viewBox="0 0 100 100" style="width:100%;height:100%;border-radius:inherit;display:block;"><circle fill="var(--th-av-sil)" cx="50" cy="38" r="19"></circle><path fill="var(--th-av-sil)" d="M12 100 C12 74 28 62 50 62 C72 62 88 74 88 100 Z"></path></svg>`;
   }
   
   var cls = 'uni-avatar' + (size ? ' ' + size : '');
-  var bgStyle = src.startsWith('data:') || src.startsWith('blob:') || src.startsWith('http') ? 'transparent' : 'var(--th-av-bg, rgba(0,0,0,0.06))';
-  return `<div class="${cls}" style="border-radius: var(--avatar-radius, 12%); overflow: hidden; display: flex; align-items: center; justify-content: center; background:${bgStyle};">${inner}</div>`;
+  var bgStyle = src.startsWith('data:') || src.startsWith('blob:') || src.startsWith('http') ? 'transparent' : 'var(--th-av-bg)';
+  return `<div class="${cls}" style="border-radius: var(--avatar-radius, 12%); overflow: hidden; display: flex; align-items: center; justify-content: center; background:${bgStyle}; border:none;">${inner}</div>`;
 }
 /* ★ 死代码清理：userAvHTML 直接复用统一入口 avatarHTML，防止两套逻辑打架 */
 function userAvHTML(a){ return avatarHTML(a, 'sm'); }
@@ -2924,20 +2931,15 @@ function renderChatFull(forceBottom){
 	  const accHTML = r => (typeof r.acc === 'number' ? `<span class="dc-acc">准度 ${r.acc}%</span>` : '');
 	  const readsHTML = reads.length ? (()=>{
 	    const list = reads.slice();
-	    const first = list[0];
-	    const rest = list.slice(1);
-	    let inner = `<div class="dc-reads" id="dcReads-${m.id}">`;
-	    inner += `<div class="dc-read-item"><span class="rn">1.</span>${escapeHTML(first.text)}<span class="rt">${fmt(first.time)}</span>${accHTML(first)}</div>`;
-	    if(rest.length){
-	      inner += `<div class="dc-read-hidden">`;
-	      rest.forEach((r, i)=>{
-	        inner += `<div class="dc-read-item"><span class="rn">${i+2}.</span>${escapeHTML(r.text)}<span class="rt">${fmt(r.time)}</span>${accHTML(r)}</div>`;
-	      });
-	      inner += `</div>`;
-	      inner += `</div>`;
-	      inner += `<div class="dc-read-tag" data-dc-toggle="dcReads-${m.id}">展开全部 · 共 ${list.length} 条 <span class="caret">›</span></div>`;
-	    } else {
-	      inner += `</div>`;
+	    /* 默认全部展开 */
+	    const isCollapsed = !!window.__dcCollapsedSet && window.__dcCollapsedSet.has(m.id);
+	    let inner = `<div class="dc-reads" id="dcReads-${m.id}" style="display:${isCollapsed?'none':'block'}">`;
+	    list.forEach((r, i)=>{
+	      inner += `<div class="dc-read-item"><span class="rn">${i+1}.</span>${escapeHTML(r.text)}<span class="rt">${fmt(r.time)}</span>${accHTML(r)}</div>`;
+	    });
+	    inner += `</div>`;
+	    if(list.length > 1){
+	      inner += `<div class="dc-read-tag" data-dc-toggle="dcReads-${m.id}">${isCollapsed ? '展开全部 · 共 ' + list.length + ' 条' : '收起'} <span class="caret" style="display:inline-block;transform:${isCollapsed?'rotate(0deg)':'rotate(90deg)'}">›</span></div>`;
 	    }
 	    return inner;
 	  })() : '';
@@ -3090,9 +3092,23 @@ function renderChatFull(forceBottom){
       const targetId = el.dataset.dcToggle;
       const wrap = document.getElementById(targetId);
       if(!wrap) return;
-      wrap.classList.toggle('open');
+      const msgId = targetId.replace('dcReads-', '');
+      if(!window.__dcCollapsedSet) window.__dcCollapsedSet = new Set();
+      
+      const isNowCollapsed = wrap.style.display !== 'none';
+      if(isNowCollapsed){
+        wrap.style.display = 'none';
+        window.__dcCollapsedSet.add(msgId);
+      } else {
+        wrap.style.display = 'block';
+        window.__dcCollapsedSet.delete(msgId);
+      }
+      
+      /* 更新文字和箭头 */
       const caret = el.querySelector('.caret');
-      if(caret) caret.style.transform = wrap.classList.contains('open') ? 'rotate(90deg)' : '';
+      if(caret) caret.style.transform = isNowCollapsed ? 'rotate(0deg)' : 'rotate(90deg)';
+      const totalCount = wrap.querySelectorAll('.dc-read-item').length;
+      el.innerHTML = (isNowCollapsed ? '展开全部 · 共 ' + totalCount + ' 条' : '收起') + ' <span class="caret" style="display:inline-block;transform:' + (isNowCollapsed ? 'rotate(0deg)' : 'rotate(90deg)') + '">›</span>';
     });
   });
   /* ★ 点已写的理解行 → 直接打开写占卜理解弹窗，方便追加 */
@@ -10355,19 +10371,19 @@ function renderDivineRecords(){
   box.innerHTML=list.map(rec=>{
 	const allReads = rec.reads || [];
 	const hasReads = allReads.length > 0;
-	/* 默认只显示最新 1 条；展开时显示全部 */
-	const expanded = !!window.__drExpandedSet && window.__drExpandedSet.has(rec.id);
-	const shown = hasReads
-	  ? (expanded ? allReads : allReads.slice(-1))
-	  : [];
+	/* ★ 改成：默认全部展开，用户手动点击才收起 */
+	const collapsed = !!window.__drExpandedSet && window.__drExpandedSet.has(rec.id);
+	const shown = hasReads ? allReads : [];
 	const readsHTML = hasReads
 	  ? `<div class="dr-reads">
 		   <div class="dr-reads-title" data-rec-toggle="${rec.id}">
 			 <span>你的理解（${allReads.length}）</span>
-			 <span class="dr-reads-arrow ${expanded?'open':''}">›</span>
+			 <span class="dr-reads-arrow ${collapsed?'':'open'}" style="transform:${collapsed?'rotate(0deg)':'rotate(90deg)'}">›</span>
 		   </div>
+		   <div class="dr-read-hidden ${collapsed?'':'open'}" style="display:${collapsed?'none':'block'}">
 		   ${shown.map(r=>`<div class="dr-read-item"><div class="rt">${new Date(r.time).toLocaleString('zh-CN',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})}</div><div class="rx">${escapeHTML(r.text)}</div></div>`).join('')}
-		   ${allReads.length > 1 ? `<div class="dr-reads-more" data-rec-toggle="${rec.id}">${expanded?'收起':'展开全部 '+allReads.length+' 条'}</div>` : ''}
+		   </div>
+		   ${allReads.length > 1 ? `<div class="dr-reads-more" data-rec-toggle="${rec.id}">${collapsed?'展开全部 '+allReads.length+' 条':'收起'}</div>` : ''}
 		 </div>`
 	  : '';
 	return `<div class="dr-card" data-rec="${rec.id}"><div class="dr-head"><span>${new Date(rec.time).toLocaleString('zh-CN',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})} · ${escapeHTML(rec.who==='self'?'我抽的':roleName+'抽的')}</span><button class="dr-del" data-rec-del="${rec.id}" type="button">✕</button></div><div class="dr-q">${escapeHTML(rec.question)}</div><div class="dr-cards">${rec.cards.map(c=>tarotHTML(c.card,c.reversed)).join('')}</div>${readsHTML}<button class="dr-add-read" data-rec-add="${rec.id}">✦ ${hasReads?'追加新的理解':'填写答案 / 解读'}</button></div>`;
@@ -13353,8 +13369,14 @@ function applyTitleText(){
   const c = getTitleTextCfg();
   const cn = document.querySelector('#chatTopbar .topbar-title .cn');
   const en = document.querySelector('#chatTopbar .topbar-title .en');
-  if(cn){ cn.textContent = c.cn || '私语'; cn.style.color = c.light?'#fff':'#1a1a1a'; }
-  if(en){ en.textContent = c.en || 'THE OTHER SIDE'; en.style.color = c.light?'rgba(255,255,255,.6)':'#bbb'; }
+  if(cn){ 
+    cn.textContent = c.cn || '私语'; 
+    cn.style.color = c.light ? '#fff' : 'var(--th-text)'; 
+  }
+  if(en){ 
+    en.textContent = c.en || 'THE OTHER SIDE'; 
+    en.style.color = c.light ? 'rgba(255,255,255,.6)' : 'var(--th-text-soft)'; 
+  }
 }
 function renderTitleTextPanel(){
   const c = getTitleTextCfg();
@@ -13789,7 +13811,11 @@ if(typeof beautyCfg.chatBarAlpha !== 'number') beautyCfg.chatBarAlpha = 100;
 let _barPreviewCssUrl = '';
 function updateChatBarStyle() {
   const alpha = beautyCfg.chatBarAlpha;
-  const bgRgba = 'rgba(255,255,255,' + (alpha / 100) + ')';
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  const r = isDark ? 42 : 255;
+  const g = isDark ? 42 : 255;
+  const b = isDark ? 42 : 255;
+  const bgRgba = 'rgba(' + r + ',' + g + ',' + b + ',' + (alpha / 100) + ')';
   
   // 1. 把外层整个胶囊的底色调成可变透明
   const dBar = document.querySelector('#page-chat .d-bar');
@@ -20517,6 +20543,13 @@ function applyTopbarBg(){
 	stack.style.transform = `translateX(${-(cur)*100}%)`;
   }
   stack.style.transform = `translateX(-100%)`;
+  document.addEventListener('visibilitychange', function(){
+    if(document.hidden) return;
+    dragging = false;
+    dx = 0;
+    stack.style.transition = '';
+    go(cur);
+  });
   function isInteractive(el){
 	if(!el || !el.closest) return false;
 	/* 只有这些是「真正需要独占触摸」的控件：
@@ -26054,20 +26087,44 @@ let biAutoAddTmp = false;
 function renderBiAvatar(){
   const box = $('#biAvatarPreview');
   if(!box) return;
-  box.innerHTML = biAvatarTmp
-    ? `<img src="${biAvatarTmp}">`
-    : `<svg viewBox="0 0 100 100"><circle class="silhouette" cx="50" cy="38" r="19"/><path class="silhouette" d="M12 100 C12 74 28 62 50 62 C72 62 88 74 88 100 Z"/></svg>`;
+  box.innerHTML = avatarHTML(biAvatarTmp);
   box.style.borderRadius = 'var(--avatar-radius,12%)';
+  box.style.overflow = 'hidden';
+  box.style.display = 'flex';
+  box.style.alignItems = 'stretch';
+  box.style.justifyContent = 'stretch';
+  box.style.background = 'var(--th-av-bg)';
+  box.style.width = '72px';
+  box.style.height = '72px';
+  box.style.padding = '0';
+  box.style.margin = '0';
+  if (box.firstElementChild) {
+    box.firstElementChild.style.width = '100%';
+    box.firstElementChild.style.height = '100%';
+    box.firstElementChild.style.borderRadius = '0';
+  }
 }
 
 
 function renderNfAvatar(){
   const box = $('#nfAvatarPreview');
   if(!box) return;
-  box.innerHTML = nfAvatarTmp
-    ? `<img src="${nfAvatarTmp}">`
-    : `<svg viewBox="0 0 100 100"><circle class="silhouette" cx="50" cy="38" r="19"/><path class="silhouette" d="M12 100 C12 74 28 62 50 62 C72 62 88 74 88 100 Z"/></svg>`;
+  box.innerHTML = avatarHTML(nfAvatarTmp);
   box.style.borderRadius = 'var(--avatar-radius,12%)';
+  box.style.overflow = 'hidden';
+  box.style.display = 'flex';
+  box.style.alignItems = 'stretch';
+  box.style.justifyContent = 'stretch';
+  box.style.background = 'var(--th-av-bg)';
+  box.style.width = '72px';
+  box.style.height = '72px';
+  box.style.padding = '0';
+  box.style.margin = '0';
+  if (box.firstElementChild) {
+    box.firstElementChild.style.width = '100%';
+    box.firstElementChild.style.height = '100%';
+    box.firstElementChild.style.borderRadius = '0';
+  }
 }
 
 function renderNfGroupList(){
