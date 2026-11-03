@@ -12,6 +12,7 @@ if(typeof window.platformClass !== 'function'){
 var platformClass = window.platformClass;
 
 const $ = s => document.querySelector(s);
+const $$ = s => Array.from(document.querySelectorAll(s));
 
 /* ===== 新增：全局数据急救清洗（防范导入备份后的死循环/爆栈） ===== */
 (function fixImportedDataCrash() {
@@ -74,7 +75,6 @@ const $ = s => document.querySelector(s);
     console.error('数据清洗失败:', e);
   }
 })();
-const $$ = s => Array.from(document.querySelectorAll(s));
 const uid = () => Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 const _mem = {};
 function lsGet(k,d){ try{const v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch(e){return _mem[k]!==undefined?_mem[k]:d;} }
@@ -137,29 +137,36 @@ function isPageInBackground(){
   return false;
 }
 
+/* ============================================================
+ *  主题系统 · 单一入口
+ *  颜色变量全部在 css/theme.css 中定义，这里只负责切换 data-theme。
+ *  新增主题：在 theme.css 加 [data-theme="xxx"] + 把 id 加进 THEMES 即可。
+ * ========================================================== */
 const THEMES = [
-  {id:'bw',name:'黑白',accent:'#1a1a1a',mbText:'#ffffff',v:{'--th-bg0':'#ffffff','--th-bg1':'#ffffff','--th-card':'#ffffff','--th-text':'#1a1a1a','--th-text-soft':'#999999','--th-text-mute':'#bbbbbb','--th-accent':'#1a1a1a','--th-accent-deep':'#000000','--th-accent-soft':'rgba(0,0,0,.04)','--th-accent-soft-2':'rgba(0,0,0,.08)','--th-accent-line':'rgba(0,0,0,.15)','--topbar-a':'rgba(0,0,0,.04)','--topbar-b':'#ffffff','--topbar-c':'#ffffff','--topbar-line':'rgba(0,0,0,.12)'}},
-  {id:'dark',name:'夜间',accent:'#e8e8e8',mbText:'#1a1a1a',v:{'--th-bg0':'#1a1a1a','--th-bg1':'#252525','--th-card':'#2e2e2e','--th-text':'#e8e8e8','--th-text-soft':'#a8a8a8','--th-text-mute':'#808080','--th-accent':'#e8e8e8','--th-accent-deep':'#ffffff','--th-accent-soft':'rgba(255,255,255,.06)','--th-accent-soft-2':'rgba(255,255,255,.10)','--th-accent-line':'rgba(255,255,255,.18)','--topbar-a':'rgba(255,255,255,.04)','--topbar-b':'#252525','--topbar-c':'#252525','--topbar-line':'rgba(255,255,255,.14)'}}
+  { id:'bw',   name:'黑白' },
+  { id:'dark', name:'夜间' }
 ];
 function applyTheme(id){
   const t = THEMES.find(x=>x.id===id) || THEMES[0];
-  const root = document.documentElement;
-  Object.keys(t.v).forEach(k => root.style.setProperty(k, t.v[k]));
-  root.style.setProperty('--mb-bg', t.accent);
-  root.style.setProperty('--mb-text', t.mbText);
-  root.setAttribute('data-theme', t.id);
+  document.documentElement.setAttribute('data-theme', t.id);
   lsSet('mj_theme', t.id);
+  // 同步浏览器顶栏颜色
+  const meta = document.getElementById('metaThemeColor');
+  if(meta){
+    meta.setAttribute('content', t.id === 'dark' ? '#1a1a1a' : '#ffffff');
+  }
 }
 try{
   // 旧主题 id 回退：如果 localStorage 里存的是已删除的主题，自动改成 bw
   (function migrateTheme(){
-    const VALID = ['bw', 'dark'];   // 目前支持黑白 / 夜间；以后加新主题，把 id 加进来即可
+    const VALID = THEMES.map(t=>t.id);
     const cur = lsGet('mj_theme', 'bw');
     if(!VALID.includes(cur)){
       lsSet('mj_theme', 'bw');
     }
   })();
-  applyTheme('bw');
+  // 读取已保存的主题并应用（不再强制 bw）
+  applyTheme(lsGet('mj_theme', 'bw'));
 }catch(e){ console.error(e); }
 
 const CALL_ROLE_CFG_KEY = 'mj_call_role_cfg_v1';
@@ -174,6 +181,13 @@ function applyBeautyCfg(){
   if(typeof beautyCfg.padV     !== 'number') beautyCfg.padV     = 8;
   if(typeof beautyCfg.padH     !== 'number') beautyCfg.padH     = 14;
   if(typeof beautyCfg.radius   !== 'number') beautyCfg.radius   = 18;
+
+  if(!document.getElementById('imgGlobalSafe')){
+    var st = document.createElement('style');
+    st.id = 'imgGlobalSafe';
+    st.textContent = 'img:not(.d-icon svg), .msg-image-bubble, .img-wrapper, #page-chat::before, .chat-avatar img, .profile-avatar img, .me-avatar img { filter: none !important; opacity: 1 !important; mix-blend-mode: normal !important; }';
+    document.head.appendChild(st);
+  }
 
   // 内置气泡变量
   document.documentElement.style.setProperty('--bubble-font-size', beautyCfg.fontSize + 'px');
@@ -2383,11 +2397,12 @@ function avatarHTML(a, size){
   if(src.startsWith('data:') || src.startsWith('blob:') || src.startsWith('http')) {
     inner = `<img src="${src}" onerror="this.style.display='none'" style="width:100%;height:100%;object-fit:cover;border-radius:inherit;">`;
   } else {
-    inner = `<svg viewBox="0 0 100 100" style="width:100%;height:100%;border-radius:inherit;"><circle fill="#d4d4d4" cx="50" cy="38" r="19"/><path fill="#d4d4d4" d="M12 100 C12 74 28 62 50 62 C72 62 88 74 88 100 Z"/></svg>`;
+    inner = `<svg viewBox="0 0 100 100" style="width:100%;height:100%;border-radius:inherit;display:block;"><circle fill="var(--th-av-sil)" cx="50" cy="38" r="19"></circle><path fill="var(--th-av-sil)" d="M12 100 C12 74 28 62 50 62 C72 62 88 74 88 100 Z"></path></svg>`;
   }
   
   var cls = 'uni-avatar' + (size ? ' ' + size : '');
-  return `<div class="${cls}" style="border-radius: var(--avatar-radius, 12%); overflow: hidden; display: flex; align-items: center; justify-content: center;">${inner}</div>`;
+  var bgStyle = src.startsWith('data:') || src.startsWith('blob:') || src.startsWith('http') ? 'transparent' : 'var(--th-av-bg)';
+  return `<div class="${cls}" style="border-radius: var(--avatar-radius, 12%); overflow: hidden; display: flex; align-items: center; justify-content: center; background:${bgStyle}; border:none;">${inner}</div>`;
 }
 /* ★ 死代码清理：userAvHTML 直接复用统一入口 avatarHTML，防止两套逻辑打架 */
 function userAvHTML(a){ return avatarHTML(a, 'sm'); }
@@ -2675,7 +2690,9 @@ function renderChatFull(forceBottom){
 	if(!m.recalled && !m.sys){
 	  timeSep = `<div class="time-sep">${formatMsgTime(m.time)}</div>`;
 	}
-	if(m.recalled){ return `<div class="recalled-line">${isUser?userName():_chatRoleDisplay}撤回了一条消息</div>`; }
+	if(m.recalled){
+	  return _renderRecallRow(m, isUser ? userName() : _chatRoleDisplay, false);
+	}
 	if(m.sys){
 	  if(m.pat){
 		const cls = 'pat-notice' + (m.patFromUser ? ' me' : '');
@@ -2950,20 +2967,15 @@ function renderChatFull(forceBottom){
 	  const accHTML = r => (typeof r.acc === 'number' ? `<span class="dc-acc">准度 ${r.acc}%</span>` : '');
 	  const readsHTML = reads.length ? (()=>{
 	    const list = reads.slice();
-	    const first = list[0];
-	    const rest = list.slice(1);
-	    let inner = `<div class="dc-reads" id="dcReads-${m.id}">`;
-	    inner += `<div class="dc-read-item"><span class="rn">1.</span>${escapeHTML(first.text)}<span class="rt">${fmt(first.time)}</span>${accHTML(first)}</div>`;
-	    if(rest.length){
-	      inner += `<div class="dc-read-hidden">`;
-	      rest.forEach((r, i)=>{
-	        inner += `<div class="dc-read-item"><span class="rn">${i+2}.</span>${escapeHTML(r.text)}<span class="rt">${fmt(r.time)}</span>${accHTML(r)}</div>`;
-	      });
-	      inner += `</div>`;
-	      inner += `</div>`;
-	      inner += `<div class="dc-read-tag" data-dc-toggle="dcReads-${m.id}">展开全部 · 共 ${list.length} 条 <span class="caret">›</span></div>`;
-	    } else {
-	      inner += `</div>`;
+	    /* 默认全部展开 */
+	    const isCollapsed = !!window.__dcCollapsedSet && window.__dcCollapsedSet.has(m.id);
+	    let inner = `<div class="dc-reads" id="dcReads-${m.id}" style="display:${isCollapsed?'none':'block'}">`;
+	    list.forEach((r, i)=>{
+	      inner += `<div class="dc-read-item"><span class="rn">${i+1}.</span>${escapeHTML(r.text)}<span class="rt">${fmt(r.time)}</span>${accHTML(r)}</div>`;
+	    });
+	    inner += `</div>`;
+	    if(list.length > 1){
+	      inner += `<div class="dc-read-tag" data-dc-toggle="dcReads-${m.id}">${isCollapsed ? '展开全部 · 共 ' + list.length + ' 条' : '收起'} <span class="caret" style="display:inline-block;transform:${isCollapsed?'rotate(0deg)':'rotate(90deg)'}">›</span></div>`;
 	    }
 	    return inner;
 	  })() : '';
@@ -3116,9 +3128,23 @@ function renderChatFull(forceBottom){
       const targetId = el.dataset.dcToggle;
       const wrap = document.getElementById(targetId);
       if(!wrap) return;
-      wrap.classList.toggle('open');
+      const msgId = targetId.replace('dcReads-', '');
+      if(!window.__dcCollapsedSet) window.__dcCollapsedSet = new Set();
+      
+      const isNowCollapsed = wrap.style.display !== 'none';
+      if(isNowCollapsed){
+        wrap.style.display = 'none';
+        window.__dcCollapsedSet.add(msgId);
+      } else {
+        wrap.style.display = 'block';
+        window.__dcCollapsedSet.delete(msgId);
+      }
+      
+      /* 更新文字和箭头 */
       const caret = el.querySelector('.caret');
-      if(caret) caret.style.transform = wrap.classList.contains('open') ? 'rotate(90deg)' : '';
+      if(caret) caret.style.transform = isNowCollapsed ? 'rotate(0deg)' : 'rotate(90deg)';
+      const totalCount = wrap.querySelectorAll('.dc-read-item').length;
+      el.innerHTML = (isNowCollapsed ? '展开全部 · 共 ' + totalCount + ' 条' : '收起') + ' <span class="caret" style="display:inline-block;transform:' + (isNowCollapsed ? 'rotate(0deg)' : 'rotate(90deg)') + '">›</span>';
     });
   });
   /* ★ 点已写的理解行 → 直接打开写占卜理解弹窗，方便追加 */
@@ -5249,10 +5275,11 @@ function showMsgMenu(msgEl,x,y){
 		/* 撤回 */
 		const i = msgs.indexOf(m);
 		if(i >= 0){
-		  m.recalled = true;
+		  _markMsgRecalled(m);
 		  /* ★ 清掉这条消息的回应，避免撤回后小图标还挂着 */
 		  try{ setReactions(m.id, []); }catch(e){}
-		  saveMsgs(); renderChat();
+		  saveMsgs();
+		  renderChat(true, true);
 		}
 	  }
 	};
@@ -6249,6 +6276,98 @@ function _calcRandInt(minVal, maxVal, defaultMin, defaultMax){
 /* 公共小工具：一条角色气泡发出去后，要不要排撤回
    - 读该角色自己的 recallOn / recallRate
    - 摇中就给它排 1~60 秒后撤回，只管这一条 */
+(function(){
+  if(document.getElementById('recallRowStyle')) return;
+  var st = document.createElement('style');
+  st.id = 'recallRowStyle';
+  st.textContent =
+    '.recall-row{display:flex;flex-direction:column;align-items:center;gap:4px;padding:6px 12px;margin:2px 0}' +
+    '.recall-row .rr-line{display:inline-flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:center;font-size:11.5px;color:var(--th-text-mute,#bbb);letter-spacing:.5px;line-height:1.5}' +
+    '.recall-row .rr-act{font-size:11.5px;color:var(--th-text);letter-spacing:.5px;border:none;border-radius:0;padding:0 2px;cursor:pointer;background:transparent;font-family:inherit;line-height:1.5}' +
+    '.recall-row .rr-act:active{background:var(--th-divider,#f5f5f5)}' +
+    '.recall-row .rr-text{margin-top:2px;font-size:12px;color:var(--th-text-mute,#bbb);letter-spacing:.5px;line-height:1.7;text-align:center;word-break:break-word;max-width:78%;white-space:pre-wrap}' +
+    '.recall-row .rr-text[hidden]{display:none}' +
+    '.recall-row .rr-text::before{content:"「"}' +
+    '.recall-row .rr-text::after{content:"」"}';
+  document.head.appendChild(st);
+})();
+var __recallOpenSet = window.__recallOpenSet || (window.__recallOpenSet = new Set());
+function _renderRecallRow(m, whoName, isGroup){
+  var by = (m.recallBy === 'user' || m.role === 'user') ? 'user' : 'char';
+  var safeWho = escapeHTML(String(whoName || '?'));
+  var txt = String(m.recallText || '');
+  var open = __recallOpenSet.has(m.id);
+  if(by === 'user'){
+    return '<div class="recall-row" data-recall-id="' + escapeHTML(m.id) + '">' +
+      '<div class="rr-line"><span>' + safeWho + '撤回了一条消息</span>' +
+        '<button class="rr-act" type="button" data-recall-reedit="' + escapeHTML(m.id) + '">重新编辑</button>' +
+      '</div>' +
+    '</div>';
+  }
+  var textHTML = txt ? ('<div class="rr-text" data-recall-text="' + escapeHTML(m.id) + '"' + (open ? '' : ' hidden') + '>' + escapeHTML(txt) + '</div>') : '';
+  return '<div class="recall-row" data-recall-id="' + escapeHTML(m.id) + '">' +
+    '<div class="rr-line"><span>' + safeWho + '撤回了一条消息</span>' +
+      (txt ? ('<button class="rr-act" type="button" data-recall-toggle="' + escapeHTML(m.id) + '">' + (open ? '点击收起' : '点击查看') + '</button>') : '') +
+    '</div>' +
+    textHTML +
+  '</div>';
+}
+document.addEventListener('click', function(e){
+  var t = e.target;
+  if(!t || !t.closest) return;
+  var tgl = t.closest('[data-recall-toggle]');
+  if(tgl){
+    e.preventDefault(); e.stopPropagation();
+    var id = tgl.dataset.recallToggle;
+    if(!id) return;
+    if(__recallOpenSet.has(id)) __recallOpenSet.delete(id); else __recallOpenSet.add(id);
+    var txtEl = document.querySelector('[data-recall-text="' + id + '"]');
+    if(txtEl){ txtEl.hidden = !__recallOpenSet.has(id); }
+    tgl.textContent = __recallOpenSet.has(id) ? '点击收起' : '点击查看';
+    return;
+  }
+  var re = t.closest('[data-recall-reedit]');
+  if(re){
+    e.preventDefault(); e.stopPropagation();
+    var mid = re.dataset.recallReedit;
+    if(!mid) return;
+    var inGroup = !!re.closest('#gchList');
+    var src = null;
+    try{
+      if(inGroup){
+        var gArr = (typeof getGroupMsgs === 'function') ? getGroupMsgs(window.__curGroupId) : [];
+        src = (gArr || []).find(function(x){ return x && x.id === mid; });
+      } else {
+        src = (typeof msgs !== 'undefined' && Array.isArray(msgs)) ? msgs.find(function(x){ return x && x.id === mid; }) : null;
+      }
+    }catch(err){ src = null; }
+    var txt = src ? String(src.recallText || '') : '';
+    if(!txt){ if(typeof toast === 'function') toast('这条没有可编辑的原文'); return; }
+    var ta = document.getElementById(inGroup ? 'gchInput' : 'chatInput');
+    if(!ta){ if(typeof toast === 'function') toast('找不到输入框'); return; }
+    ta.value = txt;
+    ta.style.height = 'auto';
+    ta.style.height = Math.min(ta.scrollHeight, 110) + 'px';
+    try{ ta.focus(); }catch(err){}
+  }
+}, true);
+function _recallTextOf(m){
+  if(!m) return '';
+  if(m.sticker) return '[表情图]';
+  if(m.voice) return '[语音 ' + (m.voice||0) + '"]';
+  if(m.imageIdbKey) return '[图片]';
+  if(m.namecard && m.namecard.name) return '[名片] ' + m.namecard.name;
+  if(m.divine && m.divine.q) return '占卜：' + m.divine.q;
+  return String(m.text || '');
+}
+function _markMsgRecalled(m){
+  if(!m || m.recalled) return false;
+  const txt = _recallTextOf(m);
+  m.recalled = true;
+  m.recallText = txt;
+  m.recallBy = (m.role === 'user') ? 'user' : 'char';
+  return true;
+}
 function _scheduleRecallForMsg(roleId, msgId){
   if(!roleId || !msgId) return;
   const r = getReply(roleId);
@@ -6261,19 +6380,14 @@ function _scheduleRecallForMsg(roleId, msgId){
     if(getCurrentRoleId() === roleId){
       const idx = msgs.findIndex(function(x){ return x && x.id === msgId; });
       if(idx >= 0 && !msgs[idx].recalled){
-        const oldT = msgs[idx].time || Date.now();
-        msgs[idx] = { id: msgs[idx].id, role: 'char', recalled: true, time: oldT };
-        saveMsgs();
-        renderChat();
+        if(_markMsgRecalled(msgs[idx])){ saveMsgs(); renderChat(true, true); }
       }
     } else {
       let arr = lsGet(key, null);
       if(Array.isArray(arr)){
         const idx = arr.findIndex(function(x){ return x && x.id === msgId; });
         if(idx >= 0 && !arr[idx].recalled){
-          const oldT = arr[idx].time || Date.now();
-          arr[idx] = { id: arr[idx].id, role: 'char', recalled: true, time: oldT };
-          lsSet(key, arr);
+          if(_markMsgRecalled(arr[idx])){ lsSet(key, arr); }
         }
       }
     }
@@ -8699,8 +8813,11 @@ let currentTab='emoji';
 let curEmojiCat='',curKaoCat='',curStickerCat='';
 let emojiEditing=false,kaoEditing=false,stickerEditing=false;
 let pendingDelete=null;
-let editSide='me';   /* 当前正在看谁的图（点 tab 会变） */
-let viewAs = 'me';   /* 当前视角（点底部小字会变），和 editSide 独立 */
+function getPanelOwner(){
+  try{ return getCurrentRoleId() || 'me'; }catch(e){ return 'me'; }
+}
+let editSide = getPanelOwner();
+let viewAs = editSide;
 /* ===== 表情包 · 新结构 =====
    stickerStore = {
      mine: { cats: [ {name, list}, ... ] },        // 只有我用
@@ -9453,12 +9570,7 @@ function renderBody(){
 }
 /* ===== 通用：生成底部「视角小字」按钮的 HTML ===== */
 function footViewHintHTML(){
-  const viewName = (viewAs === 'me')
-    ? ((userProfile && userProfile.name) || '我')
-    : getCurrentRoleName();
-  return '<button class="view-side-hint" id="btnViewSide"' +
-    (footViewHintHTML.marginLeft ? ' style="margin-left:14px"' : '') +
-    '>' + (footViewHintHTML.prefix || '') + escapeHTML(viewName) + '</button>';
+  return '';
 }
 footViewHintHTML.marginLeft = false;
 footViewHintHTML.prefix = '';
@@ -9478,8 +9590,6 @@ function bindFootStartEditBtn(){
 
 /* ===== 通用：绑定「视角小字」按钮 ===== */
 function bindFootViewSideBtn(){
-  const bv = $('#btnViewSide');
-  if(bv) bv.addEventListener('click', openViewSideMenu);
 }
 
 function renderFoot(){
@@ -10039,72 +10149,10 @@ function doApplyStickers(){
   if(m) m.classList.remove('show');
   toast('已把「' + applyStickersSrcCat + '」应用到 ' + applyStickersSelected.length + ' 个角色');
 }
-/* ===== 视角切换菜单 ===== */
-function openViewSideMenu(){
-  /* 已经开着就关掉 */
-  const old = document.getElementById('viewSideMenu');
-  if(old){ old.remove(); return; }
-  const roleId = getCurrentRoleId();
-  const roleName = getCurrentRoleName();
-  const menu = document.createElement('div');
-  menu.id = 'viewSideMenu';
-  menu.style.cssText =
-    'position:fixed;z-index:99999;min-width:150px;' +
-    'background:#fff;border:0.7px solid rgba(0,0,0,.12);border-radius:14px;' +
-    'box-shadow:0 10px 30px rgba(0,0,0,.12);padding:6px;' +
-    'font-family:"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;';
-  const myName = (userProfile && userProfile.name) ? userProfile.name : '我';
-  menu.innerHTML =
-    '<div class="vsm-item ' + (viewAs==='me'?'on':'') + '" data-side="me">' + escapeHTML(myName) + '</div>' +
-    '<div class="vsm-item ' + (viewAs===roleId?'on':'') + '" data-side="' + roleId + '">' + escapeHTML(roleName) + '</div>';
-  /* 样式通过 <style> 一次性注入 */
-  if(!document.getElementById('viewSideMenuStyle')){
-    const st = document.createElement('style');
-    st.id = 'viewSideMenuStyle';
-    st.textContent =
-      '#viewSideMenu .vsm-item{padding:10px 14px;font-size:14px;color:#1a1a1a;' +
-      'border-radius:10px;cursor:pointer;letter-spacing:1px;transition:background .15s;}' +
-      '#viewSideMenu .vsm-item:active{background:#f5f5f5;}' +
-      '#viewSideMenu .vsm-item.on{background:#fafafa;font-weight:500;}';
-    document.head.appendChild(st);
-  }
-  document.body.appendChild(menu);
-  /* 定位到小字下方 */
-  const anchor = document.getElementById('btnViewSide');
-  if(anchor){
-    const r = anchor.getBoundingClientRect();
-    const mw = menu.offsetWidth || 150;
-    const mh = menu.offsetHeight || 80;
-    let left = Math.max(8, Math.min(window.innerWidth - mw - 8, r.right - mw));
-    let top = r.top - mh - 8;
-    if(top < 8) top = r.bottom + 8;
-    menu.style.left = left + 'px';
-    menu.style.top = top + 'px';
-  }
-  /* 绑定点击 */
-  menu.querySelectorAll('.vsm-item').forEach(it=>{
-    it.addEventListener('click', ()=>{
-      viewAs = it.dataset.side;      /* 切视角 */
-      editSide = it.dataset.side;    /* 同时把"正在看的人"切到新视角 */
-      curEmojiCat = '';
-      curKaoCat = '';
-      curStickerCat = '';
-      pendingDelete = null;
-      menu.remove();
-      renderDrawer();
-    });
-  });
-  /* 点别处关掉 */
-  setTimeout(()=>{
-    document.addEventListener('click', function h(ev){
-      const m = document.getElementById('viewSideMenu');
-      if(m && !m.contains(ev.target) && ev.target.id !== 'btnViewSide'){
-        m.remove();
-        document.removeEventListener('click', h);
-      }
-    });
-  }, 0);
-}
+/* ===== 视角切换菜单 · 已按需求删除 =====
+   原因：只保留「角色自己那份」面板，不再做「我 / 角色」切换。
+   保留空函数，避免别的地方调用时报错。 */
+function openViewSideMenu(){}
 function openApplyOthers(){
   try{
     applySelected=[];
@@ -10377,19 +10425,19 @@ function renderDivineRecords(){
   box.innerHTML=list.map(rec=>{
 	const allReads = rec.reads || [];
 	const hasReads = allReads.length > 0;
-	/* 默认只显示最新 1 条；展开时显示全部 */
-	const expanded = !!window.__drExpandedSet && window.__drExpandedSet.has(rec.id);
-	const shown = hasReads
-	  ? (expanded ? allReads : allReads.slice(-1))
-	  : [];
+	/* ★ 改成：默认全部展开，用户手动点击才收起 */
+	const collapsed = !!window.__drExpandedSet && window.__drExpandedSet.has(rec.id);
+	const shown = hasReads ? allReads : [];
 	const readsHTML = hasReads
 	  ? `<div class="dr-reads">
 		   <div class="dr-reads-title" data-rec-toggle="${rec.id}">
 			 <span>你的理解（${allReads.length}）</span>
-			 <span class="dr-reads-arrow ${expanded?'open':''}">›</span>
+			 <span class="dr-reads-arrow ${collapsed?'':'open'}" style="transform:${collapsed?'rotate(0deg)':'rotate(90deg)'}">›</span>
 		   </div>
+		   <div class="dr-read-hidden ${collapsed?'':'open'}" style="display:${collapsed?'none':'block'}">
 		   ${shown.map(r=>`<div class="dr-read-item"><div class="rt">${new Date(r.time).toLocaleString('zh-CN',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})}</div><div class="rx">${escapeHTML(r.text)}</div></div>`).join('')}
-		   ${allReads.length > 1 ? `<div class="dr-reads-more" data-rec-toggle="${rec.id}">${expanded?'收起':'展开全部 '+allReads.length+' 条'}</div>` : ''}
+		   </div>
+		   ${allReads.length > 1 ? `<div class="dr-reads-more" data-rec-toggle="${rec.id}">${collapsed?'展开全部 '+allReads.length+' 条':'收起'}</div>` : ''}
 		 </div>`
 	  : '';
 	return `<div class="dr-card" data-rec="${rec.id}"><div class="dr-head"><span>${new Date(rec.time).toLocaleString('zh-CN',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})} · ${escapeHTML(rec.who==='self'?'我抽的':roleName+'抽的')}</span><button class="dr-del" data-rec-del="${rec.id}" type="button">✕</button></div><div class="dr-q">${escapeHTML(rec.question)}</div><div class="dr-cards">${rec.cards.map(c=>tarotHTML(c.card,c.reversed)).join('')}</div>${readsHTML}<button class="dr-add-read" data-rec-add="${rec.id}">✦ ${hasReads?'追加新的理解':'填写答案 / 解读'}</button></div>`;
@@ -12215,6 +12263,25 @@ function openMyBeauty(){
   var p = document.getElementById('myBeautyPanel');
   if(!p){ toast('我的美化界面没加载好'); return; }
   renderMyBeautyPanel();
+  
+  // ★ 初始化滑动返回开关的状态
+  const sw = document.getElementById('mySwipeBackSw');
+  if (sw) {
+    sw.checked = localStorage.getItem('mj_swipe_back_on') !== 'false';
+    // 防止多次绑定
+    if (!sw._bound) {
+      sw._bound = true;
+      sw.addEventListener('change', function() {
+        if (typeof window.__setSwipeBack === 'function') {
+          window.__setSwipeBack(this.checked);
+        }
+        if (typeof toast === 'function') {
+          toast(this.checked ? '已开启：从左向右滑退出个人页' : '已关闭：仅使用左上角返回键');
+        }
+      });
+    }
+  }
+  
   p.classList.add('show');
 }
 function closeMyBeauty(){
@@ -12279,7 +12346,10 @@ function applyMyFont(){
     if(row){
       e.preventDefault(); e.stopPropagation();
       var p = row.dataset.panel;
-      if(p === 'theme'){ toast('主题：黑白（目前只有这一个）'); }
+      if(p === 'theme'){
+        var st = document.getElementById('spTheme');
+        if(st) st.classList.add('show');
+      }
       else if(p === 'avatar'){
         var m = document.getElementById('spAvatar');
         if(m) m.classList.add('show');
@@ -12849,9 +12919,9 @@ function closeBeauty(){
   if(typeof renderCssPresetList === 'function') renderCssPresetList();
   if(typeof renderCssCurrentTip === 'function') renderCssCurrentTip();
 }
-const THEME_NAMES = {bw:'黑白'};
+const THEME_NAMES = {bw:'黑白', dark:'夜间'};
 function renderBeautyPanel(){
-  const cur = lsGet('mj_theme','sakura');
+  const cur = lsGet('mj_theme','bw');
   $$('#presetGrid .preset').forEach(el=>{ el.classList.toggle('on', el.dataset.theme===cur); });
   const tVal = $('#themeVal'); if(tVal) tVal.textContent = THEME_NAMES[cur] || '黑白';
   const aVal = $('#avatarVal'); if(aVal) aVal.textContent = beautyCfg.avatarShape==='circle'?'圆形':'方形';
@@ -12884,7 +12954,7 @@ function renderBeautyPanel(){
 	  const th = el.dataset.theme;
 	  applyTheme(th);
 	  $$('#presetGrid .preset').forEach(x=>x.classList.toggle('on', x===el));
-	  if(tVal) tVal.textContent = THEME_NAMES[th] || '粉樱';
+	  if(tVal) tVal.textContent = THEME_NAMES[th] || '黑白';
 	  const t = THEMES.find(x=>x.id===th);
 	  toast('已切换到：' + (t?t.name:th));
 	  applyTopbarBg();
@@ -13353,8 +13423,14 @@ function applyTitleText(){
   const c = getTitleTextCfg();
   const cn = document.querySelector('#chatTopbar .topbar-title .cn');
   const en = document.querySelector('#chatTopbar .topbar-title .en');
-  if(cn){ cn.textContent = c.cn || '私语'; cn.style.color = c.light?'#fff':'#1a1a1a'; }
-  if(en){ en.textContent = c.en || 'THE OTHER SIDE'; en.style.color = c.light?'rgba(255,255,255,.6)':'#bbb'; }
+  if(cn){ 
+    cn.textContent = c.cn || '私语'; 
+    cn.style.color = c.light ? '#fff' : 'var(--th-text)'; 
+  }
+  if(en){ 
+    en.textContent = c.en || 'THE OTHER SIDE'; 
+    en.style.color = c.light ? 'rgba(255,255,255,.6)' : 'var(--th-text-soft)'; 
+  }
 }
 function renderTitleTextPanel(){
   const c = getTitleTextCfg();
@@ -13789,7 +13865,11 @@ if(typeof beautyCfg.chatBarAlpha !== 'number') beautyCfg.chatBarAlpha = 100;
 let _barPreviewCssUrl = '';
 function updateChatBarStyle() {
   const alpha = beautyCfg.chatBarAlpha;
-  const bgRgba = 'rgba(255,255,255,' + (alpha / 100) + ')';
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  const r = isDark ? 42 : 255;
+  const g = isDark ? 42 : 255;
+  const b = isDark ? 42 : 255;
+  const bgRgba = 'rgba(' + r + ',' + g + ',' + b + ',' + (alpha / 100) + ')';
   
   // 1. 把外层整个胶囊的底色调成可变透明
   const dBar = document.querySelector('#page-chat .d-bar');
@@ -15463,7 +15543,7 @@ function renderGroupChat(){
   list.innerHTML = view.map(function(m){
     if(m.recalled){
       const who = m.role === 'user' ? userName() : (displayName(getRoleById(m.roleId) || {}) || '?');
-      return '<div class="gch-recalled-line">' + escapeHTML(who) + '撤回了一条消息</div>';
+      return _renderRecallRow(m, who, true);
     }
     if(m.pat){
       const cls = 'gch-pat-notice' + (m.patFromUser ? ' me' : '');
@@ -15814,7 +15894,7 @@ function groupChatTriggerReply(){
               const curArr = getGroupMsgs(g.id);
               const i = curArr.findIndex(function(x){ return x && x.id === targetId; });
               if(i >= 0){
-                curArr[i] = { id: curArr[i].id, role: 'char', roleId: rid, recalled: true, time: curArr[i].time || Date.now() };
+                _markMsgRecalled(curArr[i]);
                 saveGroupMsgs(g.id, curArr);
                 if(window.__curGroupId === g.id) renderGroupChat();
               }
@@ -19662,14 +19742,9 @@ let relationTickTimer = null;
 function scheduleRelationTick(){
   if(relationTickTimer) clearInterval(relationTickTimer);
   relationTickTimer = setInterval(function(){
-    try{
-      // 如果页面隐藏（切后台了），不跑关系网，防止后台爆内存
-      if(document.hidden) return; 
-      runRelationTick(); 
-    }catch(e){ console.error('关系网 tick 出错', e); }
+    try{ runRelationTick(); }catch(e){ console.error('关系网 tick 出错', e); }
   }, 60 * 1000);
-  // 延迟 5 秒再跑首次，等页面渲染彻底稳下来
-  setTimeout(function(){ try{ runRelationTick(); }catch(e){} }, 5000);
+  setTimeout(function(){ try{ runRelationTick(); }catch(e){} }, 3000);
 }
 
 function scheduleBuiltinTick(){
@@ -20522,6 +20597,34 @@ function applyTopbarBg(){
 	stack.style.transform = `translateX(${-(cur)*100}%)`;
   }
   stack.style.transform = `translateX(-100%)`;
+  function resetSwipeState(reason){
+    dragging = false;
+    dx = 0;
+    sx = 0;
+    sy = 0;
+    stack.style.transition = '';
+    /* 复位到当前真正所处的页，避免停在半路 */
+    try{ go(cur); }catch(e){}
+  }
+  document.addEventListener('visibilitychange', function(){
+    if(document.hidden){
+      resetSwipeState('hidden');
+      return;
+    }
+    resetSwipeState('visible');
+  });
+  window.addEventListener('pageshow', function(){
+    resetSwipeState('pageshow');
+  });
+  document.addEventListener('freeze', function(){
+    resetSwipeState('freeze');
+  });
+  document.addEventListener('resume', function(){
+    resetSwipeState('resume');
+  });
+  window.addEventListener('KA-RESET-SWIPE', function(){
+    resetSwipeState('ka');
+  });
   function isInteractive(el){
 	if(!el || !el.closest) return false;
 	/* 只有这些是「真正需要独占触摸」的控件：
@@ -26059,20 +26162,44 @@ let biAutoAddTmp = false;
 function renderBiAvatar(){
   const box = $('#biAvatarPreview');
   if(!box) return;
-  box.innerHTML = biAvatarTmp
-    ? `<img src="${biAvatarTmp}">`
-    : `<svg viewBox="0 0 100 100"><circle class="silhouette" cx="50" cy="38" r="19"/><path class="silhouette" d="M12 100 C12 74 28 62 50 62 C72 62 88 74 88 100 Z"/></svg>`;
+  box.innerHTML = avatarHTML(biAvatarTmp);
   box.style.borderRadius = 'var(--avatar-radius,12%)';
+  box.style.overflow = 'hidden';
+  box.style.display = 'flex';
+  box.style.alignItems = 'stretch';
+  box.style.justifyContent = 'stretch';
+  box.style.background = 'var(--th-av-bg)';
+  box.style.width = '72px';
+  box.style.height = '72px';
+  box.style.padding = '0';
+  box.style.margin = '0';
+  if (box.firstElementChild) {
+    box.firstElementChild.style.width = '100%';
+    box.firstElementChild.style.height = '100%';
+    box.firstElementChild.style.borderRadius = '0';
+  }
 }
 
 
 function renderNfAvatar(){
   const box = $('#nfAvatarPreview');
   if(!box) return;
-  box.innerHTML = nfAvatarTmp
-    ? `<img src="${nfAvatarTmp}">`
-    : `<svg viewBox="0 0 100 100"><circle class="silhouette" cx="50" cy="38" r="19"/><path class="silhouette" d="M12 100 C12 74 28 62 50 62 C72 62 88 74 88 100 Z"/></svg>`;
+  box.innerHTML = avatarHTML(nfAvatarTmp);
   box.style.borderRadius = 'var(--avatar-radius,12%)';
+  box.style.overflow = 'hidden';
+  box.style.display = 'flex';
+  box.style.alignItems = 'stretch';
+  box.style.justifyContent = 'stretch';
+  box.style.background = 'var(--th-av-bg)';
+  box.style.width = '72px';
+  box.style.height = '72px';
+  box.style.padding = '0';
+  box.style.margin = '0';
+  if (box.firstElementChild) {
+    box.firstElementChild.style.width = '100%';
+    box.firstElementChild.style.height = '100%';
+    box.firstElementChild.style.borderRadius = '0';
+  }
 }
 
 function renderNfGroupList(){
@@ -27924,7 +28051,7 @@ function openExportMenu(){
 	  myMoments.push(newMoment);
 	  saveMyMoments();
 	  /* ★ 发完立刻给这条动态摇号 */
-	  try { scheduleMomentInteraction(newMoment); } catch(e){ console.error('动态摇号出错', e); }
+	  try { if(typeof scheduleMomentInteraction === 'function') scheduleMomentInteraction(newMoment); } catch(e){ console.error('动态摇号出错', e); }
 	  postImgData = '';
 	  if(postImgPreview) postImgPreview.style.display = 'none';
 	  if(postImgFile) postImgFile.value = '';
@@ -28037,6 +28164,24 @@ function openExportMenu(){
   function roleNameOfId(id){
 	const f = getFriends().find(x => x.id === id);
 	return f ? f.name : id;
+  }
+
+  function scheduleMomentInteraction(moment){
+	if(!moment || !moment.id) return;
+	const now = Date.now();
+	const ids = getFriends().map(f => f.id);
+	ids.forEach(rid => {
+	  if(moment.owner === rid) return;
+	  if(moment.owner !== 'me' && !areFriends(moment.owner, rid)) return;
+	  const actorName = roleNameOfId(rid);
+	  const r = Math.random();
+	  if(r < 0.15){
+		pendingTasks.push({ momentId: moment.id, actorId: rid, type: 'like', at: now + Math.random() * 3600e3 });
+	  } else if(r < 0.20){
+		pendingTasks.push({ momentId: moment.id, actorId: rid, type: 'comment', at: now + Math.random() * 7200e3 });
+	  }
+	});
+	savePendingTasks();
   }
 
   function settleMoments(){
@@ -29945,6 +30090,7 @@ function switchToRole(id){
   closeAllOverlays();
   try { clearActiveDivinePending(); } catch(e){}
   setCurrentRoleId(id);
+  try{ editSide = id; viewAs = id; }catch(e){}
   msgs = loadMsgs();
   chatRenderLimit = CHAT_RENDER_STEP;   /* 换角色 → 渲染上限复位 */
   try{ settleQuizCards(); }catch(e){}
