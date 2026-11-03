@@ -27276,12 +27276,11 @@ document.addEventListener('click', function(e){
 	  /* 点击输入框：主动 focus 一次 + 延时兜底一次 */
 	  chatInput.addEventListener('click', function(){
 		chatInput.focus();
-		setTimeout(function(){ if(document.activeElement !== chatInput){ chatInput.focus(); } }, 80);
+		setTimeout(function(){ chatInput.scrollIntoView({ block: 'nearest' }); }, 150);
 		if(contentOpen || funcOpen) closeAllThings('drawer');
 	  });
 	  chatInput.addEventListener('touchstart', function(){
 		chatInput.focus();
-		setTimeout(function(){ if(document.activeElement !== chatInput){ chatInput.focus(); } }, 80);
 		if(contentOpen || funcOpen) closeAllThings('drawer');
 	  }, {passive:true});
 
@@ -27626,49 +27625,7 @@ function openExportMenu(){
 		  }
 		});
 
-		/* ★ 用 visualViewport 锁住 app 高度，避免输入法把整个页面往上推
-		   注意：不要动 #app 的 transform，也不要动 html/body 的高度，
-		   否则安卓浏览器会把整个页面往上顶。
-		   抖动修复：rAF 合并事件 + 高度阈值过滤，且不再调用 window.scrollTo */
-		(function lockViewportForKeyboard(){
-		  if(!window.visualViewport) return;
-		  var baseHeight = window.innerHeight;
-		  var appEl = document.getElementById('app');
-		  var lastH = -1, raf = null;
-
-		  function apply(){
-			raf = null;
-			var vv = window.visualViewport;
-			var h = Math.round(vv.height);
-			var keyboardH = Math.max(0, baseHeight - h);
-			if(keyboardH > 60){
-			  if(lastH >= 0 && Math.abs(h - lastH) < 24) return;
-			  lastH = h;
-			  appEl.classList.add('kb-open-real');
-			  appEl.classList.add('kb-open');
-			  appEl.style.height = h + 'px';
-			  appEl.style.top = '0';
-			}else{
-			  lastH = -1;
-			  appEl.classList.remove('kb-open-real');
-			  appEl.classList.remove('kb-open');
-			  appEl.style.height = '';
-			  appEl.style.top = '';
-			  if(document.activeElement && document.activeElement.tagName === 'TEXTAREA'){
-			    document.activeElement.blur();
-			  }
-			}
-		  }
-		  function schedule(){ if(raf === null) raf = requestAnimationFrame(apply); }
-
-		  window.visualViewport.addEventListener('resize', schedule);
-		  window.visualViewport.addEventListener('scroll', schedule);
-		  window.addEventListener('orientationchange', function(){
-			baseHeight = window.innerHeight;
-			lastH = -1;
-			schedule();
-		  });
-		})();
+ 
 	  })();
 	function updateClock(){ const d=new Date(); const el=$('#deskClock'); if(el) el.textContent=String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }
 	updateClock(); setInterval(updateClock,1000);

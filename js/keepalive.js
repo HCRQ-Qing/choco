@@ -27,8 +27,22 @@
   var CATCHUP_GAP = 60000;    /* 回前台时，冻结超过 1 分钟才补跑 */
   var CATCHUP_KEY = 'mj_ka_catchup_v1';
 
-  // 废除了多标签页抢夺逻辑，直接默认当前标签为主标签
-  var isLeaderTab = true;
+  var isLeaderTab = false;
+  var TAB_ID = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  try {
+    var bc = new BroadcastChannel('mj_leader_chan');
+    bc.onmessage = function(e) {
+      if (e.data && e.data.type === 'ping' && isLeaderTab && e.data.id !== TAB_ID) {
+        bc.postMessage({ type: 'pong', id: TAB_ID });
+      }
+    };
+    bc.postMessage({ type: 'ping', id: TAB_ID });
+    setTimeout(function() {
+      if (!isLeaderTab) isLeaderTab = true;
+    }, 300);
+  } catch (e) {
+    isLeaderTab = true;
+  }
   function takeLeadership(reason){}
   function leaderTick(now){ return true; }
 
