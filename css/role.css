@@ -732,3 +732,41 @@
   text-align:center;color:#bbb;font-size:13px;
   padding:60px 30px;line-height:2;font-style:italic;
 }
+
+/* ===== 编辑资料弹窗（#mEdit）· 彻底去白底/去边框 + 16/24间距规范 ===== */
+#mEdit .line-row input[type=text]{
+  border: none !important;
+  background: transparent !important;
+  border-radius: 0 !important;
+  padding: 8px 0 !important;
+  box-shadow: none !important;
+  flex: 1;
+}
+#mEdit .line-row input[type=text]:focus{
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+#mEdit .line-row .btns{
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  padding-left: 16px !important; /* 离头像的距离 */
+  gap: 24px !important;          /* 按钮之间的距离 */
+  flex: 1 !important;
+}
+#mEdit .line-row .mini-btn{
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;   /* 把底部的阴影干掉 */
+  padding: 0 !important;
+  color: var(--th-text) !important;
+  font-size: 14px !important;
+  cursor: pointer;
+  height: auto !important;
+}
+#mEdit .line-row .mini-btn:active{
+  opacity: 0.5 !important;
+}
+
+ 

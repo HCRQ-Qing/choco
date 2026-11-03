@@ -1456,3 +1456,111 @@ body.sel-mode-on .cd-tab .cd-tab-del{display:flex}
 }
 #mReply .rp-x:active{color:var(--th-text)}
 .overlay{position:absolute;inset:0;background:var(--mask-bg);backdrop-filter:var(--mask-blur);-webkit-backdrop-filter:var(--mask-blur)}
+
+/* ============================================================
+   ★ 编辑资料弹窗（#mEdit）统一 16px 规范间距
+   ============================================================ */
+#mEdit .sheet-body {
+  padding: 12px 20px 20px !important; /* 使用 --sp-md 规范，收紧顶部 */
+}
+#mEdit .line-row {
+  padding: 16px 0 !important; /* 其他行间距保持 16px */
+}
+/* 专门干掉“名字”这一行的顶部留白，让它往上提 */
+#mEdit .line-row:first-of-type {
+  padding-top: 0 !important;
+}
+#mEdit .line-row input[type=text] {
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
+  outline: none !important;
+  flex: 1 !important;
+  font-size: 14px !important;
+  line-height: 1.5 !important; /* 输入框行高压缩，去掉自带的隐形高度 */
+  height: auto !important;     /* 强制干掉浏览器默认高度 */
+}
+  display: flex !important;
+  align-items: center !important;
+  border-bottom: none !important; /* 无虚线 */
+}
+#mEdit .line-row .lb {
+  width: 64px !important;
+  flex: none !important;
+  font-size: 14px !important;
+  color: #999 !important;
+}
+#mEdit .line-row input[type=text] {
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  padding: 0 !important; /* 去掉输入框多余内边距 */
+  outline: none !important;
+  flex: 1 !important;
+  font-size: 14px !important;
+  line-height: 1.5 !important;
+}
+#mEdit .line-row .btns {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  padding-left: 16px !important; /* 离头像 16px */
+  gap: 24px !important;          /* 按钮之间 24px */
+  flex: 1 !important;
+}
+#mEdit .line-row .mini-btn {
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  color: var(--th-text) !important;
+  font-size: 14px !important;
+  cursor: pointer;
+  height: auto !important;
+}
+#mEdit .line-row .mini-btn:active {
+  opacity: 0.5 !important;
+}
+#mEdit #btnSaveEdit {
+  margin-top: 16px !important; /* 关系网到保存按钮的距离，统一 16px */
+}
+#mEdit .line-row .lb {
+  width: 64px !important;
+  flex: none !important;
+  font-size: 14px !important;
+  color: #999 !important;
+}
+#mEdit .line-row input[type=text] {
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  padding: 4px 0 !important;
+  outline: none !important;
+  flex: 1 !important;
+  font-size: 14px !important;
+}
+#mEdit .line-row .btns {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  padding-left: 16px !important; /* 16px 规范 */
+  gap: 24px !important;          /* 24px 规范 */
+  flex: 1 !important;
+}
+#mEdit .line-row .mini-btn {
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  color: var(--th-text) !important;
+  font-size: 14px !important;
+  cursor: pointer;
+  height: auto !important;
+}
+#mEdit .line-row .mini-btn:active {
+  opacity: 0.5 !important;
+}
