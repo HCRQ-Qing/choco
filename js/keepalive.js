@@ -253,8 +253,14 @@
   });
 
   /* bfcache 恢复 */
+  function broadcastResetSwipe(reason){
+    try{
+      window.dispatchEvent(new CustomEvent('KA-RESET-SWIPE', { detail: { reason: reason || '' } }));
+    }catch(e){}
+  }
   window.addEventListener('pageshow', function(e){
     revive('pageshow');
+    broadcastResetSwipe('pageshow');
     if(e && e.persisted){
       lastTick = Date.now();
       catchUp(CATCHUP_GAP);

@@ -2656,7 +2656,9 @@ function renderChatFull(forceBottom){
 	if(!m.recalled && !m.sys){
 	  timeSep = `<div class="time-sep">${formatMsgTime(m.time)}</div>`;
 	}
-	if(m.recalled){ return `<div class="recalled-line">${isUser?userName():_chatRoleDisplay}撤回了一条消息</div>`; }
+	if(m.recalled){
+	  return _renderRecallRow(m, isUser ? userName() : _chatRoleDisplay, false);
+	}
 	if(m.sys){
 	  if(m.pat){
 		const cls = 'pat-notice' + (m.patFromUser ? ' me' : '');
@@ -5243,10 +5245,11 @@ function showMsgMenu(msgEl,x,y){
 		/* 撤回 */
 		const i = msgs.indexOf(m);
 		if(i >= 0){
-		  m.recalled = true;
+		  _markMsgRecalled(m);
 		  /* ★ 清掉这条消息的回应，避免撤回后小图标还挂着 */
 		  try{ setReactions(m.id, []); }catch(e){}
-		  saveMsgs(); renderChat();
+		  saveMsgs();
+		  renderChat(true, true);
 		}
 	  }
 	};
@@ -6243,6 +6246,98 @@ function _calcRandInt(minVal, maxVal, defaultMin, defaultMax){
 /* 公共小工具：一条角色气泡发出去后，要不要排撤回
    - 读该角色自己的 recallOn / recallRate
    - 摇中就给它排 1~60 秒后撤回，只管这一条 */
+(function(){
+  if(document.getElementById('recallRowStyle')) return;
+  var st = document.createElement('style');
+  st.id = 'recallRowStyle';
+  st.textContent =
+    '.recall-row{display:flex;flex-direction:column;align-items:center;gap:4px;padding:6px 12px;margin:2px 0}' +
+    '.recall-row .rr-line{display:inline-flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:center;font-size:11.5px;color:var(--th-text-mute,#bbb);letter-spacing:.5px;line-height:1.5}' +
+    '.recall-row .rr-act{font-size:11.5px;color:var(--th-text);letter-spacing:.5px;border:none;border-radius:0;padding:0 2px;cursor:pointer;background:transparent;font-family:inherit;line-height:1.5}' +
+    '.recall-row .rr-act:active{background:var(--th-divider,#f5f5f5)}' +
+    '.recall-row .rr-text{margin-top:2px;font-size:12px;color:var(--th-text-mute,#bbb);letter-spacing:.5px;line-height:1.7;text-align:center;word-break:break-word;max-width:78%;white-space:pre-wrap}' +
+    '.recall-row .rr-text[hidden]{display:none}' +
+    '.recall-row .rr-text::before{content:"「"}' +
+    '.recall-row .rr-text::after{content:"」"}';
+  document.head.appendChild(st);
+})();
+var __recallOpenSet = window.__recallOpenSet || (window.__recallOpenSet = new Set());
+function _renderRecallRow(m, whoName, isGroup){
+  var by = (m.recallBy === 'user' || m.role === 'user') ? 'user' : 'char';
+  var safeWho = escapeHTML(String(whoName || '?'));
+  var txt = String(m.recallText || '');
+  var open = __recallOpenSet.has(m.id);
+  if(by === 'user'){
+    return '<div class="recall-row" data-recall-id="' + escapeHTML(m.id) + '">' +
+      '<div class="rr-line"><span>' + safeWho + '撤回了一条消息</span>' +
+        '<button class="rr-act" type="button" data-recall-reedit="' + escapeHTML(m.id) + '">重新编辑</button>' +
+      '</div>' +
+    '</div>';
+  }
+  var textHTML = txt ? ('<div class="rr-text" data-recall-text="' + escapeHTML(m.id) + '"' + (open ? '' : ' hidden') + '>' + escapeHTML(txt) + '</div>') : '';
+  return '<div class="recall-row" data-recall-id="' + escapeHTML(m.id) + '">' +
+    '<div class="rr-line"><span>' + safeWho + '撤回了一条消息</span>' +
+      (txt ? ('<button class="rr-act" type="button" data-recall-toggle="' + escapeHTML(m.id) + '">' + (open ? '点击收起' : '点击查看') + '</button>') : '') +
+    '</div>' +
+    textHTML +
+  '</div>';
+}
+document.addEventListener('click', function(e){
+  var t = e.target;
+  if(!t || !t.closest) return;
+  var tgl = t.closest('[data-recall-toggle]');
+  if(tgl){
+    e.preventDefault(); e.stopPropagation();
+    var id = tgl.dataset.recallToggle;
+    if(!id) return;
+    if(__recallOpenSet.has(id)) __recallOpenSet.delete(id); else __recallOpenSet.add(id);
+    var txtEl = document.querySelector('[data-recall-text="' + id + '"]');
+    if(txtEl){ txtEl.hidden = !__recallOpenSet.has(id); }
+    tgl.textContent = __recallOpenSet.has(id) ? '点击收起' : '点击查看';
+    return;
+  }
+  var re = t.closest('[data-recall-reedit]');
+  if(re){
+    e.preventDefault(); e.stopPropagation();
+    var mid = re.dataset.recallReedit;
+    if(!mid) return;
+    var inGroup = !!re.closest('#gchList');
+    var src = null;
+    try{
+      if(inGroup){
+        var gArr = (typeof getGroupMsgs === 'function') ? getGroupMsgs(window.__curGroupId) : [];
+        src = (gArr || []).find(function(x){ return x && x.id === mid; });
+      } else {
+        src = (typeof msgs !== 'undefined' && Array.isArray(msgs)) ? msgs.find(function(x){ return x && x.id === mid; }) : null;
+      }
+    }catch(err){ src = null; }
+    var txt = src ? String(src.recallText || '') : '';
+    if(!txt){ if(typeof toast === 'function') toast('这条没有可编辑的原文'); return; }
+    var ta = document.getElementById(inGroup ? 'gchInput' : 'chatInput');
+    if(!ta){ if(typeof toast === 'function') toast('找不到输入框'); return; }
+    ta.value = txt;
+    ta.style.height = 'auto';
+    ta.style.height = Math.min(ta.scrollHeight, 110) + 'px';
+    try{ ta.focus(); }catch(err){}
+  }
+}, true);
+function _recallTextOf(m){
+  if(!m) return '';
+  if(m.sticker) return '[表情图]';
+  if(m.voice) return '[语音 ' + (m.voice||0) + '"]';
+  if(m.imageIdbKey) return '[图片]';
+  if(m.namecard && m.namecard.name) return '[名片] ' + m.namecard.name;
+  if(m.divine && m.divine.q) return '占卜：' + m.divine.q;
+  return String(m.text || '');
+}
+function _markMsgRecalled(m){
+  if(!m || m.recalled) return false;
+  const txt = _recallTextOf(m);
+  m.recalled = true;
+  m.recallText = txt;
+  m.recallBy = (m.role === 'user') ? 'user' : 'char';
+  return true;
+}
 function _scheduleRecallForMsg(roleId, msgId){
   if(!roleId || !msgId) return;
   const r = getReply(roleId);
@@ -6255,19 +6350,14 @@ function _scheduleRecallForMsg(roleId, msgId){
     if(getCurrentRoleId() === roleId){
       const idx = msgs.findIndex(function(x){ return x && x.id === msgId; });
       if(idx >= 0 && !msgs[idx].recalled){
-        const oldT = msgs[idx].time || Date.now();
-        msgs[idx] = { id: msgs[idx].id, role: 'char', recalled: true, time: oldT };
-        saveMsgs();
-        renderChat();
+        if(_markMsgRecalled(msgs[idx])){ saveMsgs(); renderChat(true, true); }
       }
     } else {
       let arr = lsGet(key, null);
       if(Array.isArray(arr)){
         const idx = arr.findIndex(function(x){ return x && x.id === msgId; });
         if(idx >= 0 && !arr[idx].recalled){
-          const oldT = arr[idx].time || Date.now();
-          arr[idx] = { id: arr[idx].id, role: 'char', recalled: true, time: oldT };
-          lsSet(key, arr);
+          if(_markMsgRecalled(arr[idx])){ lsSet(key, arr); }
         }
       }
     }
@@ -8693,8 +8783,11 @@ let currentTab='emoji';
 let curEmojiCat='',curKaoCat='',curStickerCat='';
 let emojiEditing=false,kaoEditing=false,stickerEditing=false;
 let pendingDelete=null;
-let editSide='me';   /* 当前正在看谁的图（点 tab 会变） */
-let viewAs = 'me';   /* 当前视角（点底部小字会变），和 editSide 独立 */
+function getPanelOwner(){
+  try{ return getCurrentRoleId() || 'me'; }catch(e){ return 'me'; }
+}
+let editSide = getPanelOwner();
+let viewAs = editSide;
 /* ===== 表情包 · 新结构 =====
    stickerStore = {
      mine: { cats: [ {name, list}, ... ] },        // 只有我用
@@ -9447,12 +9540,7 @@ function renderBody(){
 }
 /* ===== 通用：生成底部「视角小字」按钮的 HTML ===== */
 function footViewHintHTML(){
-  const viewName = (viewAs === 'me')
-    ? ((userProfile && userProfile.name) || '我')
-    : getCurrentRoleName();
-  return '<button class="view-side-hint" id="btnViewSide"' +
-    (footViewHintHTML.marginLeft ? ' style="margin-left:14px"' : '') +
-    '>' + (footViewHintHTML.prefix || '') + escapeHTML(viewName) + '</button>';
+  return '';
 }
 footViewHintHTML.marginLeft = false;
 footViewHintHTML.prefix = '';
@@ -9472,8 +9560,6 @@ function bindFootStartEditBtn(){
 
 /* ===== 通用：绑定「视角小字」按钮 ===== */
 function bindFootViewSideBtn(){
-  const bv = $('#btnViewSide');
-  if(bv) bv.addEventListener('click', openViewSideMenu);
 }
 
 function renderFoot(){
@@ -10033,72 +10119,10 @@ function doApplyStickers(){
   if(m) m.classList.remove('show');
   toast('已把「' + applyStickersSrcCat + '」应用到 ' + applyStickersSelected.length + ' 个角色');
 }
-/* ===== 视角切换菜单 ===== */
-function openViewSideMenu(){
-  /* 已经开着就关掉 */
-  const old = document.getElementById('viewSideMenu');
-  if(old){ old.remove(); return; }
-  const roleId = getCurrentRoleId();
-  const roleName = getCurrentRoleName();
-  const menu = document.createElement('div');
-  menu.id = 'viewSideMenu';
-  menu.style.cssText =
-    'position:fixed;z-index:99999;min-width:150px;' +
-    'background:#fff;border:0.7px solid rgba(0,0,0,.12);border-radius:14px;' +
-    'box-shadow:0 10px 30px rgba(0,0,0,.12);padding:6px;' +
-    'font-family:"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;';
-  const myName = (userProfile && userProfile.name) ? userProfile.name : '我';
-  menu.innerHTML =
-    '<div class="vsm-item ' + (viewAs==='me'?'on':'') + '" data-side="me">' + escapeHTML(myName) + '</div>' +
-    '<div class="vsm-item ' + (viewAs===roleId?'on':'') + '" data-side="' + roleId + '">' + escapeHTML(roleName) + '</div>';
-  /* 样式通过 <style> 一次性注入 */
-  if(!document.getElementById('viewSideMenuStyle')){
-    const st = document.createElement('style');
-    st.id = 'viewSideMenuStyle';
-    st.textContent =
-      '#viewSideMenu .vsm-item{padding:10px 14px;font-size:14px;color:#1a1a1a;' +
-      'border-radius:10px;cursor:pointer;letter-spacing:1px;transition:background .15s;}' +
-      '#viewSideMenu .vsm-item:active{background:#f5f5f5;}' +
-      '#viewSideMenu .vsm-item.on{background:#fafafa;font-weight:500;}';
-    document.head.appendChild(st);
-  }
-  document.body.appendChild(menu);
-  /* 定位到小字下方 */
-  const anchor = document.getElementById('btnViewSide');
-  if(anchor){
-    const r = anchor.getBoundingClientRect();
-    const mw = menu.offsetWidth || 150;
-    const mh = menu.offsetHeight || 80;
-    let left = Math.max(8, Math.min(window.innerWidth - mw - 8, r.right - mw));
-    let top = r.top - mh - 8;
-    if(top < 8) top = r.bottom + 8;
-    menu.style.left = left + 'px';
-    menu.style.top = top + 'px';
-  }
-  /* 绑定点击 */
-  menu.querySelectorAll('.vsm-item').forEach(it=>{
-    it.addEventListener('click', ()=>{
-      viewAs = it.dataset.side;      /* 切视角 */
-      editSide = it.dataset.side;    /* 同时把"正在看的人"切到新视角 */
-      curEmojiCat = '';
-      curKaoCat = '';
-      curStickerCat = '';
-      pendingDelete = null;
-      menu.remove();
-      renderDrawer();
-    });
-  });
-  /* 点别处关掉 */
-  setTimeout(()=>{
-    document.addEventListener('click', function h(ev){
-      const m = document.getElementById('viewSideMenu');
-      if(m && !m.contains(ev.target) && ev.target.id !== 'btnViewSide'){
-        m.remove();
-        document.removeEventListener('click', h);
-      }
-    });
-  }, 0);
-}
+/* ===== 视角切换菜单 · 已按需求删除 =====
+   原因：只保留「角色自己那份」面板，不再做「我 / 角色」切换。
+   保留空函数，避免别的地方调用时报错。 */
+function openViewSideMenu(){}
 function openApplyOthers(){
   try{
     applySelected=[];
@@ -15489,7 +15513,7 @@ function renderGroupChat(){
   list.innerHTML = view.map(function(m){
     if(m.recalled){
       const who = m.role === 'user' ? userName() : (displayName(getRoleById(m.roleId) || {}) || '?');
-      return '<div class="gch-recalled-line">' + escapeHTML(who) + '撤回了一条消息</div>';
+      return _renderRecallRow(m, who, true);
     }
     if(m.pat){
       const cls = 'gch-pat-notice' + (m.patFromUser ? ' me' : '');
@@ -15840,7 +15864,7 @@ function groupChatTriggerReply(){
               const curArr = getGroupMsgs(g.id);
               const i = curArr.findIndex(function(x){ return x && x.id === targetId; });
               if(i >= 0){
-                curArr[i] = { id: curArr[i].id, role: 'char', roleId: rid, recalled: true, time: curArr[i].time || Date.now() };
+                _markMsgRecalled(curArr[i]);
                 saveGroupMsgs(g.id, curArr);
                 if(window.__curGroupId === g.id) renderGroupChat();
               }
@@ -20543,17 +20567,33 @@ function applyTopbarBg(){
 	stack.style.transform = `translateX(${-(cur)*100}%)`;
   }
   stack.style.transform = `translateX(-100%)`;
-  document.addEventListener('visibilitychange', function(){
-    if(document.hidden){
-      dragging = false;
-      dx = 0;
-      stack.style.transition = '';
-      return;
-    }
+  function resetSwipeState(reason){
     dragging = false;
     dx = 0;
+    sx = 0;
+    sy = 0;
     stack.style.transition = '';
-    go(cur);
+    /* 复位到当前真正所处的页，避免停在半路 */
+    try{ go(cur); }catch(e){}
+  }
+  document.addEventListener('visibilitychange', function(){
+    if(document.hidden){
+      resetSwipeState('hidden');
+      return;
+    }
+    resetSwipeState('visible');
+  });
+  window.addEventListener('pageshow', function(){
+    resetSwipeState('pageshow');
+  });
+  document.addEventListener('freeze', function(){
+    resetSwipeState('freeze');
+  });
+  document.addEventListener('resume', function(){
+    resetSwipeState('resume');
+  });
+  window.addEventListener('KA-RESET-SWIPE', function(){
+    resetSwipeState('ka');
   });
   function isInteractive(el){
 	if(!el || !el.closest) return false;
@@ -27981,7 +28021,7 @@ function openExportMenu(){
 	  myMoments.push(newMoment);
 	  saveMyMoments();
 	  /* ★ 发完立刻给这条动态摇号 */
-	  try { scheduleMomentInteraction(newMoment); } catch(e){ console.error('动态摇号出错', e); }
+	  try { if(typeof scheduleMomentInteraction === 'function') scheduleMomentInteraction(newMoment); } catch(e){ console.error('动态摇号出错', e); }
 	  postImgData = '';
 	  if(postImgPreview) postImgPreview.style.display = 'none';
 	  if(postImgFile) postImgFile.value = '';
@@ -28094,6 +28134,24 @@ function openExportMenu(){
   function roleNameOfId(id){
 	const f = getFriends().find(x => x.id === id);
 	return f ? f.name : id;
+  }
+
+  function scheduleMomentInteraction(moment){
+	if(!moment || !moment.id) return;
+	const now = Date.now();
+	const ids = getFriends().map(f => f.id);
+	ids.forEach(rid => {
+	  if(moment.owner === rid) return;
+	  if(moment.owner !== 'me' && !areFriends(moment.owner, rid)) return;
+	  const actorName = roleNameOfId(rid);
+	  const r = Math.random();
+	  if(r < 0.15){
+		pendingTasks.push({ momentId: moment.id, actorId: rid, type: 'like', at: now + Math.random() * 3600e3 });
+	  } else if(r < 0.20){
+		pendingTasks.push({ momentId: moment.id, actorId: rid, type: 'comment', at: now + Math.random() * 7200e3 });
+	  }
+	});
+	savePendingTasks();
   }
 
   function settleMoments(){
@@ -30002,6 +30060,7 @@ function switchToRole(id){
   closeAllOverlays();
   try { clearActiveDivinePending(); } catch(e){}
   setCurrentRoleId(id);
+  try{ editSide = id; viewAs = id; }catch(e){}
   msgs = loadMsgs();
   chatRenderLimit = CHAT_RENDER_STEP;   /* 换角色 → 渲染上限复位 */
   try{ settleQuizCards(); }catch(e){}

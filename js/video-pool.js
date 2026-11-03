@@ -1109,8 +1109,8 @@ document.addEventListener('click', (e) => {
 (function patchChatRender(){
   const origRender = window.renderChat;
   if(typeof origRender !== 'function') return;
-  window.renderChat = function(forceBottom){
-    origRender(forceBottom);
+  window.renderChat = function(forceBottom, force){
+    origRender(forceBottom, force);
     // 重建 chatList 后，同步气泡别名 message-sent / message-received
     if(window.__tagBubbles) window.__tagBubbles();
     const list = document.getElementById('chatList');
