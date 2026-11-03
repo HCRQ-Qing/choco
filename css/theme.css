@@ -89,6 +89,7 @@
   --th-bg0:    #1a1a1a;
   --th-bg1:    #252525;
   --th-card:   #2e2e2e;
+  --chat-bar-bg: #2a2a2a;
   --c-bg:      var(--th-bg0);
   --c-page:    var(--th-bg1);
 
@@ -118,8 +119,8 @@
   --c-bubble:    var(--th-bubble);
   --c-bubble-me: var(--th-bubble-me);
 
-  --th-av-bg:  #333333;
-  --th-av-sil: #5a5a5a;
+  --th-av-bg:  #2a2a2a;
+  --th-av-sil: #888888;
   --c-avatar:     var(--th-av-bg);
   --c-silhouette: var(--th-av-sil);
 
