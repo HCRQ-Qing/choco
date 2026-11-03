@@ -1335,17 +1335,9 @@
   </div>
 </div>
 <div class="modal" id="mEdit"><div class="overlay" data-close></div><div class="sheet"><div class="sheet-head"><h3>编辑资料</h3><button class="x" id="closeEdit">✕</button></div><div class="sheet-body edit-d">
-  <div class="line-row">
-	<span class="lb">名字</span>
-	<input type="text" id="inName" placeholder="角色的名字">
-  </div>
-  <div class="line-row">
-	<span class="lb">头像</span>
-	<div class="av-prev" id="editAvPrev"></div>
-	<div class="btns">
-	  <button type="button" class="mini-btn" id="btnEditUploadAv">上传</button>
-	  <button type="button" class="mini-btn" id="btnEditClearAv">默认</button>
-	</div>
+  <div class="line-row" style="padding-left: 0; gap: 16px; cursor: pointer;" id="editAvatarClickArea">
+	<div class="av-prev" id="editAvPrev" style="width: 48px; height: 48px; border-radius: 12px;"></div>
+	<input type="text" id="inName" placeholder="角色的名字" style="border: none; background: transparent; font-size: 16px; font-weight: normal; color: var(--th-text); flex: 1; outline: none; padding: 0;">
   </div>
   <div class="line-row">
 	<span class="lb">签名</span>
@@ -5025,6 +5017,8 @@
 
 <!-- ===== IndexedDB 数据底座 ===== -->
 <script src="js/indexeddb.js"></script>
+<!-- ===== 头像统一存取（IndexedDB） ===== -->
+<script src="js/avatar-store.js"></script>
 <script src="js/diagnose.js"></script>
 <!-- ===== 聊天 / 群聊 · 上传图片 ===== -->
 <script src="js/chat-image.js"></script>
