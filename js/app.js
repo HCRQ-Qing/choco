@@ -1091,6 +1091,37 @@ function openEditRemark(roleId){
   });
 }
 
+function openEditSign(roleId){
+  var rid = roleId || getCurrentRoleId();
+  var role = getRoleById(rid);
+  if(!role){ toast('找不到这个角色'); return; }
+  uniAsk({
+    title: '修改个签',
+    sub: 'SIGN · 写一句话，显示在 Ta 的资料里',
+    value: (role.sub || ''),
+    placeholder: '这个人很懒，什么都没有留下。'
+  }).then(function(v){
+    if(v === null) return;
+    var txt = String(v);
+    var friends = getFriends();
+    var f = friends.find(function(x){ return x.id === rid; });
+    if(!f) return;
+    f.sub = txt;
+    saveFriends(friends);
+    if(txt.trim()){
+      try{ pushSignCardText('cs-role', txt, rid); }catch(e){}
+    }
+    if(rid === getCurrentRoleId()){
+      refreshChatRole();
+      var cipSig = document.getElementById('cipSig');
+      if(cipSig) cipSig.textContent = getRoleSign(getRole());
+    }
+    syncRoleNameEverywhere();
+    forceRepaintChat('改个签');
+    toast(txt.trim() ? '个签已更新' : '已清空个签');
+  });
+}
+
 const ROLE_AUTOADD_KEY = 'mj_role_autoadd_v1';
 function getRoleAutoAdd(id){ const m=lsGet(ROLE_AUTOADD_KEY,{}); return !!m[id]; }
 function setRoleAutoAdd(id,v){ const m=lsGet(ROLE_AUTOADD_KEY,{}); m[id]=v; lsSet(ROLE_AUTOADD_KEY,m); }
@@ -3118,6 +3149,7 @@ function renderChatFull(forceBottom){
 
   /* ★ 图片消息：统一呼叫总入口 */
   hydrateAllImages(document.getElementById('chatList'));
+  hydrateTarotImages(document.getElementById('chatList'));
 
   if(forceBottom || wasAtBottom) box.scrollTop = box.scrollHeight;
   bindMsgLongPress();
@@ -10301,51 +10333,59 @@ let __tarotImgCache = lsGet('mj_tarot_imgs_v2', null) || {};
 
 function tarotHTML(card, reversed){
   const key = card.type === 'major' ? ('m_' + card.num) : (card.suit + '_' + card.num);
-  const customKey = __tarotImgCache[key];
-  
+  const cache = __tarotImgCache || {};
+  const customKey = cache[key];
   if(customKey){
-    const domId = 'timg_' + key + '_' + Math.random().toString(36).slice(2,6);
-    const fallbackSvg = `<svg viewBox="0 0 100 150" style="width:100%;height:100%;background:#f0f0f0"><rect width="100" height="150" fill="none" stroke="#ccc" stroke-width="2"/><text x="50" y="75" font-size="12" fill="#999" text-anchor="middle" alignment-baseline="middle">加载中</text></svg>`;
-    
-    setTimeout(() => {
-      __idb.toURL(customKey).then(url => {
-        const el = document.getElementById(domId);
-        if(el && url) {
-          el.src = url;
-          el.style.display = 'block';
-          const fb = el.previousElementSibling;
-          if(fb && fb.tagName === 'svg') fb.style.display = 'none';
-        }
-      }).catch(()=>{});
-    }, 10);
-    
-    return `<div class="tarot ${reversed?'reversed':''}" style="background:none;border:none;overflow:hidden;border-radius:6px;box-shadow:0 2px 8px rgba(0,0,0,0.15);">
-      ${fallbackSvg}
-      <img id="${domId}" style="display:none;width:100%;height:100%;object-fit:cover;transform:${reversed?'rotate(180deg)':'none'};position:absolute;inset:0">
+    return `<div class="tarot ${reversed?'reversed':''}" style="background:#f0f0f0;border:none;overflow:hidden;border-radius:6px;box-shadow:0 2px 8px rgba(0,0,0,0.15);position:relative">
+      <img class="tarot-pending-img" data-tarot-key="${key}" data-tarot-reversed="${reversed?1:0}" style="width:100%;height:100%;object-fit:cover;display:block;opacity:0;transition:opacity .2s">
       ${reversed?'<span class="t-rev-mark" style="z-index:2;">REV</span>':''}
     </div>`;
   }
-  
   if(card.type==='major') return `<div class="tarot ${reversed?'reversed':''}"><div class="t-rank-en">MAJOR</div><div class="t-rank-num">${card.num}</div><div class="t-name">${card.name}</div><div class="t-suit-en">${card.en}</div>${reversed?'<span class="t-rev-mark">REV</span>':''}</div>`;
   return `<div class="tarot ${card.theme} ${reversed?'reversed':''}"><div class="t-rank-en">${card.en}</div><div class="t-rank-num">${card.num}</div><div class="t-name">${card.name}</div><div class="t-suit-en">${card.en} of ${card.suitEn}</div>${reversed?'<span class="t-rev-mark">REV</span>':''}</div>`;
 }
 
 function tarotBackHTML(){
-  const cache = lsGet('mj_tarot_imgs_v2', null) || {};
+  const cache = __tarotImgCache || {};
   const customKey = cache['back'];
   if(customKey){
-    const domId = 'timg_back_' + Math.random().toString(36).slice(2,6);
-    setTimeout(() => {
-      __idb.toURL(customKey).then(url => {
-        const el = document.getElementById(domId);
-        if(el && url) el.src = url;
-      }).catch(()=>{});
-    }, 10);
-    return `<div class="tarot back" style="background:none;border:none;overflow:hidden;border-radius:6px;box-shadow:0 2px 8px rgba(0,0,0,0.15);">
-      <img id="${domId}" style="width:100%;height:100%;object-fit:cover;display:block;">
+    return `<div class="tarot back" style="background:#f0f0f0;border:none;overflow:hidden;border-radius:6px;box-shadow:0 2px 8px rgba(0,0,0,0.15);position:relative">
+      <img class="tarot-pending-img" data-tarot-key="back" style="width:100%;height:100%;object-fit:cover;display:block;opacity:0;transition:opacity .2s">
     </div>`;
   }
   return `<div class="tarot back"><div class="pattern-inner"></div><div class="frame-dash"></div><div class="back-center">✦</div></div>`;
+}
+
+function hydrateTarotImages(container){
+  if(!container) return;
+  const imgs = container.querySelectorAll('.tarot-pending-img[data-tarot-key]');
+  if(!imgs.length) return;
+  const cache = __tarotImgCache || {};
+  imgs.forEach(img => {
+    if(img.dataset.loaded === '1') return;
+    img.dataset.loaded = '1';
+    const key = img.dataset.tarotKey;
+    const customKey = cache[key];
+    if(!customKey){
+      img.style.display = 'none';
+      return;
+    }
+    const isRev = img.dataset.tarotReversed === '1';
+    if(isRev) img.style.transform = 'rotate(180deg)';
+    if(customKey.startsWith('data:')){
+      img.src = customKey;
+      img.onload = () => { img.style.opacity = '1'; };
+      return;
+    }
+    __idb.toURL(customKey).then(url => {
+      if(url){
+        img.src = url;
+        img.onload = () => { img.style.opacity = '1'; };
+      } else {
+        img.style.display = 'none';
+      }
+    }).catch(() => { img.style.display = 'none'; });
+  });
 }
 const DIVINE_RECORDS_KEY = 'mj_divine_records_v2';
 function getDivineRecords(roleId){ let m=lsGet(DIVINE_RECORDS_KEY,{}); if(!m[roleId]) m[roleId]=[]; return m[roleId]; }
@@ -10455,7 +10495,7 @@ function startDivine(){
 }
 function showDrawAnimation(q,picked){
   $('#divineBody').innerHTML=`<div class="divine-title">抽 牌 中</div><div class="divine-sub">✦ 保持专注 ✦</div><div class="result-cards" id="drawCards">${picked.map(()=>tarotBackHTML()).join('')}</div>`;
-  picked.forEach((p,i)=>{ setTimeout(()=>{ const slots=$('#drawCards').querySelectorAll('.tarot'); if(slots[i]) slots[i].outerHTML=tarotHTML(p.card,p.reversed); if(i===picked.length-1){ setTimeout(()=>{ $('#divineBody').insertAdjacentHTML('beforeend',`<button class="primary-btn" id="btnSendDivine">发 送 到 聊 天</button>`); $('#btnSendDivine').addEventListener('click',()=>{ const recordId=uid(); $('#mDivine').classList.remove('show'); setTimeout(()=>{ const roleName=getCurrentRoleName(); const headText=divineWho==='self'?'占卜':`${roleName}抽牌结果`; const divineMsg={id:uid(),role:divineWho==='self'?'user':'char',divine:{head:headText,q,cards:picked,recordId,reads:[],roleReads:[],saved:false,time:Date.now(),who:divineWho},time:Date.now()}; if(divineMsg.role==='user'){ dispatchUserMsg(divineMsg); } else { msgs.push(divineMsg); saveMsgs(); renderChat(); } toast('已发送，长按可保存到占卜记录'); },300); }); },400); } },400+i*500); });
+  picked.forEach((p,i)=>{ setTimeout(()=>{ const slots=$('#drawCards').querySelectorAll('.tarot'); if(slots[i]) slots[i].outerHTML=tarotHTML(p.card,p.reversed); hydrateTarotImages($('#divineBody')); if(i===picked.length-1){ setTimeout(()=>{ $('#divineBody').insertAdjacentHTML('beforeend',`<button class="primary-btn" id="btnSendDivine">发 送 到 聊 天</button>`); $('#btnSendDivine').addEventListener('click',()=>{ const recordId=uid(); $('#mDivine').classList.remove('show'); setTimeout(()=>{ const roleName=getCurrentRoleName(); const headText=divineWho==='self'?'占卜':`${roleName}抽牌结果`; const divineMsg={id:uid(),role:divineWho==='self'?'user':'char',divine:{head:headText,q,cards:picked,recordId,reads:[],roleReads:[],saved:false,time:Date.now(),who:divineWho},time:Date.now()}; if(divineMsg.role==='user'){ dispatchUserMsg(divineMsg); } else { msgs.push(divineMsg); saveMsgs(); renderChat(); } toast('已发送，长按可保存到占卜记录'); },300); }); },400); } },400+i*500); });
 }
 /* ============================================================
    占卜记录 · 筛选状态
@@ -15765,6 +15805,7 @@ function renderGroupChat(){
   }).join('');
   /* ★ 图片消息：统一呼叫总入口 */
   hydrateAllImages(list);
+  hydrateTarotImages(list);
 
   /* 有新消息才拉到底；只是重渲染（比如撤回、编辑）就保持原来的位置 */
   if(arr.length > _prevN){
@@ -27294,6 +27335,24 @@ document.addEventListener('click', function(e){
 	  }
 	})();
 	on('#cipSearch','click',()=>{ try{ openChatSearch(); }catch(e){ console.error('查找记录打开失败', e); toast('查找记录打开失败：' + e.message); } });
+	(function bindSignClick(){
+	  if(window.__signClickBound) return;
+	  window.__signClickBound = true;
+	  document.addEventListener('click', function(e){
+	    var t = e.target;
+	    if(!t || !t.closest) return;
+	    if(t.closest('#cipSig')){
+	      e.preventDefault(); e.stopPropagation();
+	      openEditSign(getCurrentRoleId());
+	      return;
+	    }
+	    if(t.closest('#profileSign')){
+	      e.preventDefault(); e.stopPropagation();
+	      openEditSign(window.__profileViewId || getCurrentRoleId());
+	      return;
+	    }
+	  }, true);
+	})();
 	on('#cipExport','click',()=>{ try{ exportChatDialog(); }catch(e){ console.error('导出失败', e); toast('导出失败：' + e.message); } });
 	on('#cipMute','change',function(){ setRoleMute(getCurrentRoleId(), this.checked); toast(this.checked?'已开启免打扰':'已关闭免打扰'); });
 	on('#cipAutoAddSw','change',function(){ setRoleAutoAdd(getCurrentRoleId(), this.checked); toast(this.checked?'已开启自主加好友':'已关闭自主加好友'); });
