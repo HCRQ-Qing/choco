@@ -34,19 +34,17 @@ const $$ = s => Array.from(document.querySelectorAll(s));
       if (changed) localStorage.setItem('mj_relation_net_v1', JSON.stringify(rel));
     }
 
-    // 2. 清洗好友列表，防止因备注/名字超长或字段缺失引发渲染崩溃
     const friendsStr = localStorage.getItem('mj_friends');
     if (friendsStr) {
       let friends = JSON.parse(friendsStr);
       if (Array.isArray(friends)) {
         let changed = false;
         friends.forEach(f => {
-          if (!f) return;
-          // 强行补全基础字段
-          if (typeof f.name !== 'string') { f.name = '角色'; changed = true; }
-          if (typeof f.remark !== 'string') { f.remark = ''; changed = true; }
-          if (typeof f.avatar !== 'string') { f.avatar = ''; changed = true; }
-          if (typeof f.sub !== 'string') { f.sub = '这个人很懒，什么都没有留下。'; changed = true; }
+          if (!f || typeof f !== 'object') return;
+          if (f.name === undefined || f.name === null) { f.name = '角色'; changed = true; }
+          if (f.remark === undefined || f.remark === null) { f.remark = ''; changed = true; }
+          if (f.avatar === undefined || f.avatar === null) { f.avatar = ''; changed = true; }
+          if (f.sub === undefined || f.sub === null) { f.sub = '这个人很懒，什么都没有留下。'; changed = true; }
         });
         if (changed) localStorage.setItem('mj_friends', JSON.stringify(friends));
       }
@@ -1075,7 +1073,15 @@ function openEditRemark(roleId){
     if(!f) return;
     f.remark = txt;
     saveFriends(friends);
-    /* 全站刷新名字 */
+    try{
+      var raw = localStorage.getItem(FRIENDS_KEY);
+      var back = raw ? JSON.parse(raw) : [];
+      var chk = back.find(function(x){ return x.id === rid; });
+      if(!chk || String(chk.remark || '') !== txt){
+        toast('备注没存进本地，可能是存储满了');
+        return;
+      }
+    }catch(e){}
     syncRoleNameEverywhere();
     if(rid === getCurrentRoleId()){
       var cipName = document.getElementById('cipName');
@@ -1276,6 +1282,7 @@ const DEFAULT_REPLY = {
   maxBlocks:3,multiBlockProb:0.40,multiBlockOn:true,
   pinyinOn:true,pinyinRate:0.10,pinyinMax:2,
   punctOn:true,punctList:[' ','','。','？','！','，','……','——','：','~','♡','…'],disabledPunctList:[],
+  endPunctOn:true,endPunctList:['。', '？', '！', '——'],
   emojiOn:true,emojiRate:0.15,
   kaoOn:true,kaoRate:0.15,
   stickerOn:true,stickerRate:0.15,
@@ -1351,6 +1358,9 @@ function getReply(roleId){
   if(typeof r.quoteRate !== 'number')    r.quoteRate = 0.08;
  
   if(typeof r.quoteFullRate !== 'number') r.quoteFullRate = 0.8;
+  /* ★ 结尾标点：默认开启，带四个默认值 */
+  if(typeof r.endPunctOn !== 'boolean') r.endPunctOn = true;
+  if(!Array.isArray(r.endPunctList))    r.endPunctList = ['。', '？', '！', '——'];
   if(typeof r.quotePartRate !== 'number') r.quotePartRate = 0.2;
   /* ★ 双击回应：默认关；自定义列表兜底为空数组 */
   if(typeof r.reactOn !== 'boolean') r.reactOn = false;
@@ -2125,9 +2135,8 @@ function genReply(useTimed, roleId){
   const bubbles = [];
   for(let b=0;b<bubbleCount;b++){
 	let blockCount = 1;
-	if((r.multiBlockOn !== false) && Math.random() < (r.multiBlockProb||0)){
-	  /* ★ 取消了 6 张的硬上限，完全按角色自己的设置来 */
-	  const _maxBlk = r.maxBlocks || 1;
+	if((r.multiBlockOn !== false) && Math.random() < (r.multiBlockProb || 0.40)){
+	  const _maxBlk = Math.max(1, r.maxBlocks || 3);
 	  blockCount = _calcRandInt(1, _maxBlk, 1, 1);
 	}
 	const parts = [];
@@ -2254,9 +2263,11 @@ function buildMsgsFromBubbles(bubbles, roleId, quote){
           }
         }
       });
-      if(r2.punctOn && r2.punctList.length && text.trim()){
-        text += r2.punctList[Math.floor(Math.random() * r2.punctList.length)];
+      
+      if(r2.endPunctOn !== false && Array.isArray(r2.endPunctList) && r2.endPunctList.length > 0){
+        text += r2.endPunctList[Math.floor(Math.random() * r2.endPunctList.length)];
       }
+
       if(!String(text).trim() && !stickerPart && !hasPinyin) return;
       const m = { id: uid(), role: 'char', text: text, time: baseTime + timeOffset++ };
       if(stickerPart){ m.sticker = stickerPart.text; }
@@ -2393,15 +2404,27 @@ var platformClass = function(p){ return typeof window.platformClass === 'functio
 function avatarHTML(a, size){
   var src = String(a || '');
   var inner = '';
-  
-  if(src.startsWith('data:') || src.startsWith('blob:') || src.startsWith('http')) {
+  var hasImg = src.startsWith('data:') || src.startsWith('blob:') || src.startsWith('http');
+
+  if(src.indexOf('idb:') === 0 && window.__avatarStore){
+    var key = 'av_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2,6);
+    inner = `<img data-avkey="${escapeHTML(src)}" onerror="this.style.display='none'" style="width:100%;height:100%;object-fit:cover;border-radius:inherit;">`;
+    setTimeout(function(){
+      window.__avatarStore.get(src, function(url){
+        if(!url) return;
+        var els = document.querySelectorAll('img[data-avkey="' + src.replace(/"/g,'\\"') + '"]');
+        for(var i=0;i<els.length;i++){ els[i].src = url; }
+      });
+    }, 10);
+    hasImg = true;
+  } else if(hasImg) {
     inner = `<img src="${src}" onerror="this.style.display='none'" style="width:100%;height:100%;object-fit:cover;border-radius:inherit;">`;
   } else {
     inner = `<svg viewBox="0 0 100 100" style="width:100%;height:100%;border-radius:inherit;display:block;"><circle fill="var(--th-av-sil)" cx="50" cy="38" r="19"></circle><path fill="var(--th-av-sil)" d="M12 100 C12 74 28 62 50 62 C72 62 88 74 88 100 Z"></path></svg>`;
   }
-  
+
   var cls = 'uni-avatar' + (size ? ' ' + size : '');
-  var bgStyle = src.startsWith('data:') || src.startsWith('blob:') || src.startsWith('http') ? 'transparent' : 'var(--th-av-bg)';
+  var bgStyle = hasImg ? 'transparent' : 'var(--th-av-bg)';
   return `<div class="${cls}" style="border-radius: var(--avatar-radius, 12%); overflow: hidden; display: flex; align-items: center; justify-content: center; background:${bgStyle}; border:none;">${inner}</div>`;
 }
 /* ★ 死代码清理：userAvHTML 直接复用统一入口 avatarHTML，防止两套逻辑打架 */
@@ -2501,96 +2524,9 @@ function updateScrollBottomBtn(scrolling){
    - 双击自己的头像 → 不处理（或也可以拍自己，看你要不要）
    - 拍完，该头像抖一下
    ============================================================ */
-function doPat(targetMsgEl, fromIsUser){
-  if(!targetMsgEl) return;
-  const av = targetMsgEl.querySelector('.msg-av');
-  if(!av) return;
+ 
 
-  /* 头像抖一下 */
-  av.classList.remove('pat-shake');
-  void av.offsetWidth;
-  av.classList.add('pat-shake');
-  setTimeout(function(){ av.classList.remove('pat-shake'); }, 450);
-
-  const role = getRole();
-  const meName = userName();
-  const taName = (role.remark && String(role.remark).trim()) || role.name;
-
-  /* 谁拍谁：双击的是对方的头像 → 我拍 Ta；双击的是自己的头像 → Ta 拍我 */
-  let html = '';
-  if(typeof patBuildHTML === 'function'){
-    html = patBuildHTML(!!fromIsUser, taName, role.id);
-  } else if(fromIsUser){
-    html = `<b>${escapeHTML(meName)}</b> 拍了拍 <b>${escapeHTML(taName)}</b> 的头像`;
-  } else {
-    html = `<b>${escapeHTML(taName)}</b> 拍了拍 <b>${escapeHTML(meName)}</b> 的头像`;
-  }
-
-  /* 存进聊天记录，用 sys 字段（跟已有的系统消息同款渲染） */
-  const msg = {
-    id: uid(),
-    time: Date.now(),
-    sys: html,
-    pat: true,
-    patFromUser: !!fromIsUser
-  };
-  msgs.push(msg);
-  saveMsgs();
-  renderChat(true);
-
-  /* 如果是我拍 Ta，按设置里的概率回拍一下（默认 8%） */
-  const _patP = (typeof patRate === 'function') ? (patRate() / 100) : 0.08;
-  if(fromIsUser && Math.random() < _patP){
-    const delay = 800 + Math.random() * 2200;
-    setTimeout(function(){
-      /* 中途切了角色就放弃 */
-      if(getCurrentRoleId() !== role.id) return;
-      const backMsg = {
-        id: uid(),
-        time: Date.now(),
-        sys: (typeof patBuildHTML === 'function')
-          ? patBuildHTML(false, taName, role.id)
-          : `<b>${escapeHTML(taName)}</b> 拍了拍 <b>${escapeHTML(meName)}</b> 的头像`,
-        pat: true,
-        patFromUser: false
-      };
-      appendMsgToRole(role.id, backMsg);
-    }, delay);
-  }
-}
-
-/* 给聊天列表绑双击头像事件 */
-(function bindPat(){
-  if(window.__patBound) return;
-  window.__patBound = true;
-  const list = document.getElementById('chatList');
-  if(!list) return;
-
-  let lastTapTime = 0;
-  let lastTapId = '';
-
-  list.addEventListener('click', function(e){
-    const av = e.target.closest('.msg-av');
-    if(!av) return;
-    const msgEl = av.closest('.msg');
-    if(!msgEl) return;
-    const id = msgEl.dataset.id;
-    const now = Date.now();
-    /* 双击判定：同一个头像，两次间隔 < 300ms */
-    if(id === lastTapId && now - lastTapTime < 300){
-      lastTapTime = 0;
-      lastTapId = '';
-      const m = msgs.find(x => x.id === id);
-      if(!m) return;
-      /* 对方消息 → 我拍 Ta；我方消息 → Ta 拍我 */
-      const fromIsUser = (m.role === 'char');
-      doPat(msgEl, fromIsUser);
-    } else {
-      lastTapTime = now;
-      lastTapId = id;
-    }
-  }, false);
-})();
+ 
 
 /* ============================================================
    全局唯一的图片加载总入口
@@ -7181,16 +7117,34 @@ function _showPersistentNotification(title, body){
   if(window.__mjVisibilityBound) return;
   window.__mjVisibilityBound = true;
   document.addEventListener('visibilitychange', function(){
-    /* 切后台：记一下时间点，回来时用来补算漏掉的消息 */
     if(document.hidden){
       try{ lsSet('mj_last_seen_at_v1', Date.now()); }catch(e){}
-      /* ★ 关键：如果开关是开的，切后台时再确保保活音频在跑一次
-         （防止某些浏览器在切换时把 <audio> 暂停了） */
       try{
         if(getKeepAliveOn()){
           if(!_keepAliveRunning || !_keepAliveAudio || _keepAliveAudio.paused){
             startKeepAlive();
           }
+        }
+      }catch(e){}
+    } else {
+      try{
+        var appEl = document.getElementById('app');
+        if(appEl){
+          appEl.style.height = '';
+          appEl.style.top = '';
+          appEl.classList.remove('kb-open-real');
+          if(!document.activeElement || (
+            document.activeElement.tagName !== 'INPUT' &&
+            document.activeElement.tagName !== 'TEXTAREA'
+          )){
+            appEl.classList.remove('kb-open');
+          }
+        }
+        var gch = document.getElementById('groupChatScreen');
+        if(gch){
+          gch.style.height = '';
+          gch.style.top = '';
+          gch.classList.remove('kb-open-real');
         }
       }catch(e){}
     }
@@ -7556,12 +7510,85 @@ function fireActiveMessage(roleId){
 
  
 
-  const text = pickActiveCardText(roleId);
-  if(!text){
-    cfg.activeLastFireAt = Date.now();
-    saveReply();
-    return;
+  try {
+    const _res = genReply(true, roleId);
+    const outMsgs = buildMsgsFromBubbles(_res[0].bubbles, roleId, null);
+    
+    if (!outMsgs.length) {
+      cfg.activeLastFireAt = Date.now();
+      saveReply();
+      return;
+    }
+
+    const _activeQuote = buildQuoteTarget(roleId);
+    if(_activeQuote && outMsgs[0]){
+      outMsgs[0].quote = { name: _activeQuote.name, text: _activeQuote.text, msgId: _activeQuote.msgId };
+    }
+
+    let currentIdx = 0;
+    function sendNext() {
+      if (currentIdx >= outMsgs.length) {
+        markActiveUnreadNoReply();
+        cfg.activeLastFireAt = Date.now();
+        saveReply();
+        return;
+      }
+      
+      var tb = document.getElementById('typingBar');
+      if (tb) tb.classList.remove('show');
+
+      const m = outMsgs[currentIdx];
+      m.active = true;
+      
+      appendMsgToRole(roleId, m);
+      notifyPush(roleId, m);
+      currentIdx++;
+      
+      if (currentIdx < outMsgs.length) {
+        var curR = getReply(roleId);
+        var cMin = curR.minDelay || 1000;
+        var cMax = curR.maxDelay || 10000;
+        var nextWait = cMin + Math.random() * (cMax - cMin);
+        
+        // 在这个等待时间内，随机选一个时刻亮起“正在输入”
+        // 比如等了 5000 毫秒，就在前 4000 毫秒里随机挑个时间亮
+        var randomShowDelay = Math.random() * (nextWait - 1000);
+        if (randomShowDelay < 0) randomShowDelay = 0; 
+        
+        setTimeout(function(){
+          var tb2 = document.getElementById('typingBar');
+          if (tb2) tb2.classList.add('show');
+        }, randomShowDelay);
+        
+        setTimeout(sendNext, nextWait);
+      } else {
+        var tbEnd = document.getElementById('typingBar');
+        if (tbEnd) tbEnd.classList.remove('show');
+        markActiveUnreadNoReply();
+        cfg.activeLastFireAt = Date.now();
+        saveReply();
+      }
+    }
+    
+    var initR = getReply(roleId);
+    var initMin = initR.minDelay || 1000;
+    var initMax = initR.maxDelay || 10000;
+    var initWait = initMin + Math.random() * (initMax - initMin);
+
+    var tbInit = document.getElementById('typingBar');
+    var initRandomDelay = Math.random() * (initWait - 1000);
+    if (initRandomDelay < 0) initRandomDelay = 0;
+    
+    setTimeout(function(){
+      if (tbInit) tbInit.classList.add('show');
+    }, initRandomDelay);
+
+    setTimeout(sendNext, initWait);
+
+  } catch(e) {
+    console.error('主动发消息生成失败', e);
   }
+  return;
 
   /* ===== 主动语音：独立掷骰子（选 C） =====
      每次主动触发时，独立 30% 概率发一条语音（替代文字） */
@@ -8065,6 +8092,45 @@ $$('.d-tab').forEach(t=>{ t.addEventListener('click',e=>{ e.stopPropagation(); $
         加回 .show，逼浏览器重新走一次进入动画。
      3. 无论从抽屉还是从个人页进，都保证 #beautyPanel 真的切到 .show。
    ============================================================ */
+(function bindDrawerActiveBtn(){
+  var df = document.getElementById('drawerFunc');
+  if(!df) return;
+  
+  var body = df.querySelector('.drawer-body');
+  if(!body) return;
+  
+  var oldBtn = document.getElementById('drawerActiveBtn');
+  if(oldBtn) oldBtn.remove();
+  
+  var grid = df.querySelector('.func-grid');
+  if(!grid) return;
+  
+  if(grid.querySelector('[data-func="active"]')) return;
+  
+  var el = document.createElement('div');
+  el.className = 'func-item';
+  el.dataset.func = 'active';
+  el.innerHTML = '<div class="fi-box"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-8.5 8.3 9 9 0 0 1-3.6-.7L4 20.5l1.4-4.1a8.1 8.1 0 0 1-1.3-4.4A8.4 8.4 0 0 1 12.5 3.2 8.4 8.4 0 0 1 21 11.5z"/><path d="M8 12h8M12 8v8"/></svg></div><span class="fi-label">主动一下</span>';
+  
+  el.onclick = function(e){
+    e.stopPropagation();
+    
+    try{
+      var rid = getCurrentRoleId();
+      
+      if(typeof toast === 'function') toast('已发指令，Ta 一会儿回');
+      
+      if(typeof fireActiveMessage === 'function') fireActiveMessage(rid);
+
+    }catch(err){
+      console.error('主动一下失败', err);
+      if(typeof toast === 'function') toast('没发出去：' + err.message);
+    }
+  };
+  
+  grid.insertBefore(el, grid.firstChild);
+})();
+
 $$('.func-item').forEach(item=>{ item.addEventListener('click',e=>{
   e.stopPropagation();
   const fn = item.dataset.func;
@@ -8131,7 +8197,11 @@ $$('.func-item').forEach(item=>{ item.addEventListener('click',e=>{
   } else if(fn === 'pat'){
     closeAllThings('drawer');
     setTimeout(function(){
-      if(typeof window.openPatSettings === 'function') window.openPatSettings();
+      if(typeof window.openPatPanel === 'function'){
+        var role = getRole();
+        var taName = (role.remark && String(role.remark).trim()) || role.name;
+        window.openPatPanel(taName, role.id, true);
+      }
       else toast('拍一拍模块还没加载好');
     }, 200);
   }
@@ -10235,14 +10305,23 @@ function tarotHTML(card, reversed){
   
   if(customKey){
     const domId = 'timg_' + key + '_' + Math.random().toString(36).slice(2,6);
+    const fallbackSvg = `<svg viewBox="0 0 100 150" style="width:100%;height:100%;background:#f0f0f0"><rect width="100" height="150" fill="none" stroke="#ccc" stroke-width="2"/><text x="50" y="75" font-size="12" fill="#999" text-anchor="middle" alignment-baseline="middle">加载中</text></svg>`;
+    
     setTimeout(() => {
       __idb.toURL(customKey).then(url => {
         const el = document.getElementById(domId);
-        if(el && url) el.src = url;
+        if(el && url) {
+          el.src = url;
+          el.style.display = 'block';
+          const fb = el.previousElementSibling;
+          if(fb && fb.tagName === 'svg') fb.style.display = 'none';
+        }
       }).catch(()=>{});
     }, 10);
+    
     return `<div class="tarot ${reversed?'reversed':''}" style="background:none;border:none;overflow:hidden;border-radius:6px;box-shadow:0 2px 8px rgba(0,0,0,0.15);">
-      <img id="${domId}" style="width:100%;height:100%;object-fit:cover;display:block;transform:${reversed?'rotate(180deg)':'none'};">
+      ${fallbackSvg}
+      <img id="${domId}" style="display:none;width:100%;height:100%;object-fit:cover;transform:${reversed?'rotate(180deg)':'none'};position:absolute;inset:0">
       ${reversed?'<span class="t-rev-mark" style="z-index:2;">REV</span>':''}
     </div>`;
   }
@@ -10252,7 +10331,8 @@ function tarotHTML(card, reversed){
 }
 
 function tarotBackHTML(){
-  const customKey = __tarotImgCache['back'];
+  const cache = lsGet('mj_tarot_imgs_v2', null) || {};
+  const customKey = cache['back'];
   if(customKey){
     const domId = 'timg_back_' + Math.random().toString(36).slice(2,6);
     setTimeout(() => {
@@ -12338,6 +12418,20 @@ function applyMyFont(){
 (function bindMyBeautyRows(){
   if(window.__myBeautyBound) return;
   window.__myBeautyBound = true;
+
+  // ★ 暴力插入“图标排版”入口（不管原来的 DOM 长什么样）
+  setTimeout(function(){
+    var bpBody = document.querySelector('#beautyPanel .bp-body');
+    if(bpBody && !document.getElementById('btnIconSort')){
+      var row = document.createElement('div');
+      row.className = 'bp-row';
+      row.dataset.panel = 'icon-sort';
+      row.id = 'btnIconSort';
+      row.innerHTML = '<span class="num">07</span><div class="r-name">图标排版</div><span class="r-val">拖拽换位</span><span class="r-arr">›</span>';
+      bpBody.appendChild(row);
+    }
+  }, 500);
+
   document.addEventListener('click', function(e){
     var t = e.target;
     if(!t || !t.closest) return;
@@ -12410,6 +12504,10 @@ function applyMyFont(){
           if(typeof window.renderTarotGrid === 'function') window.renderTarotGrid();
           s6.classList.add('show');
         }
+      }
+      else if(p2 === 'icon-sort'){
+        closeBeauty();
+        if(typeof window.enterIconSortMode === 'function') window.enterIconSortMode();
       }
     }
     
@@ -12714,6 +12812,7 @@ function openBeauty(mode){
   window.renderTarotGrid = function(){
     var grid = document.getElementById('tarotImgGrid');
     if(!grid) return;
+    __tarotImgCache = lsGet('mj_tarot_imgs_v2', null) || {};
     var keys = [];
     MAJOR.forEach(function(c){ keys.push({ k: 'm_' + c.num, label: c.name }); });
     Object.keys(SUITS).forEach(function(suit){
@@ -15208,78 +15307,7 @@ function gchEnterMultiSelect(startId){
   }, true);
 })();
 
-/* ★ 群聊拍一拍：双击成员头像（顶部成员条）或消息里的头像 */
-(function bindGchPat(){
-  if(window.__gchPatBound) return;
-  window.__gchPatBound = true;
-
-  let lastTapTime = 0;
-  let lastTapId = '';
-
-  function doGchPat(targetRid, fromIsUser){
-    const target = getRoleById(targetRid);
-    if(!target) return;
-    const meName = userName();
-    const taName = displayName(target) || target.name || '?';
-
-    let html;
-    if(typeof patBuildHTML === 'function'){
-      html = patBuildHTML(!!fromIsUser, taName, targetRid);
-    } else if(fromIsUser){
-      html = '<b>' + escapeHTML(meName) + '</b> 拍了拍 <b>' + escapeHTML(taName) + '</b>';
-    } else {
-      html = '<b>' + escapeHTML(taName) + '</b> 拍了拍 <b>' + escapeHTML(meName) + '</b>';
-    }
-
-    const g = getGroupById(window.__curGroupId);
-    if(!g) return;
-    const arr = getGroupMsgs(g.id);
-    arr.push({ id: uid(), sys: html, pat: true, patFromUser: !!fromIsUser, time: Date.now() });
-    saveGroupMsgs(g.id, arr);
-    g.lastMsgAt = Date.now();
-    saveGroup(g);
-    renderGroupChat();
-
-    /* 我拍 Ta → 按设置概率回拍一下（默认 8%） */
-    const _gchPatP = (typeof patRate === 'function') ? (patRate() / 100) : 0.08;
-    if(fromIsUser && Math.random() < _gchPatP){
-      setTimeout(function(){
-        if(window.__curGroupId !== g.id) return;
-        const arr2 = getGroupMsgs(g.id);
-        arr2.push({
-          id: uid(),
-          sys: (typeof patBuildHTML === 'function')
-            ? patBuildHTML(false, taName, targetRid)
-            : '<b>' + escapeHTML(taName) + '</b> 拍了拍 <b>' + escapeHTML(meName) + '</b>',
-          pat: true,
-          patFromUser: false,
-          time: Date.now()
-        });
-        saveGroupMsgs(g.id, arr2);
-        renderGroupChat();
-      }, 800 + Math.random() * 2200);
-    }
-  }
-
-  /* 双击消息里的成员头像 */
-  document.addEventListener('click', function(e){
-    const av = e.target.closest && e.target.closest('#gchList .gch-mav');
-    if(!av) return;
-    const msgEl = av.closest('.gch-msg');
-    if(!msgEl) return;
-    const id = msgEl.dataset.id;
-    const m = getGroupMsgs(window.__curGroupId).find(function(x){ return x.id === id; });
-    if(!m){ return; }
-    const now = Date.now();
-    if(id === lastTapId && now - lastTapTime < 300){
-      lastTapTime = 0; lastTapId = '';
-      if(m.role === 'user') return;   /* 自己的头像是"我"，不拍自己 */
-      doGchPat(m.roleId, true);
-    } else {
-      lastTapTime = now; lastTapId = id;
-    }
-  }, true);
-})();
+ 
 
 /* ============================================================
    群聊详情面板
@@ -21122,7 +21150,7 @@ function renderCardDemand(d){
       '<label class="cd-switch"><input type="checkbox" id="cdEnableCombine" ' + (d.enableCombine?'checked':'') + '><span class="cd-sw-slider"></span></label>' +
     '</div>' +
     '<div class="cd-toggle-row">' +
-      '<span class="cd-tlabel">是否想开启标点符号</span>' +
+      '<span class="cd-tlabel">是否想开启标点拼接</span>' +
       '<label class="cd-switch"><input type="checkbox" id="cdEnablePunct" ' + (d.enablePunct?'checked':'') + '><span class="cd-sw-slider"></span></label>' +
     '</div>';
 
@@ -24693,7 +24721,7 @@ function renderReplyPanel(tab){
 	  </div>
 	  <div class="section">
 		<div class="title title-sw">
-		  <span>标点符号</span>
+		  <span>标点拼接</span>
 		  <label class="switch"><input type="checkbox" id="rsPunctOn" ${r.punctOn?'checked':''}><span class="slider"></span></label>
 		</div>
 		${r.punctOn ? `
@@ -24730,6 +24758,35 @@ function renderReplyPanel(tab){
 		  			  <div class="add-punc"><input type="text" id="punctInput" placeholder="添加标点 / emoji"><button id="punctAddBtn">添加</button></div>
 			` : ''}
 		  </div>
+		  
+		  <div class="section">
+			<div class="title title-sw">
+			  <span>结尾标点</span>
+			  <label class="switch"><input type="checkbox" id="rsEndPunctOn" ${(r.endPunctOn!==false)?'checked':''}><span class="slider"></span></label>
+			</div>
+			${(r.endPunctOn!==false) ? `
+			  <div class="desc">开启后，拼卡结尾会带上以下标点之一</div>
+			  <div class="punc-grid" id="endPuncList">
+				${(() => {
+				  const all = [];
+				  const seen = {};
+				  const normal = [];
+				  const defaultList = ['。', '？', '！', '——'];
+				  const curList = Array.isArray(r.endPunctList) ? r.endPunctList : defaultList;
+				  curList.forEach(function(p){
+					if(seen[p]) return;
+					seen[p] = 1;
+					normal.push({ t:p, key:p });
+				  });
+				  return normal.map(function(item){
+					return `<span class="punc-item on" data-endkey="${escapeHTML(item.key)}">${escapeHTML(item.t)}</span>`;
+				  }).join('');
+				})()}
+			  </div>
+			  <div class="add-punc"><input type="text" id="endPunctInput" placeholder="添加结尾标点 / emoji"><button id="endPunctAddBtn">添加</button></div>
+			` : ''}
+		  </div>
+
 		  <div class="section">
 			<div class="title title-sw">
 			  <span>双击回应 · 角色自动贴</span>
@@ -25009,6 +25066,56 @@ function renderReplyPanel(tab){
   $$('#puncList .del').forEach(el=>{
 	el.addEventListener('click', ()=>{ r.punctList.splice(+el.dataset.i,1); saveReply(); renderReplyPanel('special'); });
   });
+  /* ============================================================
+     结尾标点交互
+     ============================================================ */
+  (function bindEndPunc(){
+    const onSw = $('#rsEndPunctOn');
+    if(onSw) onSw.addEventListener('change', function(){
+      const cur = getReply();
+      cur.endPunctOn = this.checked;
+      saveReply();
+      renderReplyPanel('special');
+    });
+
+    const list = document.getElementById('endPuncList');
+    if(list){
+      list.querySelectorAll('.punc-item').forEach(function(el){
+        if(el.querySelector('.p-del')) return;
+        var del = document.createElement('span');
+        del.className = 'p-del';
+        del.textContent = '✕';
+        el.appendChild(del);
+      });
+
+      list.querySelectorAll('.punc-item').forEach(function(el){
+        var del = el.querySelector('.p-del');
+        if(del){
+          del.addEventListener('click', function(e){
+            e.stopPropagation();
+            var key = el.dataset.endkey;
+            const cur = getReply();
+            cur.endPunctList = cur.endPunctList.filter(function(p){ return p !== key; });
+            saveReply();
+            el.remove();
+          });
+        }
+      });
+    }
+
+    const addBtn = $('#endPunctAddBtn');
+    if(addBtn) addBtn.addEventListener('click', function(){
+      const inp = $('#endPunctInput');
+      const v = inp.value.trim();
+      if(!v) return;
+      const cur = getReply();
+      if(!Array.isArray(cur.endPunctList)) cur.endPunctList = ['。', '？', '！', '——'];
+      if(!cur.endPunctList.includes(v)) cur.endPunctList.push(v);
+      saveReply();
+      renderReplyPanel('special');
+    });
+  })();
+
   /* ============================================================
      标点交互 v2
        - 点一下：原位黑 ↔ 灰切换，位置永远不变
@@ -30474,4 +30581,210 @@ function goToPage(name){
     render: renderDrawerIconList
   };
 })();
- 
+ /* ===== 图标排版拖拽引擎 ===== */
+(function(){
+  window.enterIconSortMode = function(){
+    var app = document.getElementById('app');
+    if(!app || app.classList.contains('icon-edit-mode')) return;
+    
+    app.classList.add('icon-edit-mode');
+    // 强制打开抽屉
+    var df = document.getElementById('drawerFunc');
+    if(df) df.classList.add('open');
+    if(typeof funcOpen !== 'undefined') funcOpen = true;
+
+    // 底部完成栏
+    var bar = document.createElement('div');
+    bar.id = 'iconEditBar';
+    bar.innerHTML = '<span>长按图标拖拽换位</span><button type="button" onclick="window.saveIconLayout()">完 成</button>';
+    document.body.appendChild(bar);
+
+    var dBar = document.querySelector('.d-bar');
+    var grid = df.querySelector('.func-grid');
+
+    var draggedEl = null;
+    var isTouch = false;
+    var longPressTimer = null;
+    var ghost = null;
+    var startX = 0, startY = 0;
+
+    function createGhost(el, x, y) {
+      ghost = document.createElement('div');
+      ghost.className = 'icon-edit-ghost';
+      var iconHTML = el.querySelector('svg') ? el.querySelector('svg').outerHTML : '';
+      ghost.innerHTML = iconHTML;
+      ghost.style.left = x + 'px';
+      ghost.style.top = y + 'px';
+      document.body.appendChild(ghost);
+    }
+
+    function startDrag(el, x, y) {
+      if(el.dataset.func === 'active') return; // 不让拖“主动一下” (可选)
+      draggedEl = el;
+      draggedEl.classList.add('icon-edit-dragging');
+      createGhost(el, x, y);
+      isTouch = true;
+      startX = x; startY = y;
+      if(navigator.vibrate) navigator.vibrate(15);
+    }
+
+    function moveDrag(x, y) {
+      if(!ghost) return;
+      ghost.style.left = x + 'px';
+      ghost.style.top = y + 'px';
+      
+      var elBelow = document.elementFromPoint(x, y);
+      if(dBar) dBar.classList.remove('icon-edit-dropzone');
+      if(grid) grid.classList.remove('icon-edit-dropzone');
+
+      if(elBelow) {
+        if(elBelow.closest('.d-bar')) dBar.classList.add('icon-edit-dropzone');
+        else if(elBelow.closest('.func-grid')) grid.classList.add('icon-edit-dropzone');
+      }
+    }
+
+    function endDrag(x, y) {
+      if(!ghost) return;
+      ghost.remove(); ghost = null;
+      if(dBar) dBar.classList.remove('icon-edit-dropzone');
+      if(grid) grid.classList.remove('icon-edit-dropzone');
+
+      var elBelow = document.elementFromPoint(x, y);
+      if(!elBelow) { cleanup(); return; }
+
+      var targetBar = elBelow.closest('.d-bar');
+      var targetGrid = elBelow.closest('.func-grid');
+      var fromBar = draggedEl.closest('.d-bar');
+      var fromGrid = draggedEl.closest('.func-grid');
+
+      // 新增：如果都在抽屉里，并且拖到了另一个格子上，直接互换位置
+      var targetGridItem = elBelow.closest('.func-item');
+      if (fromGrid && targetGrid && targetGridItem && targetGridItem !== draggedEl) {
+        var nextSibling = targetGridItem.nextElementSibling;
+        if (nextSibling === draggedEl) {
+          // 如果是相邻的，nextSibling 就是自己，交换位置
+          targetGridItem.parentNode.insertBefore(draggedEl, targetGridItem);
+        } else {
+          targetGridItem.parentNode.insertBefore(draggedEl, targetGridItem);
+          targetGridItem.parentNode.insertBefore(targetGridItem, nextSibling);
+        }
+        cleanup();
+        return;
+      }
+
+      if(fromBar && targetGrid) {
+        // 从输入栏拖到抽屉
+        var ph = document.createElement('div');
+        ph.className = 'd-icon slot-placeholder';
+        ph.innerHTML = '<svg viewBox="0 0 24 24"><line x1="12" y1="6" x2="12" y2="18"/><line x1="6" y1="12" x2="18" y2="12"/></svg>';
+        fromBar.insertBefore(ph, draggedEl);
+        
+        draggedEl.className = 'func-item';
+        var name = draggedEl.id === 'smileBtn' ? '表情' : (draggedEl.id === 'micBtn' ? '语音' : '功能');
+        draggedEl.innerHTML = '<div class="fi-box">' + draggedEl.innerHTML + '</div><span class="fi-label">' + name + '</span>';
+        grid.appendChild(draggedEl);
+      } 
+      else if(!fromBar && targetBar) {
+        // 从抽屉拖到输入栏
+        var ph2 = targetBar.querySelector('.slot-placeholder');
+        draggedEl.className = 'd-icon';
+        var svg = draggedEl.querySelector('.fi-box svg');
+        draggedEl.innerHTML = svg ? svg.outerHTML : '';
+        
+        if(ph2) {
+          targetBar.insertBefore(draggedEl, ph2);
+          ph2.remove();
+        } else {
+          var sendBtn = targetBar.querySelector('.send-btn');
+          if(sendBtn) targetBar.insertBefore(draggedEl, sendBtn);
+          else targetBar.appendChild(draggedEl);
+        }
+      }
+
+      cleanup();
+    }
+
+    function cleanup() {
+      if(draggedEl) draggedEl.classList.remove('icon-edit-dragging');
+      draggedEl = null; isTouch = false;
+    }
+
+    // 绑事件
+    function onDown(e) {
+      var el = e.target.closest('.d-icon, .func-item');
+      if(!el) return;
+      startDrag(el, e.clientX || e.touches[0].clientX, e.clientY || e.touches[0].clientY);
+    }
+    function onMove(e) {
+      if(!isTouch || !draggedEl) return;
+      e.preventDefault();
+      moveDrag(e.clientX || e.touches[0].clientX, e.clientY || e.touches[0].clientY);
+    }
+    function onUp(e) {
+      if(!isTouch || !draggedEl) return;
+      endDrag(e.clientX || (e.changedTouches && e.changedTouches[0].clientX), e.clientY || (e.changedTouches && e.changedTouches[0].clientY));
+    }
+
+    app._iconDown = function(e){
+      var el = e.target.closest('.d-icon, .func-item');
+      if(!el) return;
+      startX = e.clientX || e.touches[0].clientX;
+      startY = e.clientY || e.touches[0].clientY;
+      longPressTimer = setTimeout(function(){ startDrag(el, startX, startY); }, 300);
+    };
+    app._iconMove = function(e){
+      if(isTouch && draggedEl){ e.preventDefault(); moveDrag(e.clientX || e.touches[0].clientX, e.clientY || e.touches[0].clientY); }
+      else if(longPressTimer){
+        var cx = e.clientX || e.touches[0].clientX;
+        var cy = e.clientY || e.touches[0].clientY;
+        if(Math.abs(cx-startX)>10 || Math.abs(cy-startY)>10) clearTimeout(longPressTimer);
+      }
+    };
+    app._iconUp = function(e){
+      clearTimeout(longPressTimer);
+      if(isTouch && draggedEl){ endDrag(e.clientX || (e.changedTouches&&e.changedTouches[0].clientX), e.clientY || (e.changedTouches&&e.changedTouches[0].clientY)); }
+    };
+
+    app.addEventListener('touchstart', app._iconDown, {passive:true});
+    app.addEventListener('touchmove', app._iconMove, {passive:false});
+    app.addEventListener('touchend', app._iconUp);
+    app.addEventListener('mousedown', app._iconDown);
+    app.addEventListener('mousemove', app._iconMove);
+    app.addEventListener('mouseup', app._iconUp);
+    
+    window.__iconEditCleanup = function(){
+      app.removeEventListener('touchstart', app._iconDown);
+      app.removeEventListener('touchmove', app._iconMove);
+      app.removeEventListener('touchend', app._iconUp);
+      app.removeEventListener('mousedown', app._iconDown);
+      app.removeEventListener('mousemove', app._iconMove);
+      app.removeEventListener('mouseup', app._iconUp);
+    };
+  };
+  window.saveIconLayout = function(){
+    var app = document.getElementById('app');
+    if(app) app.classList.remove('icon-edit-mode');
+    
+    var bar = document.getElementById('iconEditBar');
+    if(bar) bar.remove();
+
+    var df = document.getElementById('drawerFunc');
+    if(df) df.classList.remove('open');
+    
+    // 保存输入栏的顺序
+    var barItems = [];
+    document.querySelectorAll('.d-bar .d-icon, .d-bar .slot-placeholder').forEach(function(el){
+      barItems.push(el.id || (el.classList.contains('slot-placeholder') ? 'plus' : el.dataset.func));
+    });
+    
+    // 保存抽屉的顺序
+    var gridItems = [];
+    document.querySelectorAll('.func-grid .func-item').forEach(function(el){
+      gridItems.push(el.dataset.func || '');
+    });
+
+    lsSet('mj_icon_layout_v1', { bar: barItems, grid: gridItems });
+    if(typeof window.__iconEditCleanup === 'function') window.__iconEditCleanup();
+    if(typeof toast === 'function') toast('图标排版已保存');
+  };
+})();
