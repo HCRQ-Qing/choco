@@ -2328,11 +2328,12 @@ function avatarHTML(a, size){
   if(src.startsWith('data:') || src.startsWith('blob:') || src.startsWith('http')) {
     inner = `<img src="${src}" onerror="this.style.display='none'" style="width:100%;height:100%;object-fit:cover;border-radius:inherit;">`;
   } else {
-    inner = `<svg viewBox="0 0 100 100" style="width:100%;height:100%;border-radius:inherit;"><circle fill="#d4d4d4" cx="50" cy="38" r="19"/><path fill="#d4d4d4" d="M12 100 C12 74 28 62 50 62 C72 62 88 74 88 100 Z"/></svg>`;
+    inner = `<svg viewBox="0 0 100 100" style="width:100%;height:100%;border-radius:inherit;"><circle fill="var(--th-av-sil, #d4d4d4)" cx="50" cy="38" r="19"/><path fill="var(--th-av-sil, #d4d4d4)" d="M12 100 C12 74 28 62 50 62 C72 62 88 74 88 100 Z"/></svg>`;
   }
   
   var cls = 'uni-avatar' + (size ? ' ' + size : '');
-  return `<div class="${cls}" style="border-radius: var(--avatar-radius, 12%); overflow: hidden; display: flex; align-items: center; justify-content: center;">${inner}</div>`;
+  var bgStyle = src.startsWith('data:') || src.startsWith('blob:') || src.startsWith('http') ? 'transparent' : 'var(--th-av-bg, rgba(0,0,0,0.06))';
+  return `<div class="${cls}" style="border-radius: var(--avatar-radius, 12%); overflow: hidden; display: flex; align-items: center; justify-content: center; background:${bgStyle};">${inner}</div>`;
 }
 /* ★ 死代码清理：userAvHTML 直接复用统一入口 avatarHTML，防止两套逻辑打架 */
 function userAvHTML(a){ return avatarHTML(a, 'sm'); }
@@ -12192,6 +12193,25 @@ function openMyBeauty(){
   var p = document.getElementById('myBeautyPanel');
   if(!p){ toast('我的美化界面没加载好'); return; }
   renderMyBeautyPanel();
+  
+  // ★ 初始化滑动返回开关的状态
+  const sw = document.getElementById('mySwipeBackSw');
+  if (sw) {
+    sw.checked = localStorage.getItem('mj_swipe_back_on') !== 'false';
+    // 防止多次绑定
+    if (!sw._bound) {
+      sw._bound = true;
+      sw.addEventListener('change', function() {
+        if (typeof window.__setSwipeBack === 'function') {
+          window.__setSwipeBack(this.checked);
+        }
+        if (typeof toast === 'function') {
+          toast(this.checked ? '已开启：从左向右滑退出个人页' : '已关闭：仅使用左上角返回键');
+        }
+      });
+    }
+  }
+  
   p.classList.add('show');
 }
 function closeMyBeauty(){
