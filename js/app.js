@@ -2865,7 +2865,9 @@ function renderChatFull(forceBottom){
 	  let mainText = '';
 	  if(ic.kind === 'pending'){
 	    tagText = '个签邀请';
-	    mainText = '邀请换' + (ic.type === 'user' ? '你的' : '自己的') + '个签';
+	    var _icRole = getRoleById(ic.roleId || getCurrentRoleId()) || {};
+	    var _icRoleName = (_icRole.remark && String(_icRole.remark).trim()) || _icRole.name || '角色';
+	    mainText = '邀请' + _icRoleName + '切换' + (ic.type === 'user' ? userName() : _icRoleName) + '个签';
 	  } else if(ic.kind === 'accept'){
 	    tagText = '已切换';
 	    mainText = ic.newSign || '';
@@ -23729,17 +23731,19 @@ function inviteSignSwitch(type){
       time: Date.now(),
       inviteCard: {
         kind: 'pending',
-        type: type
+        type: type,
+        roleId: rid
       }
     });
 
     var s = getSignSwitchStore();
-    /* 已有待处理的邀请 → 先清掉 */
-    if(s.invitePending[rid]) delete s.invitePending[rid];
+    if(!s.invitePending[rid] || typeof s.invitePending[rid] !== 'object' || Array.isArray(s.invitePending[rid])){
+      s.invitePending[rid] = {};
+    }
+    var _invSlot = s.invitePending[rid];
 
-    /* ★ 无条件进队列，1~10 分钟后由 runSignSwitchTick 掷骰子决定同意/拒绝 */
-    var delay = (1 + Math.floor(Math.random() * 10)) * 60 * 1000;
-    s.invitePending[rid] = {
+    var delay = (1 + Math.floor(Math.random() * 5)) * 60 * 1000;
+    _invSlot[type] = {
       type: type,
       dueAt: Date.now() + delay
     };
@@ -29398,6 +29402,17 @@ function getSignSwitchStore(){
   if(!s.userSignByRole || typeof s.userSignByRole !== 'object') s.userSignByRole = {};
   /* ★ 新增：待处理的邀请（per-role） */
   if(!s.invitePending || typeof s.invitePending !== 'object') s.invitePending = {};
+  /* ★ 旧数据迁移：单槽对象 {type,dueAt} → 双槽 {role:{...}, user:{...}} */
+  Object.keys(s.invitePending).forEach(function(rid){
+    var slot = s.invitePending[rid];
+    if(!slot || typeof slot !== 'object' || Array.isArray(slot)) return;
+    var hasType = (typeof slot.type === 'string' && typeof slot.dueAt === 'number');
+    if(hasType){
+      var migrated = {};
+      migrated[slot.type] = { type: slot.type, dueAt: slot.dueAt };
+      s.invitePending[rid] = migrated;
+    }
+  });
   if(typeof s.me.on !== 'boolean')    s.me.on = false;
   if(typeof s.me.nextAt !== 'number') s.me.nextAt = 0;
   /* 兼容旧结构 */
@@ -29793,12 +29808,15 @@ function runSignSwitchTick(){
 
   /* ★ 处理邀请：到点后，角色同意或拒绝 */
   allIds.forEach(function(rid){
-    var inv = s.invitePending[rid];
+    var slot = s.invitePending[rid];
+    if(!slot) return;
+    ['role', 'user'].forEach(function(invType){
+    var inv = slot[invType];
     if(!inv) return;
     if(now < inv.dueAt) return;
 
-    /* ★ 到点那一刻：70% 同意，30% 拒绝（掷骰子） */
-    var agree = Math.random() < 0.70;
+    /* ★ 到点那一刻：92% 同意，8% 拒绝（掷骰子） */
+    var agree = Math.random() < 0.92;
 
     if(agree){
       /* 同意：切个签 */
@@ -29859,8 +29877,12 @@ function runSignSwitchTick(){
       });
     }
 
-    delete s.invitePending[rid];
+    delete slot[invType];
     changed = true;
+    });
+    if(Object.keys(slot).length === 0){
+      delete s.invitePending[rid];
+    }
   });
 
   if(changed) saveSignSwitchStore(s);
