@@ -817,6 +817,7 @@
     <div class="it" data-act="trim"><svg viewBox="0 0 24 24"><path d="M4 7h16"/><path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/><path d="M6 7l1 12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-12"/></svg>去末尾标点</div>
     <div class="it" data-act="move-only-same"><svg viewBox="0 0 24 24"><path d="M4 12l4-4M4 12l4 4M4 12h12"/><path d="M18 4v16"/></svg><span id="cdMoveOnlyLabel">只移动到该分组 · 开</span></div>
     <div class="it" data-act="sign-switch"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>个签切换设置</div>
+    <div class="it" data-act="sign-sync"><svg viewBox="0 0 24 24"><path d="M17 2l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>更新内置字卡</div>
   </div>
   <div class="cd-divider" id="cdSpecialDivider" style="display:none"></div>
   <div class="grp" id="cdSpecialGrp" style="display:none">
@@ -5025,6 +5026,8 @@
  
 <!-- ===== 主应用逻辑（聊天/字卡/朋友/我的等） ===== -->
 <script src="js/app.js"></script>
+<!-- ===== 内置个签同步（手动触发「更新内置字卡」） ===== -->
+<script src="js/sign-preset-sync.js"></script>
 <script src="js/truth.js"></script>
 <!-- ===== 回复链 / 已读推平（接管 triggerReply / runReplyChain / ReplyRunner） ===== -->
 <script src="js/reply-core.js"></script>
