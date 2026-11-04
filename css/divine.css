@@ -668,4 +668,78 @@
   display:none;align-items:flex-end;justify-content:center;z-index:400;
 }
 .cat-panel-mask.show{display:flex}
+/* ===== 塔罗图片全场景居中铺满 ===== */
+.tarot-pending-img {
+  object-position: center center !important;
+}
 
+#chatList .dc-cards .tarot,
+#gchList .dc-cards .tarot,
+.dr-card .dr-cards .tarot,
+#divineBody .result-cards .tarot,
+.shuffle-stage .tarot {
+  padding: 0 !important;
+  border: none !important;
+  background: transparent !important;
+  border-radius: 6px !important;
+  overflow: hidden !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15) !important;
+}
+
+#chatList .dc-cards img,
+#chatList .dc-cards .tarot img,
+#gchList .dc-cards img,
+#gchList .dc-cards .tarot img,
+.dr-card .dr-cards img,
+.dr-card .dr-cards .tarot img,
+#divineBody .result-cards img,
+#divineBody .result-cards .tarot img,
+.shuffle-stage .tarot img {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  object-position: center center !important;
+  display: block !important;
+  border-radius: inherit !important;
+  margin: 0 !important;
+}
+ #divineBody .result-cards img,
+#divineBody .result-cards .tarot img {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  object-position: center center !important;
+  display: block !important;
+  border-radius: inherit !important;
+}
+
+/* ===== 塔罗翻牌动画 ===== */
+.flip-card-wrapper {
+  perspective: 1000px;
+  width: 60px; 
+  height: 92px;
+  margin: 0 2px;
+  flex-shrink: 0;
+}
+.flip-card-inner {
+  position: relative;
+  width: 100%; 
+  height: 100%;
+  transition: transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+  transform-style: preserve-3d;
+}
+.flip-card-wrapper.flipped .flip-card-inner {
+  transform: rotateY(180deg);
+}
+.flip-card-front, .flip-card-back {
+  position: absolute;
+  width: 100%; 
+  height: 100%;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  top: 0; 
+  left: 0;
+}
+.flip-card-back {
+  transform: rotateY(180deg);
+}

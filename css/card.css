@@ -100,7 +100,6 @@ body.sel-mode-on .cd-tabs-wrap{margin-top:10px}
 body.sel-mode-on .cd-tab .cd-tab-del{display:flex}
 .cd-tab .cd-tab-del:active{background:var(--th-text);color:var(--th-bg1)}
 .cd-tab.on{color:var(--th-text);background:transparent;border-color:transparent}
-.cd-tab.on::after{content:"";position:absolute;left:0;bottom:0;width:100%;height:1px;background:var(--th-text)}
 
 .sel-bar{display:none;align-items:center;gap:8px;padding:10px 16px;flex:none;background:var(--th-bg1);border-bottom:0.7px solid var(--th-border)}
 .sel-bar.show{display:flex}
@@ -160,7 +159,9 @@ body.sel-mode-on .cd-tab .cd-tab-del{display:flex}
 .cl-line .idx{width:20px;flex:none;font-size:10px;color:#dedede;font-family:Georgia,serif;text-align:right;padding-top:0}
 .cl-line.sel-mode .idx{display:none}
 .cl-line .txt{flex:1;min-width:0;font-size:14px;line-height:1.75;color:var(--th-text);letter-spacing:.4px;word-break:break-word;font-family:var(--app-font);white-space:pre-wrap;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
-.cl-line .txt mark{background:rgba(255,213,74,.35);color:var(--th-bg1);border-radius:3px;padding:0 2px}
+.cl-line .txt mark{background:transparent;color:var(--th-text);font-weight:700;border-radius:0;padding:0}
+.cl-line .txt .cl-cat-tag{color:#bbb;font-size:11.5px;letter-spacing:.5px;margin-left:6px;font-weight:300;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+.cl-line.cl-jump-highlight{background:var(--th-accent-soft);transition:background .3s ease}
 .cl-line .acts{display:flex;gap:18px;flex:none;opacity:.28;padding-top:0}
 .cl-line.sel-mode .acts{display:none}
 /* 拖拽排序样式 */
