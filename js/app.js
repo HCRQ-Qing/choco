@@ -41,8 +41,9 @@ const $$ = s => Array.from(document.querySelectorAll(s));
         let changed = false;
         friends.forEach(f => {
           if (!f || typeof f !== 'object') return;
-          if (f.name === undefined || f.name === null) { f.name = '角色'; changed = true; }
-          if (f.remark === undefined || f.remark === null) { f.remark = ''; changed = true; }
+          if (f.name === undefined || f.name === null || f.name === '') { f.name = '角色'; changed = true; }
+          if (f.remark === null || f.remark === undefined) { f.remark = ''; changed = true; }
+          else if (typeof f.remark !== 'string') { f.remark = ''; changed = true; }
           if (f.avatar === undefined || f.avatar === null) { f.avatar = ''; changed = true; }
           if (f.sub === undefined || f.sub === null) { f.sub = '这个人很懒，什么都没有留下。'; changed = true; }
         });
@@ -368,6 +369,150 @@ function refreshBubblePreview(){
   }
 }
 
+window.SIGN_PRESET_LIST = [
+  "我不敢看到你哭。我究竟是该替你哭出来，还是就这样，你看着我，我看着你，任由天聋地哑。",
+  "命运再次给我出一样的题，泪眼婆娑的还是我，总是我，只有我。",
+  "我终于明白命运的薄情，给予我一万颗泪，要我用一万种方式失去。",
+  "当我无法安慰你 或你不再关怀我 请千万记住 在我们菲薄的流年 曾有 十二只白鹭鸶 飞过秋天的湖泊",
+  "你不信来世，蜉蝣也不信明天。",
+  "欸我好想要一颗虎牙哦",
+  "又讨厌我了吗",
+  "待在我身边就已经很幸福了不是吗",
+  "是我引诱你吗？",
+  "我坏你就不爱我了吗。",
+  "在你心裡我還如初見時那般可愛嗎",
+  "我们都不懂时间的重量",
+  "缘分竟然默许你离去",
+  "你有一滴泪是为我掉的话 那我就不恨你了",
+  "下辈子我要变成一枚，印错的字。错降在一首完美的情诗里，让你 微微诧异 让你认眞思考，我存在的意义。",
+  "我已经尽力在你的生命里留下痕迹",
+  "你还在生我的气吗 你后悔认识我了吗",
+  "我的眼泪对你来说也无足轻重吗",
+  "我是一个机关算尽的人 但是由于数学太差全部算错了",
+  "想变成一只垂耳兔 只垂耳 不垂泪",
+  "慢半拍也没关系",
+  "你出现时 天使才被定义",
+  "終於在地球找到最喜歡的人類了",
+  "很高兴遇见你 不可思议的十四亿分之一",
+  "晚安 明天太阳还会升起 女孩你的明天不会完蛋",
+  "全世界的水都会重逢，北冰洋与尼罗河也会在湿云里交融。",
+  "我的头发也会生长，泛黄，掉落。那我也是树吗？",
+  "这冗长难渡的苦涩 居然只是命运轻描淡写的一笔吗",
+  "人的生命只有两次，当你意识到只有一次时，第二次就开始了。",
+  "好想躲在厕所里偷偷的哭 结果每一间都有屎…",
+  "你的出现是梅雨季里短暂的晴天",
+  "我将与你结为夫妻，不管你是否愿意",
+  "ⓘ 该个签涉萌已被处理",
+  "我即将在你面前绊倒自己",
+  "宝宝我亲亲亲亲亲 (˵>ㅿ<˵)♡",
+  "看你又忘打标签了#萌#可爱#美丽",
+  "遇到了全世界正数第一宠我之人！",
+  "一觉醒来发现全世界的人聊天技术下降100倍 而我像往常一样给你发了一句我想你了 你哭着要和我共度余生",
+  "宇宙 天空 我們",
+ 
+  "好想成為你的宇宙，而不是一顆可有可無的星星",
+  "トランプの下着を無料で贈る",
+  "这一生冗长 苦涩 我想与你同行",
+  "if i say， i love you",
+  "ㅇ ㅂ ㅇ",
+  "该拿什么和眼泪抗衡",
+  "我爱你但与你无关",
+  "艺术是否可以含有巧言令色的成分",
+  "这里是天堂吗",
+  "那你是天使呀^ ^",
+  "あなたが恋しい…",
+  "我是个悲哀的空壳",
+  "好多人坐着邮轮，而你摇着独木舟就敢来到这里，所以你是船翻了也能活下来的人，是靠着一块木板也能漂浮的人",
+  "世界很大诶 小妹",
+  "人生的季节不是线性的，当你为一件事燃烧得足够炽热，你就在任何天气里，为自己创造了一个夏天。",
+  "握紧你最喜欢的麦穗，然后闭眼，穿过整片麦田",
+  "把自卑的人翻过来，会变成一个卑自",
+  "原諒你實在太可爱",
+  "恋还是练",
+  "好想你……不好！我的面子。！",
+  "记住我的好 或记住我就好",
+  "或许你的天使就是我呀ÒωÓ",
+  "我不想只在梦里见到你",
+  "为了跟你见面我可是提前吃了三天星球杯没用勺",
+  "生命中最重要的东西 我找到了",
+  "为你，千千万万遍",
+  "世间百般爱你之人总与你相距千里，但我永远在你的心里",
+  "请让你的爱和眼泪流入我生命里，侵蚀成以你为名的小溪吧",
+  "爱人的眼睛是世界第八大海洋",
+  "这是缘亦是梦中最美的相见",
+  "我屁股好痒。",
+  "这个世界太随便了 语言都没有重量 什么都可以随便 感情也是 人也是",
+  "我的太阳有两个，一个远在天边一个近在眼前",
+  "不要执着于去远方了看看脚下的小花吧",
+  "如果早点认识你就好了，在你小的时候，在你第一次难过的时候，在你第一次特别需要陪伴的时候，在你最需要爱的时候",
+  "你可以完全依赖我 因为我比世界好多了",
+  "我在你森林里扮演的角色还是太蘑菇了",
+  "我出生的那天是上帝认为世上不能没有我的那天",
+  "终其一生寻找那颗偏向你的心，不是早就长在你的胸腔里了吗",
+  "我要响彻天地的自由和触及深处的灵魂",
+  "老天你凭啥知道一切",
+  "你说幸福有链接 我打开一看是404 Not Found¯꒳¯̥̥",
+  "好想為你抵擋世界上的所有壞",
+  "You look like an angel",
+  "如果连天空都是你的牢笼 哪里才有你的羽翼呢",
+  "路边装忧郁差点被摩托撞飞靠正太扭腰躲过一劫。",
+  "如果明天世界末日 那我想跟你在一起呀",
+  "其实关于你的事，好的坏的我都记不太清了，可是别人提到你时，我却下意识的想起那天你说我漂亮时的眼睛",
+  "好嘛，没关系，你哭没关系。我陪你去散步好不好，你不用太打扮。我带你去你最喜欢的那家餐厅好不好，吃饭之前让你先拍照。我抱抱你好不好，稍微紧一些。眼泪是弱酸性，腐蚀掉外壳，留下比较脆弱的你。脆弱也没关系，焦虑烦躁委屈敏感，咬我，掐我，让我说一千遍我爱你，要我一直陪着你，都可以。",
+  "笨蛋 我存在的意义就是想接住你的眼泪呀",
+  "这次没关系 下次别这样了 下次要是还这样 下次也没关系",
+  "一直依赖我的话，你以后怎么办呢？",
+  "人们遇到流浪动物时总是会说 你跳到我车上我就救你 你叫两声我就救你 你走过来吧 走过来我就救你 人何尝不是如此 我们和神明没有共通语言 被苦难压到倒地不起时 心软的神也会那样祈祷吧 人 你站起来吧 站起来我就救你",
+  "任何人都请不要再闯进我的生活",
+  "我好咕嘟",
+  "트럼프 팬티 무료 증정.",
+  "假装什么都不在乎就能幸福了吗",
+  "海的那边",
+  "能拥抱 能哭泣 能依靠 这就是我想要的感情",
+  "我会想你的 在世界某个角落",
+  "没关系的，你怎么都没关系，想躲起来也没关系，不想面对也没关系，脏脏的旧旧的也没关系，碎掉了也没关系，我把你藏起来，我把你包裹起来，我把你擦干净，我把你拼起来，我捂住你的耳朵，只要闭上眼睛额头靠着额头，这个世界就只剩下我们两个了，不要害怕。",
+  "我存在的意义就是为了接住你的眼泪，让你可以不那么勇敢，不管发生什么事我都会一直陪着你，明明你脆弱一点也没关系",
+  "当你恒常以诗的悲哀征服生命的悲哀，我试图以文学的悬崖瓦解宿命的悬崖；当我无法安慰你，或你不再能关怀我，请千万记住，在我们菲薄的句流年里，曾有十二只白鹭鸶飞过秋天的湖泊。",
+  "同一片天为何好久不见",
+  "正正相反的你和我",
+  "天空知晓一切 却不携来片刻回音",
+  "人总会犯错 所以铅笔的另一头是橡皮",
+  "同我啜泣，共我悲鸣",
+  "生锈的感情又逢下雨天",
+  "像秋一样接纳自己的丰荣与枯败 像月亮一样接受自己的阴晴与圆缺",
+  "正因为抱着与你相会的希望，我才总认为多么崎岖的小径也是正道",
+  "生命有如度过一重大海，我们相遇在同一条窄船里。死时，我们同登彼岸，又向不同的世界各奔前程。",
+  "没办法凭借一个开头来辨别悲剧或者喜剧 有一天你笑到一半 眉头就开始皱起 你是在那个时候看见今天的吗",
+  "灵魂会流动，或许明天会变成大海",
+  "IM SO SAD !",
+  "我能否将你比作夏天",
+  "世事漫随流水",
+  "乞拉朋齐的云又在哭泣，我想说我爱你。",
+  "雨都停了这片天灰什么呢",
+  "曾经的永远是永远的曾经",
+  "时间是带走我的洪水，但我亦为河流",
+  "在隆冬，我终于知道，我身上有一个不可战胜的夏天。",
+  "我們十指相扣 是上帝解不開的宿命結",
+  "你的真誠 善良 耐心 我細數 我珍重",
+  "幾分之幾 幾分知己",
+  "我叹缘分浅浅如雨渐渐。",
+  "抱紧你的我比国王富有",
+  "失去你的我比乞丐落魄",
+  "年幼的你总缺乏勇气",
+  "看到你幸福，我才会幸福。",
+  "因為喜歡，才會想佔有，為什麼要放棄？",
+  "應該死命纏著對方到底啊。",
+  "懷著一夜暴富的夢想活著。",
+  "要離開的人，就算是強行留住，也沒有什麼意義吧。",
+  "你以後一定會做得更好，蛻變成更厲害的人，不要這樣否定自己。",
+  "別總是把，自己困在過去，請你活在當下吧。",
+  "人生到最後依然是獨自一人。所以，我要享受我瀟灑的人生。",
+  "不需要變得完美，只要是人都會犯錯。",
+  "對某些人來說，很重要的事，對其他人來說，並非如此，這很理所當然。",
+  "一週上班五天，對人類來說，不會太多了嗎？現在就想回家…",
+  "無論任何事都認為，是自己的錯造成的，這就叫做傲慢。",
+  "唉…好累…要去洗澡…為什麼可以幫人洗澡的機器還沒被發明出來？"
+];
 const SIGN_PLACEHOLDER = '这个人很懒，什么都没有留下。';
 const OLD_SIGN_PLACEHOLDERS = ['你的专属角色','这个人很懒，还没有留下介绍'];
 
@@ -543,6 +688,44 @@ cardStore.public = cardStore.public.filter(g=>g && g.id !== 'g-open');
   });
 })();
 /* ★ 一次性迁移：公用 g-sign 整个删掉，每个角色专属各补一份 */
+(function cleanOldSignDuplicates(){
+  var FLAG = 'mj_sign_dedup_v2';
+  if(lsGet(FLAG, false)) return;
+  try{
+    var store = cardStore || {};
+    var removed = 0;
+    function cleanGroups(groups){
+      if(!Array.isArray(groups)) return;
+      groups.forEach(function(g){
+        if(!g || g.id !== 'g-sign' || !Array.isArray(g.cats)) return;
+        g.cats.forEach(function(cat){
+          if(!Array.isArray(cat.list)) return;
+          var seen = new Set();
+          var newList = [];
+          cat.list.forEach(function(item){
+            var txt = String(cardText(item) || '').trim();
+            if(!txt){ newList.push(item); return; }
+            if(seen.has(txt)){ removed++; } 
+            else { seen.add(txt); newList.push(item); }
+          });
+          cat.list = newList;
+        });
+      });
+    }
+    cleanGroups(store.public);
+    if(store.roles){
+      Object.keys(store.roles).forEach(function(rid){ cleanGroups(store.roles[rid]); });
+    }
+    if(removed > 0){
+      saveCardStore();
+      console.log('[个签大扫除] 自动清理了 ' + removed + ' 条重复的字卡');
+    }
+    lsSet(FLAG, true);
+  }catch(e){
+    console.error('[个签大扫除] 出错', e);
+    lsSet(FLAG, true);
+  }
+})();
 (function migrateSignToRoles(){
   var FLAG = 'mj_sign_to_roles_v1';
   if(lsGet(FLAG, false)) return;
@@ -564,6 +747,8 @@ cardStore.public = cardStore.public.filter(g=>g && g.id !== 'g-open');
     lsSet(FLAG, true);
   }
 })();
+
+ 
 
 (function fixMoodData(){
   const mg = cardStore.public.find(g=>g.id==='g-mood');
@@ -1456,23 +1641,11 @@ function getGroupsByOwner(owner){
     }
     if(!Array.isArray(g.cats)){ g.cats = []; changed = true; }
     if(!g.cats.some(function(c){ return c.id === 'cs-me'; })){
-      g.cats.push({ id:'cs-me', name:'我的个签', list: [
-        '云和阳光不过一公尺',
-        '我想睡在梦里，醒在梦境',
-        { text:'如果我住在你梦里\n愿与你共眠 不想再苏醒', t:Date.now() },
-        { text:'自顾自己已经有了定义\n何时该靠近什么应该摒弃', t:Date.now() },
-        '眷恋唯一的星光就是你'
-      ]});
+      g.cats.push({ id:'cs-me', name:'我的个签', list: SIGN_PRESET_LIST.slice() });
       changed = true;
     }
     if(!g.cats.some(function(c){ return c.id === 'cs-role'; })){
-      g.cats.push({ id:'cs-role', name:'角色个签', list: [
-        '云和阳光不过一公尺',
-        '我想睡在梦里，醒在梦境',
-        { text:'如果我住在你梦里\n愿与你共眠 不想再苏醒', t:Date.now() },
-        { text:'自顾自己已经有了定义\n何时该靠近什么应该摒弃', t:Date.now() },
-        '眷恋唯一的星光就是你'
-      ]});
+      g.cats.push({ id:'cs-role', name:'角色个签', list: SIGN_PRESET_LIST.slice() });
     }
     /* ★ 拒绝理由：角色独立 */
     if(!g.cats.some(function(c){ return c.id === 'cs-refuse'; })){
@@ -2438,15 +2611,19 @@ function avatarHTML(a, size){
   var hasImg = src.startsWith('data:') || src.startsWith('blob:') || src.startsWith('http');
 
   if(src.indexOf('idb:') === 0 && window.__avatarStore){
-    var key = 'av_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2,6);
     inner = `<img data-avkey="${escapeHTML(src)}" onerror="this.style.display='none'" style="width:100%;height:100%;object-fit:cover;border-radius:inherit;">`;
-    setTimeout(function(){
-      window.__avatarStore.get(src, function(url){
-        if(!url) return;
-        var els = document.querySelectorAll('img[data-avkey="' + src.replace(/"/g,'\\"') + '"]');
-        for(var i=0;i<els.length;i++){ els[i].src = url; }
-      });
-    }, 10);
+    (function(srcKey){
+      var tries = 0;
+      function fill(){
+        window.__avatarStore.get(srcKey, function(url){
+          if(!url){ if(++tries < 5) setTimeout(fill, 300); return; }
+          var els = document.querySelectorAll('img[data-avkey="' + srcKey.replace(/"/g,'\\"') + '"]');
+          if(!els.length){ if(++tries < 5) setTimeout(fill, 300); return; }
+          for(var i=0;i<els.length;i++){ els[i].src = url; }
+        });
+      }
+      setTimeout(fill, 10);
+    })(src);
     hasImg = true;
   } else if(hasImg) {
     inner = `<img src="${src}" onerror="this.style.display='none'" style="width:100%;height:100%;object-fit:cover;border-radius:inherit;">`;
@@ -29151,7 +29328,6 @@ function pushSignCardText(catId, text, roleId){
   var t = String(text || '').trim();
   if(!t) return false;
 
-  /* ★ 我的个签：写进该角色专属的 g-sign → cs-me */
   if(catId === 'cs-me'){
     var rid0 = roleId || (typeof getCurrentRoleId === 'function' ? getCurrentRoleId() : '');
     if(!rid0) return false;
@@ -29163,7 +29339,7 @@ function pushSignCardText(catId, text, roleId){
       var cat0 = g0.cats.find(function(c){ return c.id === 'cs-me'; });
       if(!cat0){ return false; }
       if(!Array.isArray(cat0.list)) cat0.list = [];
-      var exists0 = cat0.list.some(function(item){ return String(cardText(item)).trim() === t; });
+      var exists0 = cat0.list.some(function(item){ return String(cardText(item) || '').trim() === t; });
       if(exists0) return false;
       cat0.list.push({ text: t, t: Date.now() });
       saveCardStore();
@@ -29174,7 +29350,6 @@ function pushSignCardText(catId, text, roleId){
     }
   }
 
-  /* ★ 角色个签：写进该角色专属的 g-sign → cs-role */
   if(catId === 'cs-role'){
     var rid = roleId || (typeof getCurrentRoleId === 'function' ? getCurrentRoleId() : '');
     if(!rid) return false;
@@ -29186,7 +29361,7 @@ function pushSignCardText(catId, text, roleId){
       var cat = g.cats.find(function(c){ return c.id === 'cs-role'; });
       if(!cat){ return false; }
       if(!Array.isArray(cat.list)) cat.list = [];
-      var exists = cat.list.some(function(item){ return String(cardText(item)).trim() === t; });
+      var exists = cat.list.some(function(item){ return String(cardText(item) || '').trim() === t; });
       if(exists) return false;
       cat.list.push({ text: t, t: Date.now() });
       saveCardStore();
