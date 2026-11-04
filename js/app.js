@@ -10498,13 +10498,46 @@ function startDivine(){
   const roleName=getCurrentRoleName();
   const enTitle = divineWho==='self' ? 'SHUFFLING' : 'SHUFFLING';
   const cnTitle = divineWho==='self' ? '洗 牌 中' : `${escapeHTML(roleName)} 正 在 洗 牌`;
-  $('#divineBody').innerHTML=`<div class="shuffling"><div class="sh-title">${enTitle}</div><div class="sh-sub">${cnTitle}</div><div class="shuffle-stage"><div class="shuffle-card s1">${tarotBackHTML()}</div><div class="shuffle-card s2">${tarotBackHTML()}</div><div class="shuffle-card s3">${tarotBackHTML()}</div><div class="shuffle-card s4">${tarotBackHTML()}</div><div class="shuffle-card s5">${tarotBackHTML()}</div></div><div class="sh-track"></div></div>`;
+  $('#divineBody').innerHTML=`<div class="shuffling"><div class="sh-title">${enTitle}</div><div class="sh-sub">${cnTitle}</div><div class="shuffle-stage"><div class="shuffle-card s1" style="width:52px;height:80px;flex-shrink:0;">${tarotBackHTML()}</div><div class="shuffle-card s2" style="width:52px;height:80px;flex-shrink:0;">${tarotBackHTML()}</div><div class="shuffle-card s3" style="width:52px;height:80px;flex-shrink:0;">${tarotBackHTML()}</div><div class="shuffle-card s4" style="width:52px;height:80px;flex-shrink:0;">${tarotBackHTML()}</div><div class="shuffle-card s5" style="width:52px;height:80px;flex-shrink:0;">${tarotBackHTML()}</div></div><div class="sh-track"></div></div>`;
+  hydrateTarotImages($('#divineBody'));
   hydrateTarotImages($('#divineBody'));
   setTimeout(()=>{ const picked=[]; const pool=[...FULL_DECK]; for(let i=0;i<divineCount;i++){ const idx=Math.floor(Math.random()*pool.length); const card=pool.splice(idx,1)[0]; const reversed=Math.random()<0.5; picked.push({card,reversed}); } showDrawAnimation(q,picked); },2200);
 }
 function showDrawAnimation(q,picked){
-  $('#divineBody').innerHTML=`<div class="divine-title">抽 牌 中</div><div class="divine-sub">✦ 保持专注 ✦</div><div class="result-cards" id="drawCards">${picked.map(()=>tarotBackHTML()).join('')}</div>`;
-  picked.forEach((p,i)=>{ setTimeout(()=>{ const slots=$('#drawCards').querySelectorAll('.tarot'); if(slots[i]) slots[i].outerHTML=tarotHTML(p.card,p.reversed); hydrateTarotImages($('#divineBody')); if(i===picked.length-1){ setTimeout(()=>{ $('#divineBody').insertAdjacentHTML('beforeend',`<button class="primary-btn" id="btnSendDivine">发 送 到 聊 天</button>`); $('#btnSendDivine').addEventListener('click',()=>{ const recordId=uid(); $('#mDivine').classList.remove('show'); setTimeout(()=>{ const roleName=getCurrentRoleName(); const headText=divineWho==='self'?'占卜':`${roleName}抽牌结果`; const divineMsg={id:uid(),role:divineWho==='self'?'user':'char',divine:{head:headText,q,cards:picked,recordId,reads:[],roleReads:[],saved:false,time:Date.now(),who:divineWho},time:Date.now()}; if(divineMsg.role==='user'){ dispatchUserMsg(divineMsg); } else { msgs.push(divineMsg); saveMsgs(); renderChat(); } toast('已发送，长按可保存到占卜记录'); },300); }); },400); } },400+i*500); });
+  const wrappers = picked.map(()=>`<div class="flip-card-wrapper"><div class="flip-card-inner"><div class="flip-card-front">${tarotBackHTML()}</div><div class="flip-card-back"></div></div></div>`).join('');
+  $('#divineBody').innerHTML=`<div class="divine-title">抽 牌 中</div><div class="divine-sub">✦ 保持专注 ✦</div><div class="result-cards" id="drawCards">${wrappers}</div>`;
+  hydrateTarotImages($('#divineBody'));
+  
+  picked.forEach((p,i)=>{ 
+    setTimeout(()=>{ 
+      const wrap = document.querySelectorAll('#drawCards .flip-card-wrapper')[i];
+      if(wrap) {
+        const backEl = wrap.querySelector('.flip-card-back');
+        backEl.innerHTML = tarotHTML(p.card, p.reversed);
+        hydrateTarotImages(backEl);
+        setTimeout(() => {
+          wrap.classList.add('flipped');
+        }, 50);
+      }
+      
+      if(i===picked.length-1){ 
+        setTimeout(()=>{ 
+          $('#divineBody').insertAdjacentHTML('beforeend',`<button class="primary-btn" id="btnSendDivine">发 送 到 聊 天</button>`); 
+          $('#btnSendDivine').addEventListener('click',()=>{ 
+            const recordId=uid(); 
+            $('#mDivine').classList.remove('show'); 
+            setTimeout(()=>{ 
+              const roleName=getCurrentRoleName(); 
+              const headText=divineWho==='self'?'占卜':`${roleName}抽牌结果`; 
+              const divineMsg={id:uid(),role:divineWho==='self'?'user':'char',divine:{head:headText,q,cards:picked,recordId,reads:[],roleReads:[],saved:false,time:Date.now(),who:divineWho},time:Date.now()}; 
+              if(divineMsg.role==='user'){ dispatchUserMsg(divineMsg); } else { msgs.push(divineMsg); saveMsgs(); renderChat(); } 
+              toast('已发送，长按可保存到占卜记录'); 
+            },300); 
+          }); 
+        },600); 
+      } 
+    },400+i*500); 
+  });
 }
 /* ============================================================
    占卜记录 · 筛选状态
@@ -22638,9 +22671,20 @@ function renderCdList(){
  
   const kw = cardKeyword.trim();
   const sortMode = getSortMode();
-  let items = cat.list.map((line,i)=>({line,i}));
-  if(kw){
-	items = items.filter(it=>cardText(it.line).toLowerCase().includes(kw.toLowerCase()));
+  const searchMode = !!kw;
+  let items;
+  if(searchMode){
+	items = [];
+	(g.cats || []).forEach(c => {
+	  (c.list || []).forEach((line, i) => {
+		const t = cardText(line);
+		if(t && t.toLowerCase().includes(kw.toLowerCase())){
+		  items.push({ line, i, cid: c.id, cname: c.name });
+		}
+	  });
+	});
+  } else {
+	items = cat.list.map((line,i)=>({line,i}));
   }
   if(sortMode === 'newest'){
 	items.sort((a,b)=>(b.line.t||0)-(a.line.t||0));
@@ -22661,7 +22705,6 @@ function renderCdList(){
     box.innerHTML = `<div class="cl-empty">「${escapeHTML(cat.name)}」已被关闭<br>不会参与时间字卡抽卡</div>`;
   }
   else{
-	  /* ★ 多选状态判断：只看 body 上的标记，不读 selMode 变量 */
 	  const _cdInSelMode = document.body.hasAttribute('data-cd-selmode');
 	  const showChk = _cdInSelMode;
 	box.innerHTML = items.map(it=>{
@@ -22671,7 +22714,11 @@ function renderCdList(){
 	  const txt = moved ? '（' + raw + '）' : raw;
 	  const cls = 'cl-line' + (_cdInSelMode?' sel-mode':'') + (isSel?' selected':'') + (moved?' just-moved':'');
 	  const chkHTML = showChk ? ('<div class="chk">' + (isSel ? '✓' : '') + '</div>') : '';
-	  return `<div class="${cls}" data-i="${it.i}">${chkHTML}<span class="idx"></span><div class="txt">${highlight(txt,kw)}</div><div class="acts"><div class="cl-act copy" data-copy="${it.i}"><svg viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg></div><div class="cl-act" data-edit="${it.i}"><svg viewBox="0 0 24 24"><path d="M4 20l4-1 11-11-3-3L5 16z"/><path d="M14 6l3 3"/></svg></div><div class="cl-act" data-del="${it.i}"><svg viewBox="0 0 24 24"><path d="M4 7h16"/><path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/><path d="M6 7l1 12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-12"/></svg></div></div></div>`;
+	  const catTag = searchMode && it.cname
+		? '<span class="cl-cat-tag">· ' + escapeHTML(it.cname) + '</span>'
+		: '';
+	  const dataCid = searchMode ? ' data-search-cid="' + escapeHTML(it.cid) + '"' : '';
+	  return `<div class="${cls}" data-i="${it.i}"${dataCid}>${chkHTML}<span class="idx"></span><div class="txt">${highlight(txt,kw)}${catTag}</div><div class="acts"><div class="cl-act copy" data-copy="${it.i}"><svg viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg></div><div class="cl-act" data-edit="${it.i}"><svg viewBox="0 0 24 24"><path d="M4 20l4-1 11-11-3-3L5 16z"/><path d="M14 6l3 3"/></svg></div><div class="cl-act" data-del="${it.i}"><svg viewBox="0 0 24 24"><path d="M4 7h16"/><path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/><path d="M6 7l1 12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-12"/></svg></div></div></div>`;
 	}).join('');
   }
   /* ===== 事件委托：一次性绑到 #cdList 上，避免重建后丢事件 ===== */
@@ -22682,34 +22729,73 @@ function renderCdList(){
     const line = e.target.closest('.cl-line');
     if(!line) return;
 
-    /* 多选状态判断：只读 body 属性，不读 selMode 变量 */
     const nowInSel = document.body.hasAttribute('data-cd-selmode');
 
-    /* 非多选：走复制 / 编辑 / 删除 */
     if(!nowInSel){
+      const searchCid = line.dataset.searchCid || '';
+      const getSrcCat = function(){
+        if(searchCid){
+          const gg = currentGroupObj();
+          return gg ? getCat(gg, searchCid) : null;
+        }
+        return getCat(currentGroupObj(), curCatId);
+      };
       const cp = e.target.closest('[data-copy]');
       if(cp){
         e.stopPropagation();
         const i = +cp.dataset.copy;
-        const c = getCat(currentGroupObj(), curCatId);
+        const c = getSrcCat();
         if(c) copyText(cardText(c.list[i]),'已复制');
         return;
       }
       const ed = e.target.closest('[data-edit]');
       if(ed){
         e.stopPropagation();
-        openEditInline(+ed.dataset.edit);
+        const i = +ed.dataset.edit;
+        if(searchCid){
+          const c = getSrcCat();
+          if(c) openCardEditModalForCat(searchCid, i, cardText(c.list[i]));
+        } else {
+          openEditInline(i);
+        }
         return;
       }
       const dl = e.target.closest('[data-del]');
       if(dl){
         e.stopPropagation();
         const i = +dl.dataset.del;
-        pendingDelete=[i];
-        const c = getCat(currentGroupObj(), curCatId);
+        const c = getSrcCat();
         const t = c ? cardText(c.list[i]) : '';
+        pendingDelete=[i];
+        if(searchCid){
+          window.__delSearchCid = searchCid;
+        } else {
+          window.__delSearchCid = '';
+        }
         $('#confirmDelText').innerHTML=`将删除 1 条字卡：<br><span style="color:var(--th-accent)">${escapeHTML(t).slice(0,40)}</span><br><span style="font-size:11px;color:#bbb">（30 天内可在回收站还原）</span>`;
         $('#mConfirmDel').classList.add('show');
+        return;
+      }
+      if(searchCid){
+        const g2 = currentGroupObj();
+        const c2 = g2 ? getCat(g2, searchCid) : null;
+        if(c2){
+          if(typeof window.__cdSearchJumpTarget !== 'undefined'){}
+          curCatId = searchCid;
+          cardKeyword = '';
+          const sInp = $('#cdSearchInput');
+          if(sInp) sInp.value = '';
+          renderCdTabs();
+          renderCdList();
+          setTimeout(function(){
+            const target = document.querySelector('#cdList .cl-line[data-i="' + i + '"]');
+            if(target){
+              target.scrollIntoView({block:'center', behavior:'smooth'});
+              target.classList.add('cl-jump-highlight');
+              setTimeout(function(){ target.classList.remove('cl-jump-highlight'); }, 2000);
+            }
+          }, 80);
+        }
         return;
       }
       return;
@@ -23013,9 +23099,15 @@ on('#confirmDelOk','click',()=>{
   }
 
   /* 字卡删除：原逻辑 */
-  const cat = currentCatObj();
+  const _delSearchCid = window.__delSearchCid || '';
   const g = currentGroupObj();
-  if(!cat || !pendingDelete.length){ $('#mConfirmDel').classList.remove('show'); return; }
+  let cat;
+  if(_delSearchCid && g){
+    cat = getCat(g, _delSearchCid);
+  } else {
+    cat = currentCatObj();
+  }
+  if(!cat || !pendingDelete.length){ $('#mConfirmDel').classList.remove('show'); window.__delSearchCid = ''; return; }
 
  
 
@@ -23037,6 +23129,7 @@ on('#confirmDelOk','click',()=>{
   sorted.forEach(i => cat.list.splice(i, 1));
   saveCardStore();
   pendingDelete = [];
+  window.__delSearchCid = '';
   $('#mConfirmDel').classList.remove('show');
   exitSelMode();
   renderCdTabs();
@@ -23051,6 +23144,20 @@ function openEditInline(i){
 /* ===== 字卡编辑弹窗 ===== */
 let cardEditIndex = -1;
 let cardEditTargetCatId = '';
+function openCardEditModalForCat(cid, i, text){
+  const g = currentGroupObj();
+  if(!g) return;
+  const c = getCat(g, cid);
+  if(!c) return;
+  cardEditIndex = i;
+  cardEditTargetCatId = cid;
+  window.__cardEditFromSearchCid = cid;
+  $('#cardEditText').value = text || '';
+  renderCardEditCats();
+  $('#mCardEdit').classList.add('show');
+  setTimeout(()=>{ const t=$('#cardEditText'); if(t){ t.focus(); t.setSelectionRange(t.value.length,t.value.length); } }, 200);
+}
+
 function openCardEditModal(i, text){
   cardEditIndex = i;
   cardEditTargetCatId = curCatId;
@@ -23072,7 +23179,9 @@ function renderCardEditCats(){
 }
 on('#cardEditOk','click',()=>{
   const g = currentGroupObj(); if(!g){ toast('分组不存在'); return; }
-  const srcCat = getCat(g, curCatId);
+  const _fromSearchCid = window.__cardEditFromSearchCid || '';
+  const _srcCid = _fromSearchCid || curCatId;
+  const srcCat = getCat(g, _srcCid);
   if(!srcCat){ toast('原分类不存在'); return; }
   const text = $('#cardEditText').value.replace(/^\s+|\s+$/g,'');
   if(!text){ toast('内容不能为空'); return; }
@@ -23090,9 +23199,10 @@ on('#cardEditOk','click',()=>{
   }
   saveCardStore();
   $('#mCardEdit').classList.remove('show');
+  window.__cardEditFromSearchCid = '';
   renderCdTabs();
   renderCdList();
-  toast(cardEditTargetCatId === curCatId ? '已保存' : '已移动到「'+dstCat.name+'」');
+  toast(cardEditTargetCatId === _srcCid ? '已保存' : '已移动到「'+dstCat.name+'」');
 });
 let longPressTimer=null, longPressStart={x:0,y:0};
 function bindLongPress(){
@@ -24374,6 +24484,10 @@ on('#cdHisMask','click',cdHisClose);
 
 on('#cdSearchInput','input',function(){
   cardKeyword = this.value;
+  const wrap = document.getElementById('cdTabsWrap');
+  const hint = document.querySelector('.rename-hint');
+  if(wrap) wrap.style.display = this.value.trim() ? 'none' : '';
+  if(hint) hint.style.display = this.value.trim() ? 'none' : '';
   renderCdList();
 });
 on('#cdSearchInput','keydown',function(e){
@@ -27287,11 +27401,13 @@ document.addEventListener('click', function(e){
 	  /* 键盘收起时解除滑动锁定 */
 	  chatInput.addEventListener('blur', function(){
 		setTimeout(function(){
+		  if(window.__kbSwitching) return;
 		  var active = document.activeElement;
-		  if(!active || (active.tagName !== 'INPUT' && active.tagName !== 'TEXTAREA')){
-			document.getElementById('app').classList.remove('kb-open');
-		  }
-		}, 100);
+		  if(active && active.tagName === 'TEXTAREA' && active.id === 'chatInput') return;
+		  var vv = window.visualViewport;
+		  if(vv && (window.innerHeight - vv.height - vv.offsetTop) > 80) return;
+		  document.getElementById('app').classList.remove('kb-open');
+		}, 180);
 	  });
 
 	  /* 点表情 / 加号 / 麦克风时，让输入框主动失焦一次，
