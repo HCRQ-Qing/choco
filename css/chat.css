@@ -93,7 +93,7 @@
 .topbar-btn svg{width:16px;height:16px;stroke:var(--th-text);fill:none;stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round}
 .topbar-btn.pink-icon{background:transparent;border-color:transparent;box-shadow:none}
 .topbar-btn.pink-icon svg{stroke:var(--th-text);stroke-width:1.4}
-.topbar-btn:hover{background:var(--th-divider)}
+@media (hover:hover) and (pointer:fine){.topbar-btn:hover{background:var(--th-divider)}}
 
 .tb-mb{position:absolute;left:calc(100% - 8px);top:-12px;background:var(--th-text);color:var(--th-bg1);font-family:"PingFang SC","Hiragino Sans GB",sans-serif;line-height:1;display:inline-flex;align-items:center;justify-content:center;height:20px;padding:0 8px;border-radius:50px;font-size:11px;white-space:nowrap;z-index:30;opacity:0;visibility:hidden;pointer-events:none;box-shadow:0 2px 8px var(--th-accent-line)}
 .tb-mb::after{content:"";position:absolute;background:var(--th-text);left:12px;bottom:-3px;width:8px;height:8px;clip-path:polygon(0 0,100% 0,0 100%)}
@@ -519,12 +519,12 @@ body[data-bubble="bracket"] .msg .voice-bubble::after{content:none !important}
 .d-bar{flex:none;display:flex;gap:6px;align-items:center;margin:0 14px 8px;padding:6px 10px;position:relative;z-index:10;background:var(--th-card,var(--th-bg1));border:none;border-radius:22px;box-shadow:0 1px 5px var(--c-shadow)}
 .d-icon{width:30px;height:30px;border-radius:50%;flex:none;border:none;background:transparent;color:var(--th-text);cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:none}
 .d-icon svg{width:16px;height:16px;stroke:var(--th-text);fill:none;stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round;pointer-events:none}
-.d-icon:hover{background:var(--th-divider)}
+@media (hover:hover) and (pointer:fine){.d-icon:hover{background:var(--th-divider)}}
 .d-bar textarea{flex:1;min-width:0;border:none;background:transparent;padding:6px 4px;font-size:13.5px;font-family:inherit;color:var(--th-text);outline:none;resize:none;max-height:110px;line-height:1.5}
 .d-bar textarea::placeholder{color:#bbb}
 .send-btn{width:30px;height:30px;border-radius:50%;flex:none;border:none;cursor:pointer;background:transparent;color:var(--th-text);display:flex;align-items:center;justify-content:center;box-shadow:none;transition:background .2s ease;padding:0}
 .send-btn svg{width:14px;height:14px;stroke:var(--th-text);fill:none;stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round;pointer-events:none}
-.send-btn:hover{background:var(--th-accent-soft)}
+@media (hover:hover) and (pointer:fine){.send-btn:hover{background:var(--th-accent-soft)}}
 
 .input-quote{display:none;align-items:center;gap:8px;margin:0 16px 0;padding:9px 13px;background:var(--th-accent-soft);border-left:none;border-radius:8px;font-size:12px;color:var(--th-text-soft);position:relative;z-index:11}
 .input-quote.show{display:flex}

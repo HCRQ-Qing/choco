@@ -1,5 +1,8 @@
 @font-face{font-family:'LikeJian';src:url('../fonts/LikeJian.ttf') format('truetype'),url('https://cdn.jsdelivr.net/gh/maoken-fonts/MaokenYingBiKaiShuJ@main/MaokenYingBiKaiShuJ_0.20.ttf') format('truetype');font-display:swap}
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:rgba(0,0,0,0) !important;-webkit-touch-callout:none;user-select:none}
+button,.d-icon,.send-btn,.topbar-btn,.func-item,.ss-ico,.mood-act,.cl-act,.gch-func-item,.gch-d-icon,.gch-at-item,.gch-mdel,.modal .x,.uni-confirm-layer button{-webkit-tap-highlight-color:transparent !important;outline:none !important}
+.d-icon,.send-btn,.topbar-btn{background-color:transparent}
+.d-icon:active,.send-btn:active,.topbar-btn:active,.func-item:active,.ss-ico:active,.mood-act:active,.cl-act:active,.gch-func-item:active,.gch-d-icon:active,.gch-at-item:active,.gch-mdel:active{background-color:transparent !important;outline:none !important;box-shadow:none !important}
 /* ★ 开屏启动页样式 */
 #bootLoader {
   position: fixed;
