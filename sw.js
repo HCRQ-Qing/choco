@@ -15,7 +15,7 @@
    所以每个事件进来都先从 IndexedDB 读回排期再重新 arm 一次。
    ============================================================ */
 
-const CACHE_NAME = 'choco-v6';
+const CACHE_NAME = 'choco-v7';
 const DB_NAME = 'mj_big_files';
 const STORE = 'files';
 const SCHED_KEY = 'sw_ka_schedule_v1';
@@ -90,7 +90,12 @@ self.addEventListener('activate', function(e){
         if(k !== CACHE_NAME) return caches.delete(k);
       }));
     }).then(function(){ return self.clients.claim(); }).then(function(){
-      /* 激活后立即重排一次通知 */
+      return self.clients.matchAll({ type:'window', includeUncontrolled:true }).then(function(list){
+        list.forEach(function(c){
+          try{ c.postMessage({ type:'SW_UPDATED', cache: CACHE_NAME }); }catch(err){}
+        });
+      }).catch(function(){});
+    }).then(function(){
       return loadSchedule().then(function(){ arm(); }).catch(function(){});
     })
   );
