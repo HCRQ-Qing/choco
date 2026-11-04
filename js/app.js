@@ -5373,8 +5373,7 @@ function showMsgMenu(msgEl,x,y){
 
 
 	  } else if(act === 'quote'){
-		// 引用整段
-		const name = isUser ? userName() : getRole().name;
+		const name = isUser ? userName() : displayName(getRole());
 		const text = m.text || '';
 		if(!text){ toast('没有可引用的文字'); return; }
 		setQuote({name, text, msgId: m.id});
@@ -5392,8 +5391,7 @@ function showMsgMenu(msgEl,x,y){
 		openEditChar(m);
 
 	  } else if(act === 'quote-divine'){
-		// 引用占卜结果
-		const name = isUser ? userName() : getRole().name;
+		const name = isUser ? userName() : displayName(getRole());
 		const d = m.divine;
 		const cardText = d.cards.map(c=>{
 		  const rev = c.reversed ? '（逆位）' : '';
@@ -7248,17 +7246,64 @@ window.xyPendingNotifyClick = function(){
   });
 };
 
-/* ★ 收到 SW 的 MOCHI_NOTIFY_CLICK 消息时，实时跳转 */
 try{
   if('serviceWorker' in navigator && navigator.serviceWorker){
     navigator.serviceWorker.addEventListener('message', function(e){
-      if(!e || !e.data || e.data.type !== 'MOCHI_NOTIFY_CLICK') return;
-      var entry = null;
-      try{ entry = notifyEntryFromTag(String(e.data.tag || '')); }catch(x){}
-      notifyRoute(entry);
+      if(!e || !e.data) return;
+      if(e.data.type === 'MOCHI_NOTIFY_CLICK'){
+        var entry = null;
+        try{ entry = notifyEntryFromTag(String(e.data.tag || '')); }catch(x){}
+        notifyRoute(entry);
+        return;
+      }
+      if(e.data.type === 'SW_UPDATED'){
+        handleSwUpdated(String(e.data.cache || ''));
+        return;
+      }
     });
   }
 }catch(e){}
+
+var __swUpdateShownKey = 'mj_sw_update_shown_v1';
+function handleSwUpdated(cacheName){
+  try{
+    if(!cacheName) return;
+    if(!navigator.serviceWorker || !navigator.serviceWorker.controller) return;
+    if(sessionStorage.getItem(__swUpdateShownKey) === cacheName) return;
+    sessionStorage.setItem(__swUpdateShownKey, cacheName);
+    if(typeof uniConfirm !== 'function') return;
+    uniConfirm({
+      title: '发现新版本',
+      sub: 'VERSION ' + cacheName.replace('choco-', '').toUpperCase(),
+      body: '新版本已经准备好了，更新后使用最新功能。',
+      cancelText: '取 消',
+      okText: '立即更新'
+    }).then(function(ok){
+      if(!ok) return;
+      var hasUnsent = false;
+      try{
+        var ta = document.getElementById('chatInput');
+        if(ta && ta.value && ta.value.trim()) hasUnsent = true;
+        var gta = document.getElementById('gchInput');
+        if(gta && gta.value && gta.value.trim()) hasUnsent = true;
+      }catch(e){}
+      if(window.__recording || document.querySelector('.rec-panel.show')) hasUnsent = true;
+      if(document.querySelector('.modal.show, .rd-modal.show, .uni-confirm-layer')) hasUnsent = true;
+      if(!hasUnsent){
+        location.reload();
+        return;
+      }
+      uniConfirm({
+        title: '还有内容没处理',
+        body: '输入框里有没发出去的字，刷新后会丢。确定要更新吗？',
+        cancelText: '先不更新',
+        okText: '仍然更新'
+      }).then(function(ok2){
+        if(ok2) location.reload();
+      });
+    });
+  }catch(e){ console.error('更新弹窗出错', e); }
+}
 
 /* ★ 页面启动时，先看有没有待处理的点击回执 */
 try{
@@ -22860,18 +22905,44 @@ function renderCdList(){
   const sortMode = getSortMode();
   const searchMode = !!kw;
   let items;
+  const isSignGroup = (g.id === 'g-sign');
+  const signCatIds = ['cs-me', 'cs-role', 'cs-refuse'];
+  function localPoolOfCatId(cid){
+    const c = (g.cats || []).find(function(x){ return x.id === cid; });
+    const arr = (c && Array.isArray(c.list)) ? c.list : [];
+    return arr.map(function(x){
+      return { text: String(cardText(x) || '').trim(), t: (x && typeof x === 'object' && x.t) ? x.t : 0 };
+    }).filter(function(x){ return x.text; });
+  }
   if(searchMode){
-	items = [];
-	(g.cats || []).forEach(c => {
-	  (c.list || []).forEach((line, i) => {
-		const t = cardText(line);
-		if(t && t.toLowerCase().includes(kw.toLowerCase())){
-		  items.push({ line, i, cid: c.id, cname: c.name });
-		}
-	  });
-	});
+    items = [];
+    (g.cats || []).forEach(c => {
+      (c.list || []).forEach((line, i) => {
+        const t = cardText(line);
+        if(t && t.toLowerCase().includes(kw.toLowerCase())){
+          items.push({ line, i, cid: c.id, cname: c.name });
+        }
+      });
+      if(isSignGroup && signCatIds.indexOf(c.id) >= 0){
+        const localTexts = {};
+        (c.list || []).forEach(function(x){ localTexts[String(cardText(x) || '').trim()] = 1; });
+        getBuiltinSignPool(c.id).forEach(function(t){
+          if(localTexts[t]) return;
+          if(!t.toLowerCase().includes(kw.toLowerCase())) return;
+          items.push({ line: { text: t, t: 0 }, i: -1, cid: c.id, cname: c.name, builtin: true, btext: t });
+        });
+      }
+    });
   } else {
-	items = cat.list.map((line,i)=>({line,i}));
+    items = cat.list.map((line,i)=>({line,i}));
+    if(isSignGroup && signCatIds.indexOf(cat.id) >= 0){
+      const localTexts = {};
+      cat.list.forEach(function(x){ localTexts[String(cardText(x) || '').trim()] = 1; });
+      getBuiltinSignPool(cat.id).forEach(function(t){
+        if(localTexts[t]) return;
+        items.push({ line: { text: t, t: 0 }, i: -1, builtin: true, btext: t });
+      });
+    }
   }
   if(sortMode === 'newest'){
 	items.sort((a,b)=>(b.line.t||0)-(a.line.t||0));
@@ -22895,17 +22966,22 @@ function renderCdList(){
 	  const _cdInSelMode = document.body.hasAttribute('data-cd-selmode');
 	  const showChk = _cdInSelMode;
 	box.innerHTML = items.map(it=>{
-	  const isSel = selSet.has(it.i);
+	  const isSel = it.i >= 0 && selSet.has(it.i);
 	  const raw = cardText(it.line);
 	  const moved = it.line && typeof it.line === 'object' && it.line.justMoved;
 	  const txt = moved ? '（' + raw + '）' : raw;
-	  const cls = 'cl-line' + (_cdInSelMode?' sel-mode':'') + (isSel?' selected':'') + (moved?' just-moved':'');
-	  const chkHTML = showChk ? ('<div class="chk">' + (isSel ? '✓' : '') + '</div>') : '';
+	  const isBuiltin = !!it.builtin;
+	  const cls = 'cl-line' + (_cdInSelMode && !isBuiltin ? ' sel-mode':'') + (isSel?' selected':'') + (moved?' just-moved':'') + (isBuiltin?' is-builtin':'');
+	  const chkHTML = (showChk && !isBuiltin) ? ('<div class="chk">' + (isSel ? '✓' : '') + '</div>') : '';
 	  const catTag = searchMode && it.cname
 		? '<span class="cl-cat-tag">· ' + escapeHTML(it.cname) + '</span>'
 		: '';
 	  const dataCid = searchMode ? ' data-search-cid="' + escapeHTML(it.cid) + '"' : '';
-	  return `<div class="${cls}" data-i="${it.i}"${dataCid}>${chkHTML}<span class="idx"></span><div class="txt">${highlight(txt,kw)}${catTag}</div><div class="acts"><div class="cl-act copy" data-copy="${it.i}"><svg viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg></div><div class="cl-act" data-edit="${it.i}"><svg viewBox="0 0 24 24"><path d="M4 20l4-1 11-11-3-3L5 16z"/><path d="M14 6l3 3"/></svg></div><div class="cl-act" data-del="${it.i}"><svg viewBox="0 0 24 24"><path d="M4 7h16"/><path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/><path d="M6 7l1 12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-12"/></svg></div></div></div>`;
+	  const bAttr = isBuiltin ? (' data-builtin="1" data-btext="' + escapeHTML(it.btext || raw) + '"') : '';
+	  const copyBtn = '<div class="cl-act copy" data-copy="' + it.i + '" data-btext="' + escapeHTML(isBuiltin ? (it.btext||raw) : '') + '"><svg viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg></div>';
+	  const editBtn = isBuiltin ? '' : ('<div class="cl-act" data-edit="' + it.i + '"><svg viewBox="0 0 24 24"><path d="M4 20l4-1 11-11-3-3L5 16z"/><path d="M14 6l3 3"/></svg></div>');
+	  const delBtn = '<div class="cl-act" data-del="' + it.i + '" data-btext="' + escapeHTML(isBuiltin ? (it.btext||raw) : '') + '"><svg viewBox="0 0 24 24"><path d="M4 7h16"/><path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/><path d="M6 7l1 12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-12"/></svg></div>';
+	  return `<div class="${cls}" data-i="${it.i}"${dataCid}${bAttr}>${chkHTML}<span class="idx"></span><div class="txt">${highlight(txt,kw)}${catTag}</div><div class="acts">${copyBtn}${editBtn}${delBtn}</div></div>`;
 	}).join('');
   }
   /* ===== 事件委托：一次性绑到 #cdList 上，避免重建后丢事件 ===== */
@@ -22951,6 +23027,21 @@ function renderCdList(){
       if(dl){
         e.stopPropagation();
         const i = +dl.dataset.del;
+        const isBuiltinDel = dl.dataset.btext && dl.dataset.btext !== '';
+        const gNow = currentGroupObj();
+        const isSignNow = gNow && gNow.id === 'g-sign';
+        if(isBuiltinDel && isSignNow){
+          const btext = dl.dataset.btext;
+          const curCat = getSrcCat();
+          const catIdNow = searchCid || curCatId;
+          if(!catIdNow) return;
+          const ok = confirm('删除这条个签？\n\n' + btext);
+          if(!ok) return;
+          addSignBlocked(catIdNow, btext);
+          renderCdList();
+          toast('已删除');
+          return;
+        }
         const c = getSrcCat();
         const t = c ? cardText(c.list[i]) : '';
         pendingDelete=[i];
@@ -25929,12 +26020,54 @@ function uniClose(){
   if(mask) mask.classList.remove('show');
   _uniOpen = false;
 }
-/* 单独给"取消"用：关窗 + resolve(null) */
 function uniCancel(){
   const mask = document.getElementById('uniMask');
   if(mask) mask.classList.remove('show');
   if(_uniResolve){ const r = _uniResolve; _uniResolve = null; r(null); }
   _uniOpen = false;
+}
+
+let _uniConfirmLayer = null;
+function uniConfirm(opts){
+  opts = opts || {};
+  if(_uniConfirmLayer){ _uniConfirmLayer.remove(); _uniConfirmLayer = null; }
+  return new Promise(function(resolve){
+    const layer = document.createElement('div');
+    layer.className = 'uni-confirm-layer';
+    layer.style.cssText = 'position:fixed;inset:0;z-index:2147483647;background:rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;padding:24px';
+    const cancelText = opts.cancelText || '取 消';
+    const okText = opts.okText || '确 定';
+    layer.innerHTML =
+      '<div style="width:100%;max-width:300px;background:#fff;border-radius:20px;box-shadow:0 20px 60px rgba(0,0,0,.18);padding:26px 22px 20px;text-align:center;box-sizing:border-box">' +
+        '<div style="font-size:15px;font-weight:300;letter-spacing:3px;color:#1a1a1a;text-indent:3px">' + escapeHTML(opts.title || '提示') + '</div>' +
+        (opts.sub ? '<div style="font-size:11.5px;color:#bbb;letter-spacing:1.5px;margin-top:8px">' + escapeHTML(opts.sub) + '</div>' : '') +
+        (opts.body ? '<div style="font-size:13px;color:#666;line-height:1.8;margin-top:16px;letter-spacing:.5px">' + escapeHTML(opts.body) + '</div>' : '') +
+        '<div style="display:flex;gap:10px;margin-top:24px">' +
+          '<button type="button" data-act="cancel" style="flex:1;padding:12px 0;border-radius:14px;border:0.7px solid rgba(0,0,0,.14);background:transparent;color:#999;font-size:13.5px;font-family:inherit;letter-spacing:2px;cursor:pointer">' + cancelText + '</button>' +
+          '<button type="button" data-act="ok" style="flex:1;padding:12px 0;border-radius:14px;border:none;background:#1a1a1a;color:#fff;font-size:13.5px;font-family:inherit;letter-spacing:2px;cursor:pointer">' + okText + '</button>' +
+        '</div>' +
+      '</div>';
+    document.body.appendChild(layer);
+    _uniConfirmLayer = layer;
+    let done = false;
+    function finish(v){
+      if(done) return;
+      done = true;
+      if(layer.parentNode) layer.remove();
+      if(_uniConfirmLayer === layer) _uniConfirmLayer = null;
+      resolve(v);
+    }
+    layer.addEventListener('click', function(e){
+      if(e.target === layer){ finish(false); return; }
+      const act = e.target.getAttribute('data-act');
+      if(act === 'cancel') finish(false);
+      else if(act === 'ok') finish(true);
+    });
+    setTimeout(function(){
+      const ok = layer.querySelector('[data-act="ok"]');
+      if(ok && opts.autoFocus !== false) ok.focus();
+    }, 80);
+  });
 }
 
 /* ===== 点击「我」改用户名 ===== */
@@ -29289,42 +29422,244 @@ function pickNextSignSwitchAt(){
   return Date.now() + days * 86400000;
 }
 
+const BUILTIN_SIGN_POOL = {
+  'cs-me': [
+    "我不敢看到你哭。我究竟是该替你哭出来，还是就这样，你看着我，我看着你，任由天聋地哑。",
+    "命运再次给我出一样的题，泪眼婆娑的还是我，总是我，只有我。",
+    "我终于明白命运的薄情，给予我一万颗泪，要我用一万种方式失去。",
+    "当我无法安慰你 或你不再关怀我 请千万记住 在我们菲薄的流年 曾有 十二只白鹭鸶 飞过秋天的湖泊",
+    "你不信来世，蜉蝣也不信明天。",
+    "欸我好想要一颗虎牙哦",
+    "又讨厌我了吗",
+    "待在我身边就已经很幸福了不是吗",
+    "是我引诱你吗？",
+    "我坏你就不爱我了吗。",
+    "在你心裡我還如初見時那般可愛嗎",
+    "我们都不懂时间的重量",
+    "缘分竟然默许你离去",
+    "你有一滴泪是为我掉的话 那我就不恨你了",
+    "下辈子我要变成一枚，印错的字。错降在一首完美的情诗里，让你 微微诧异 让你认眞思考，我存在的意义。",
+    "我已经尽力在你的生命里留下痕迹",
+    "你还在生我的气吗 你后悔认识我了吗",
+    "我的眼泪对你来说也无足轻重吗",
+    "我是一个机关算尽的人 但是由于数学太差全部算错了",
+    "想变成一只垂耳兔 只垂耳 不垂泪",
+    "慢半拍也没关系",
+    "你出现时 天使才被定义",
+    "終於在地球找到最喜歡的人類了",
+    "很高兴遇见你 不可思议的十四亿分之一",
+    "晚安 明天太阳还会升起 女孩你的明天不会完蛋",
+    "全世界的水都会重逢，北冰洋与尼罗河也会在湿云里交融。",
+    "我的头发也会生长，泛黄，掉落。那我也是树吗？",
+    "这冗长难渡的苦涩 居然只是命运轻描淡写的一笔吗",
+    "人的生命只有两次，当你意识到只有一次时，第二次就开始了。",
+    "好想躲在厕所里偷偷的哭 结果每一间都有屎…",
+    "你的出现是梅雨季里短暂的晴天",
+    "我将与你结为夫妻，不管你是否愿意",
+    "ⓘ 该个签涉萌已被处理",
+    "我即将在你面前绊倒自己",
+    "宝宝我亲亲亲亲亲 (˵>ㅿ<˵)♡",
+    "看你又忘打标签了#萌#可爱#美丽",
+    "遇到了全世界正数第一宠我之人！",
+    "一觉醒来发现全世界的人聊天技术下降100倍 而我像往常一样给你发了一句我想你了 你哭着要和我共度余生",
+    "宇宙 天空 我們",
+    "好想成為你的宇宙，而不是一顆可有可無的星星",
+    "トランプの下着を無料で贈る",
+    "这一生冗长 苦涩 我想与你同行",
+    "if i say， i love you",
+    "ㅇ ㅂ ㅇ",
+    "该拿什么和眼泪抗衡",
+    "我爱你但与你无关",
+    "艺术是否可以含有巧言令色的成分",
+    "这里是天堂吗",
+    "那你是天使呀^ ^",
+    "あなたが恋しい…",
+    "我是个悲哀的空壳",
+    "好多人坐着邮轮，而你摇着独木舟就敢来到这里，所以你是船翻了也能活下来的人，是靠着一块木板也能漂浮的人",
+    "世界很大诶 小妹",
+    "人生的季节不是线性的，当你为一件事燃烧得足够炽热，你就在任何天气里，为自己创造了一个夏天。",
+    "握紧你最喜欢的麦穗，然后闭眼，穿过整片麦田",
+    "把自卑的人翻过来，会变成一个卑自",
+    "原諒你實在太可爱",
+    "恋还是练",
+    "好想你……不好！我的面子。！",
+    "记住我的好 或记住我就好",
+    "或许你的天使就是我呀ÒωÓ",
+    "我不想只在梦里见到你",
+    "为了跟你见面我可是提前吃了三天星球杯没用勺",
+    "生命中最重要的东西 我找到了",
+    "为你，千千万万遍",
+    "世间百般爱你之人总与你相距千里，但我永远在你的心里",
+    "请让你的爱和眼泪流入我生命里，侵蚀成以你为名的小溪吧",
+    "爱人的眼睛是世界第八大海洋",
+    "这是缘亦是梦中最美的相见",
+    "我屁股好痒。",
+    "这个世界太随便了 语言都没有重量 什么都可以随便 感情也是 人也是",
+    "我的太阳有两个，一个远在天边一个近在眼前",
+    "不要执着于去远方了看看脚下的小花吧",
+    "如果早点认识你就好了，在你小的时候，在你第一次难过的时候，在你第一次特别需要陪伴的时候，在你最需要爱的时候",
+    "你可以完全依赖我 因为我比世界好多了",
+    "我在你森林里扮演的角色还是太蘑菇了",
+    "我出生的那天是上帝认为世上不能没有我的那天",
+    "终其一生寻找那颗偏向你的心，不是早就长在你的胸腔里了吗",
+    "我要响彻天地的自由和触及深处的灵魂",
+    "老天你凭啥知道一切",
+    "你说幸福有链接 我打开一看是404 Not Found¯꒳¯̥̥",
+    "好想為你抵擋世界上的所有壞",
+    "You look like an angel",
+    "如果连天空都是你的牢笼 哪里才有你的羽翼呢",
+    "路边装忧郁差点被摩托撞飞靠正太扭腰躲过一劫。",
+    "如果明天世界末日 那我想跟你在一起呀",
+    "其实关于你的事，好的坏的我都记不太清了，可是别人提到你时，我却下意识的想起那天你说我漂亮时的眼睛",
+    "好嘛，没关系，你哭没关系。我陪你去散步好不好，你不用太打扮。我带你去你最喜欢的那家餐厅好不好，吃饭之前让你先拍照。我抱抱你好不好，稍微紧一些。眼泪是弱酸性，腐蚀掉外壳，留下比较脆弱的你。脆弱也没关系，焦虑烦躁委屈敏感，咬我，掐我，让我说一千遍我爱你，要我一直陪着你，都可以。",
+    "笨蛋 我存在的意义就是想接住你的眼泪呀",
+    "这次没关系 下次别这样了 下次要是还这样 下次也没关系",
+    "一直依赖我的话，你以后怎么办呢？",
+    "人们遇到流浪动物时总是会说 你跳到我车上我就救你 你叫两声我就救你 你走过来吧 走过来我就救你 人何尝不是如此 我们和神明没有共通语言 被苦难压到倒地不起时 心软的神也会那样祈祷吧 人 你站起来吧 站起来我就救你",
+    "任何人都请不要再闯进我的生活",
+    "我好咕嘟",
+    "트럼프 팬티 무료 증정.",
+    "假装什么都不在乎就能幸福了吗",
+    "海的那边",
+    "能拥抱 能哭泣 能依靠 这就是我想要的感情",
+    "我会想你的 在世界某个角落",
+    "没关系的，你怎么都没关系，想躲起来也没关系，不想面对也没关系，脏脏的旧旧的也没关系，碎掉了也没关系，我把你藏起来，我把你包裹起来，我把你擦干净，我把你拼起来，我捂住你的耳朵，只要闭上眼睛额头靠着额头，这个世界就只剩下我们两个了，不要害怕。",
+    "我存在的意义就是为了接住你的眼泪，让你可以不那么勇敢，不管发生什么事我都会一直陪着你，明明你脆弱一点也没关系",
+    "当你恒常以诗的悲哀征服生命的悲哀，我试图以文学的悬崖瓦解宿命的悬崖；当我无法安慰你，或你不再能关怀我，请千万记住，在我们菲薄的句流年里，曾有十二只白鹭鸶飞过秋天的湖泊。",
+    "同一片天为何好久不见",
+    "正正相反的你和我",
+    "天空知晓一切 却不携来片刻回音",
+    "人总会犯错 所以铅笔的另一头是橡皮",
+    "同我啜泣，共我悲鸣",
+    "生锈的感情又逢下雨天",
+    "像秋一样接纳自己的丰荣与枯败 像月亮一样接受自己的阴晴与圆缺",
+    "正因为抱着与你相会的希望，我才总认为多么崎岖的小径也是正道",
+    "生命有如度过一重大海，我们相遇在同一条窄船里。死时，我们同登彼岸，又向不同的世界各奔前程。",
+    "没办法凭借一个开头来辨别悲剧或者喜剧 有一天你笑到一半 眉头就开始皱起 你是在那个时候看见今天的吗",
+    "灵魂会流动，或许明天会变成大海",
+    "IM SO SAD !",
+    "我能否将你比作夏天",
+    "世事漫随流水",
+    "乞拉朋齐的云又在哭泣，我想说我爱你。",
+    "雨都停了这片天灰什么呢",
+    "曾经的永远是永远的曾经",
+    "时间是带走我的洪水，但我亦为河流",
+    "在隆冬，我终于知道，我身上有一个不可战胜的夏天。",
+    "我們十指相扣 是上帝解不開的宿命結",
+    "你的真誠 善良 耐心 我細數 我珍重",
+    "幾分之幾 幾分知己",
+    "我叹缘分浅浅如雨渐渐。",
+    "抱紧你的我比国王富有",
+    "失去你的我比乞丐落魄",
+    "年幼的你总缺乏勇气",
+    "看到你幸福，我才会幸福。",
+    "因為喜歡，才會想佔有，為什麼要放棄？",
+    "應該死命纏著對方到底啊。",
+    "懷著一夜暴富的夢想活著。",
+    "要離開的人，就算是強行留住，也沒有什麼意義吧。",
+    "你以後一定會做得更好，蛻變成更厲害的人，不要這樣否定自己。",
+    "別總是把，自己困在過去，請你活在當下吧。",
+    "人生到最後依然是獨自一人。所以，我要享受我瀟灑的人生。",
+    "不需要變得完美，只要是人都會犯錯。",
+    "對某些人來說，很重要的事，對其他人來說，並非如此，這很理所當然。",
+    "一週上班五天，對人類來說，不會太多了嗎？現在就想回家…",
+    "無論任何事都認為，是自己的錯造成的，這就叫做傲慢。",
+    "唉…好累…要去洗澡…為什麼可以幫人洗澡的機器還沒被發明出來？"
+  ],
+  'cs-role': [],
+  'cs-refuse': [
+    "没有我想要的",
+    "不需要",
+    "现在挺好",
+    "我喜欢现在这个",
+    "懒得换",
+    "不知道换哪个",
+    "更希望你给我换",
+    "没空",
+    "自己想",
+    "不想"
+  ]
+};
+BUILTIN_SIGN_POOL['cs-role'] = BUILTIN_SIGN_POOL['cs-me'].slice();
+
+const SIGN_BLOCKED_KEY = 'mj_sign_blocked_v1';
+function getSignBlockedMap(){
+  let m = lsGet(SIGN_BLOCKED_KEY, null);
+  if(!m || typeof m !== 'object') m = {};
+  return m;
+}
+function saveSignBlockedMap(m){ lsSet(SIGN_BLOCKED_KEY, m); }
+function getSignBlockedList(catId){
+  const m = getSignBlockedMap();
+  return Array.isArray(m[catId]) ? m[catId] : [];
+}
+function addSignBlocked(catId, text){
+  const t = String(text || '').trim();
+  if(!catId || !t) return;
+  const m = getSignBlockedMap();
+  if(!Array.isArray(m[catId])) m[catId] = [];
+  if(m[catId].indexOf(t) < 0) m[catId].push(t);
+  saveSignBlockedMap(m);
+}
+function removeSignBlocked(catId, text){
+  const t = String(text || '').trim();
+  if(!catId || !t) return;
+  const m = getSignBlockedMap();
+  if(!Array.isArray(m[catId])) return;
+  const i = m[catId].indexOf(t);
+  if(i >= 0){ m[catId].splice(i, 1); saveSignBlockedMap(m); }
+}
+function getBuiltinSignPool(catId){
+  const arr = BUILTIN_SIGN_POOL[catId];
+  if(!Array.isArray(arr)) return [];
+  const blocked = getSignBlockedList(catId);
+  return arr.filter(function(s){ return blocked.indexOf(String(s).trim()) < 0; });
+}
+
 /* 从「签字卡」分组里抽一条
    - catId === 'cs-me'      → 从「公用 → 签字卡 → 我的个签」里抽
    - catId === 'cs-role'    → 从「角色专属 → 签字卡 → 角色个签」里抽
                              角色专属为空时，回退到公用的「角色个签」
    修复：角色个签不再跟用户共用同一个分类，改为各角色独立 */
 function pickSignCardText(catId, roleId){
-  /* --- 我自己的个签：从该角色专属读，各角色独立 --- */
   if(catId === 'cs-me'){
     var rid0 = roleId || (typeof getCurrentRoleId === 'function' ? getCurrentRoleId() : '');
-    if(!rid0) return '';
-    try{
-      var roleGroups0 = getGroupsByOwner(rid0);
-      var rg0 = roleGroups0.find(function(x){ return x.id === 'g-sign'; });
-      if(!rg0 || !rg0.cats) return '';
-      var rcat0 = rg0.cats.find(function(c){ return c.id === 'cs-me'; });
-      if(!rcat0 || !rcat0.list || !rcat0.list.length) return '';
-      var rpool0 = rcat0.list.map(cardText).map(function(s){ return String(s).trim(); }).filter(Boolean);
-      if(!rpool0.length) return '';
-      return rpool0[Math.floor(Math.random() * rpool0.length)];
-    }catch(e){ console.error('读角色专属我的个签失败', e); return ''; }
+    var localPool0 = [];
+    if(rid0){
+      try{
+        var roleGroups0 = getGroupsByOwner(rid0);
+        var rg0 = roleGroups0.find(function(x){ return x.id === 'g-sign'; });
+        if(rg0 && rg0.cats){
+          var rcat0 = rg0.cats.find(function(c){ return c.id === 'cs-me'; });
+          if(rcat0 && rcat0.list){
+            localPool0 = rcat0.list.map(cardText).map(function(s){ return String(s).trim(); }).filter(Boolean);
+          }
+        }
+      }catch(e){ console.error('读角色专属我的个签失败', e); }
+    }
+    var pool0 = localPool0.concat(getBuiltinSignPool('cs-me'));
+    if(!pool0.length) return '';
+    return pool0[Math.floor(Math.random() * pool0.length)];
   }
 
-  /* --- 角色个签 / 拒绝理由：从该角色专属抽 --- */
   if(catId === 'cs-role' || catId === 'cs-refuse'){
     var rid = roleId || (typeof getCurrentRoleId === 'function' ? getCurrentRoleId() : '');
-    if(!rid) return '';
-    try{
-      var roleGroups = getGroupsByOwner(rid);
-      var rg = roleGroups.find(function(x){ return x.id === 'g-sign'; });
-      if(!rg || !rg.cats) return '';
-      var rcat = rg.cats.find(function(c){ return c.id === catId; });
-      if(!rcat || !rcat.list || !rcat.list.length) return '';
-      var rpool = rcat.list.map(cardText).map(function(s){ return String(s).trim(); }).filter(Boolean);
-      if(!rpool.length) return '';
-      return rpool[Math.floor(Math.random() * rpool.length)];
-    }catch(e){ console.error('读角色专属个签失败', e); return ''; }
+    var localPool = [];
+    if(rid){
+      try{
+        var roleGroups = getGroupsByOwner(rid);
+        var rg = roleGroups.find(function(x){ return x.id === 'g-sign'; });
+        if(rg && rg.cats){
+          var rcat = rg.cats.find(function(c){ return c.id === catId; });
+          if(rcat && rcat.list){
+            localPool = rcat.list.map(cardText).map(function(s){ return String(s).trim(); }).filter(Boolean);
+          }
+        }
+      }catch(e){ console.error('读角色专属个签失败', e); }
+    }
+    var pool = localPool.concat(getBuiltinSignPool(catId));
+    if(!pool.length) return '';
+    return pool[Math.floor(Math.random() * pool.length)];
   }
 
   return '';
@@ -29878,13 +30213,12 @@ function playQueueItem(item){
 /* ============ 来电 / 呼叫 UI ============ */
 /* ===== 缩小到小窗（还没接通的状态） ===== */
 function shrinkToMini(pendingKind, roleId){
-  /* pendingKind: 'incoming'（角色打来，等待接听） 或 'outgoing'（我方打出去，等待对方接听） */
   const role = getRoleById(roleId) || {};
   const mini = document.getElementById('callMini');
   if(!mini) return;
   renderCallAvatar(document.getElementById('callMiniAvatar'), role);
   const nameEl = document.getElementById('callMiniName');
-  if(nameEl) nameEl.textContent = role.name || '角色';
+  if(nameEl) nameEl.textContent = displayName(role) || '角色';
   const timeEl = document.getElementById('callMiniTime');
   if(timeEl) timeEl.textContent = (pendingKind === 'incoming') ? '来电中…' : '正在呼叫…';
   /* 显示接听按钮？只有 incoming 才需要 */
@@ -29935,9 +30269,9 @@ function triggerIncomingCall(forceRoleId){
   const scr = document.getElementById('callIncoming');
   if(!scr) return;
   renderCallAvatar(document.getElementById('callIncomingAvatar'), role);
-  document.getElementById('callIncomingName').textContent = role.name || '角色';
+  document.getElementById('callIncomingName').textContent = displayName(role) || '角色';
   document.getElementById('callIncomingSub').textContent = '邀 请 你 通 话';
-  document.getElementById('callIncomingType').textContent = (callState.mode === 'video') ? '📹' : '📞';
+  document.getElementById('callIncomingType').textContent = '';
   const bg = document.getElementById('callIncomingBg');
   if(bg){
     if(role.avatar && String(role.avatar).startsWith('data:')){
@@ -29969,13 +30303,14 @@ function missedIncomingCall(){
   appendMsgToRole(callState.roleId, {
     id: uid(),
     time: Date.now(),
-    sys: '<b>' + escapeHTML(role.name || '角色') + '</b> 的来电未接听'
+    sys: '<b>' + escapeHTML(displayName(role) || '角色') + '</b> 的来电未接听'
   });
   const scr = document.getElementById('callIncoming');
   if(scr) scr.classList.remove('show');
   const mini = document.getElementById('callMini');
   if(mini) mini.classList.remove('show');
   try{ stopRingLoop(); if(window.__stopRing){ window.__stopRing(); window.__stopRing=null; } }catch(e){}
+  callState.active = false;
   callState.pendingKind = '';
   resetCallCycle();
 }
@@ -29985,7 +30320,7 @@ function rejectIncomingCall(){
   appendMsgToRole(callState.roleId, {
     id: uid(),
     time: Date.now(),
-    sys: '你挂断了 <b>' + escapeHTML(role.name || '角色') + '</b> 的来电'
+    sys: '你挂断了 <b>' + escapeHTML(displayName(role) || '角色') + '</b> 的来电'
   });
   const scr = document.getElementById('callIncoming');
   if(scr) scr.classList.remove('show');
@@ -29994,6 +30329,7 @@ function rejectIncomingCall(){
   clearTimeout(window.__callIncomingTimeout);
   try{ stopRingLoop(); if(window.__stopRing){ window.__stopRing(); window.__stopRing=null; } }catch(e){}
   try{ playSoundOnce('hangup'); }catch(e){}
+  callState.active = false;
   callState.pendingKind = '';
   resetCallCycle();
 }
@@ -30010,7 +30346,7 @@ function acceptCall(skipIncoming){
   const role = getRoleById(callState.roleId) || {};
   const mini = document.getElementById('callMini');
   renderCallAvatar(document.getElementById('callMiniAvatar'), role);
-  document.getElementById('callMiniName').textContent = role.name || '角色';
+  document.getElementById('callMiniName').textContent = displayName(role) || '角色';
   document.getElementById('callMiniTime').textContent = '00:00';
   if(!mini.dataset.inited){
     mini.style.left = (window.innerWidth - 200) + 'px';
@@ -30035,7 +30371,7 @@ function hangupCall(fromWho){
   const ss = String(dur%60).padStart(2,'0');
 
   const whoText = fromWho === 'role'
-    ? '<b>' + escapeHTML(role.name || '角色') + '</b> 挂断了通话'
+    ? '<b>' + escapeHTML(displayName(role) || '角色') + '</b> 挂断了通话'
     : '你挂断了通话';
   appendMsgToRole(callState.roleId, {
     id: uid(),
@@ -30147,6 +30483,7 @@ function userCall(mode){
   const role = getRoleById(roleId) || {};
   const cfg = getCallCfg();
   if(!cfg.on){ toast('通话功能已关闭'); return; }
+  if(callState.active || callState.pendingKind){ toast('正在通话中'); return; }
 
   callState.mode = mode;
   callState.roleId = roleId;
@@ -30158,9 +30495,9 @@ function userCall(mode){
   const scr = document.getElementById('callOutgoing');
   if(!scr) return;
   renderCallAvatar(document.getElementById('callOutgoingAvatar'), role);
-  document.getElementById('callOutgoingName').textContent = role.name || '角色';
+  document.getElementById('callOutgoingName').textContent = displayName(role) || '角色';
   document.getElementById('callOutgoingSub').textContent = '正 在 呼 叫…';
-  document.getElementById('callOutgoingType').textContent = (mode === 'video') ? '📹' : '📞';
+  document.getElementById('callOutgoingType').textContent = '';
   const bg = document.getElementById('callOutgoingBg');
   if(bg){
     if(role.avatar && String(role.avatar).startsWith('data:')){
@@ -30195,7 +30532,7 @@ function userCall(mode){
 
       const mini = document.getElementById('callMini');
       renderCallAvatar(document.getElementById('callMiniAvatar'), role);
-      document.getElementById('callMiniName').textContent = role.name || '角色';
+      document.getElementById('callMiniName').textContent = displayName(role) || '角色';
       document.getElementById('callMiniTime').textContent = '00:00';
       if(!mini.dataset.inited){
         mini.style.left = (window.innerWidth - 200) + 'px';
@@ -30223,7 +30560,7 @@ function userCall(mode){
       scr.classList.remove('show');
       appendMsgToRole(roleId, {
         id: uid(), time: Date.now(),
-        sys: '<b>' + escapeHTML(role.name || '角色') + '</b> 已拒接'
+        sys: '<b>' + escapeHTML(displayName(role) || '角色') + '</b> 已拒接'
       });
       resetCallCycle();
 
@@ -30377,10 +30714,27 @@ document.addEventListener('change', function(e){
 
 /* ============ 启动 ============ */
 function startCallModule(){
-  if(callState.active){
+  if(callState.active || callState.pendingKind){
     callState.active = false;
+    callState.pendingKind = '';
     callState.queue = [];
     callState.playing = false;
+    try{ stopMiniTimeTick(); }catch(e){}
+    try{ stopRingLoop(); }catch(e){}
+    if(window.__stopRing){ try{ window.__stopRing(); }catch(e){} window.__stopRing = null; }
+    var _mini = document.getElementById('callMini');
+    if(_mini) _mini.classList.remove('show');
+    var _inScr = document.getElementById('callIncoming');
+    if(_inScr) _inScr.classList.remove('show');
+    var _outScr = document.getElementById('callOutgoing');
+    if(_outScr) _outScr.classList.remove('show');
+    var _mm = document.getElementById('callMiniMedia');
+    if(_mm) _mm.style.display = 'none';
+    var _mv = document.getElementById('callMiniVideo');
+    if(_mv){ try{ _mv.pause(); _mv.src = ''; }catch(e){} }
+    clearTimeout(window.__callIncomingTimeout);
+    clearTimeout(window.__callOutgoingTimeout);
+    clearTimeout(window.__roleAutoHangup);
   }
   /* 给每个"允许主动打来"的角色排一份初始掷骰时间 */
   if(!callState.perRole) callState.perRole = {};
