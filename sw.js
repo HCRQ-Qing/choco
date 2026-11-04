@@ -15,7 +15,7 @@
    所以每个事件进来都先从 IndexedDB 读回排期再重新 arm 一次。
    ============================================================ */
 
-const CACHE_NAME = 'choco-v5';          /* ★ 版本号 +1 强制全量清理旧缓存 */
+const CACHE_NAME = 'choco-v6';
 const DB_NAME = 'mj_big_files';
 const STORE = 'files';
 const SCHED_KEY = 'sw_ka_schedule_v1';
