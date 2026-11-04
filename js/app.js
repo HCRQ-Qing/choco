@@ -2002,7 +2002,7 @@ function pickRoleEmoji(roleId){
                    : (Array.isArray(panel.hiddenEmojiCats) ? panel.hiddenEmojiCats : []);
     const enabled = cats.filter(c=>!disabled.includes(c.name));
     const pool = [];
-    enabled.forEach(c=>{ (c.list||[]).forEach(ch=>{ if(ch && String(ch).trim()) pool.push(String(ch).trim()); }); });
+    enabled.forEach(c=>{ if(c.name==='常用') return; (c.list||[]).forEach(ch=>{ if(ch && String(ch).trim()) pool.push(String(ch).trim()); }); });
     if(!pool.length) return '';
     const one = pool[Math.floor(Math.random()*pool.length)];
     try{ usageBump(USAGE_EMOJI_KEY, rid, one); }catch(e){}
@@ -2017,7 +2017,7 @@ function pickRoleKao(roleId){
     const disabled = Array.isArray(panel.disabledKaoCats) ? panel.disabledKaoCats : [];
     const enabled = cats.filter(c=>!disabled.includes(c.name));
     const pool = [];
-    enabled.forEach(c=>{ (c.list||[]).forEach(k=>{ if(k && String(k).trim()) pool.push(String(k).trim()); }); });
+    enabled.forEach(c=>{ if(c.name==='常用') return; (c.list||[]).forEach(k=>{ if(k && String(k).trim()) pool.push(String(k).trim()); }); });
     if(!pool.length) return '';
     const one = pool[Math.floor(Math.random()*pool.length)];
     try{ usageBump(USAGE_KAO_KEY, rid, one); }catch(e){}
@@ -9067,13 +9067,13 @@ const DEFAULT_EMOJI_CATS = [
   {name:'符号',icon:'💯',list:[...'❤️💔💕💞💓💗💖💘💝💯✅❌⭕🚫🔰🔱💠➰➿〰️🔴🟠🟡🟢🔵🟣⚫⚪🟤🔺🔻🔸🔹🔶🔷🔳🔲▪️▫️◾◽◼️◻️🟥🟧🟨🟩🟦🟪⬛⬜🟫⭐🌟✨⚡🔥💥💫']}
 ];
 const DEFAULT_KAOMOJI_CATS = [
-  {name:'开心',list:['(◕‿◕)','(｡♥‿♥｡)','(♡´▽`♡)','(๑•̀ㅂ•́)و✧','(≧▽≦)ﾉ','(๑>◡<๑)✧','(*/ω＼*)','(๑˃̵ᴗ˂̵)','(◍•ᴗ•◍)','(◕ᴗ◕✿)','(◠‿◠✿)','(✿◠‿◠)','(❁´◡`❁)','(๑˃̵ᴗ˂̵)و','(｡•̀ᴗ-)✧','(๑>ᴗ<๑)','(◍•ᴗ•◍)✧*。','(っ˘ω˘ς)','(๑´ω`๑)','୧(´ω`*)୨','(❁´◡`❁)♡']},
-  {name:'生气',list:['(╯°□°）╯︵ ┻━┻','┻━┻ ︵ヽ(`Д´)ﾉ','(╬ Ò﹏Ó)','(#`Д´)','( ` ω ´ )','(ƭ `з´ )','(╬ಠ益ಠ)','(ﾉಥ益ಥ)ﾉ彡┻━┻','(ﾉಠ益ಠ)ﾉ','Σ(▼□▼メ)','ヽ(｀⌒´メ)ノ','ヽ(`Д´)ﾉ','Σ(｀д′*ノ)ノ']},
-  {name:'伤心',list:['(｡•́︿•̀｡)','(ノへ￣、)','(╥ω╥)','(つ﹏⊂)','(ಥ_ಥ)','(ಥ﹏ಥ`｡)','(っ- ‸ - ς)','(｡•́ - •̀｡)','(T_T)','qwq','QwQ','QAQ','TAT']},
+  {name:'开心',list:['(◍＞◡＜◍)','՞˶･֊･˶՞','⌯>ᴗo⌯ .ᐟ.ᐟ','୧〃•̀ꇴ•〃૭','(,,>᎑<,,)','˃ 𖥦 ˂','૮₍ ˃̶ ꇴ ˂̶ ₎ა','( ˶ ❛ ꁞ ❛ ˶ )','˶╹ꇴ╹˶','٩(๑ơలơ)۶','(๑╹ヮ╹๑)ﾉ','ᯇᴗᯇ']},
+  {name:'生气',list:['(*￣m￣)','（｀Δ´）！','-`д´-','(*≧m≦*)','☄ฺ(◣д◢)☄ฺ','⩌⌯⩌']},
+  {name:'伤心',list:['･᷄‎･᷅','´ᯅ`','꒦ິ^꒦ິ','˶ˊᜊˋ˶','⸝⸝ʚ̴̶̷̆ ̯ʚ̴̶̷̆⸝⸝','˃̣̣̥⌓˂̣̣̥','QWQ','ㅠ⩊ㅠ']},
   {name:'害羞',list:['(*/ω＼*)','(〃∀〃)','(๑////๑)','(⺣ ◡⺣)♡','(〃ω〃)','(๑•́ ₃ •̀๑)✧','(灬ºωº灬)','(๑´ㅂ`๑)','(๑¯◡¯๑)']},
-  {name:'无语',list:['(⊙_⊙)','(°ー°〃)','(⊙﹏⊙)','(´･_･`)','(￣ω￣;)','(・_・;)','(→_→)','(←_←)','(¬_¬)','(¬‿¬)','UwU','OwO']},
-  {name:'害怕',list:['Σ(っ °Д °;)っ','Σ(°△°|||)︴','(°Д°)','(⊙口⊙)','(ﾟДﾟ)','(°◇°;)','(⊙o⊙)','(⚆_⚆)','(؛´Д`)','(╥﹏╥)','(ʘᴗʘ)']},
-  {name:'特殊',list:['♬♪']}
+  {name:'无语',list:['╮( •́ω•̀ )╭']},
+  {name:'害怕',list:['（／．＼）','(ノдヽ)']},
+  {name:'特殊',list:['⊂_ヽ\n     ＼＼\n         ＼( ͡° ͜ʖ ͡°)\n              >    ⌒ヽ\n            /      へ＼\n         /        /    ＼＼\n          ﾚ    ノ         ヽ_つ\n        /    /\n     /    /|\n    (    (ヽ\n    |    |、＼\n    | 丿 ＼ ⌒)\n    | |        ) /\nノ )        Lﾉ\n(_／']}
 ];
 let panelMap = lsGet('mj_panel_map', null) || {};
 /* 拿一份"干净的默认面板"当模板：
@@ -9100,6 +9100,30 @@ function filterEmojiCats(cats){
     return copy;
   });
 }
+
+(function migrateKaoToNewDefaults(){
+  var FLAG = 'mj_kao_new_defaults_v1';
+  if(lsGet(FLAG, false)) return;
+  try{
+    var NEW = {};
+    DEFAULT_KAOMOJI_CATS.forEach(function(c){ NEW[c.name] = c.list; });
+    var TARGET = ['开心','生气','伤心','无语','害怕','特殊'];
+    var map = lsGet('mj_panel_map', null);
+    if(map && typeof map === 'object'){
+      Object.keys(map).forEach(function(key){
+        var panel = map[key];
+        if(!panel || !Array.isArray(panel.kaoCats)) return;
+        panel.kaoCats.forEach(function(cat){
+          if(TARGET.indexOf(cat.name) < 0) return;
+          cat.list = JSON.parse(JSON.stringify(NEW[cat.name]));
+        });
+      });
+      lsSet('mj_panel_map', map);
+      try{ panelMap = map; }catch(e){}
+    }
+  }catch(e){ console.error('颜文字换新迁移失败', e); }
+  lsSet(FLAG, true);
+})();
 
 function getCleanEmojiTemplate(){
   try{
@@ -10122,6 +10146,20 @@ function openAddEmojiModal(){
   if(ta){
 	ta.value = '';
 	ta.setAttribute('placeholder', AE_PLACEHOLDERS.line);
+	if(!ta._autoBracketBound){
+	  ta._autoBracketBound = true;
+	  ta.addEventListener('keydown', function(e){
+	    if(e.key === 'Enter' && !e.shiftKey && !e.ctrlKey && !e.metaKey && aeMode === 'bracket'){
+	      e.preventDefault();
+	      const s = this.selectionStart;
+	      const en = this.selectionEnd;
+	      const v = this.value;
+	      this.value = v.slice(0, s) + '\n[]' + v.slice(en);
+	      this.selectionStart = this.selectionEnd = s + 3;
+	      this.dispatchEvent(new Event('input', { bubbles: true }));
+	    }
+	  });
+	}
   }
   const desc = document.getElementById('aeDesc');
   if(desc) desc.innerHTML = AE_DESCS.line;
@@ -10140,7 +10178,16 @@ on('#aeModes','click',e=>{
 	x.classList.toggle('on', x === t);
   });
   const ta = document.getElementById('aeText');
-  if(ta) ta.setAttribute('placeholder', AE_PLACEHOLDERS[aeMode]);
+  if(ta){
+	ta.setAttribute('placeholder', AE_PLACEHOLDERS[aeMode]);
+	if(aeMode === 'bracket'){
+	  ta.value = '[]';
+	  setTimeout(()=>{ ta.focus(); ta.setSelectionRange(1, 1); }, 10);
+	} else {
+	  ta.value = '';
+	  setTimeout(()=>{ ta.focus(); }, 10);
+	}
+  }
   const desc = document.getElementById('aeDesc');
   if(desc) desc.innerHTML = AE_DESCS[aeMode];
 });
@@ -10257,6 +10304,20 @@ function openAddKaoModal(){
   if(ta){
 	ta.value = '';
 	ta.setAttribute('placeholder', AK_PLACEHOLDERS.line);
+	if(!ta._autoBracketBound){
+	  ta._autoBracketBound = true;
+	  ta.addEventListener('keydown', function(e){
+	    if(e.key === 'Enter' && !e.shiftKey && !e.ctrlKey && !e.metaKey && akMode === 'bracket'){
+	      e.preventDefault();
+	      const s = this.selectionStart;
+	      const en = this.selectionEnd;
+	      const v = this.value;
+	      this.value = v.slice(0, s) + '\n[]' + v.slice(en);
+	      this.selectionStart = this.selectionEnd = s + 3;
+	      this.dispatchEvent(new Event('input', { bubbles: true }));
+	    }
+	  });
+	}
   }
   const desc = document.getElementById('akDesc');
   if(desc) desc.innerHTML = AK_DESCS.line;
@@ -10275,7 +10336,16 @@ on('#akModes','click',e=>{
 	x.classList.toggle('on', x === t);
   });
   const ta = document.getElementById('newKaoText');
-  if(ta) ta.setAttribute('placeholder', AK_PLACEHOLDERS[akMode]);
+  if(ta){
+	ta.setAttribute('placeholder', AK_PLACEHOLDERS[akMode]);
+	if(akMode === 'bracket'){
+	  ta.value = '[]';
+	  setTimeout(()=>{ ta.focus(); ta.setSelectionRange(1, 1); }, 10);
+	} else {
+	  ta.value = '';
+	  setTimeout(()=>{ ta.focus(); }, 10);
+	}
+  }
   const desc = document.getElementById('akDesc');
   if(desc) desc.innerHTML = AK_DESCS[akMode];
 });
