@@ -9102,12 +9102,22 @@ function filterEmojiCats(cats){
 }
 
 (function migrateKaoToNewDefaults(){
-  var FLAG = 'mj_kao_new_defaults_v1';
+  var FLAG = 'mj_kao_new_defaults_v2';
   if(lsGet(FLAG, false)) return;
   try{
     var NEW = {};
     DEFAULT_KAOMOJI_CATS.forEach(function(c){ NEW[c.name] = c.list; });
     var TARGET = ['开心','生气','伤心','无语','害怕','特殊'];
+    
+    var oldDefaults = {
+      '开心': ['(◕‿◕)','(｡♥‿♥｡)','(♡´▽`♡)','(๑•̀ㅂ•́)و✧','(≧▽≦)ﾉ','(๑>◡<๑)✧','(*/ω＼*)','(๑˃̵ᴗ˂̵)','(◍•ᴗ•◍)','(◕ᴗ◕✿)','(◠‿◠✿)','(✿◠‿◠)','(❁´◡`❁)','(๑˃̵ᴗ˂̵)و','(｡•̀ᴗ-)✧','(๑>ᴗ<๑)','(◍•ᴗ•◍)✧*。','(っ˘ω˘ς)','(๑´ω`๑)','୧(´ω`*)୨','(❁´◡`❁)♡'],
+      '生气': ['(╯°□°）╯︵ ┻━┻','┻━┻ ︵ヽ(`Д´)ﾉ','(╬ Ò﹏Ó)','(#`Д´)','( ` ω ´ )','(ƭ `з´ )','(╬ಠ益ಠ)','(ﾉಥ益ಥ)ﾉ彡┻━┻','(ﾉಠ益ಠ)ﾉ','Σ(▼□▼メ)','ヽ(｀⌒´メ)ノ','ヽ(`Д´)ﾉ','Σ(｀д′*ノ)ノ'],
+      '伤心': ['(｡•́︿•̀｡)','(ノへ￣、)','(╥ω╥)','(つ﹏⊂)','(ಥ_ಥ)','(ಥ﹏ಥ`｡)','(っ- ‸ - ς)','(｡•́ - •̀｡)','(T_T)','qwq','QwQ','QAQ','TAT'],
+      '无语': ['(⊙_⊙)','(°ー°〃)','(⊙﹏⊙)','(´･_･`)','(￣ω￣;)','(・_・;)','(→_→)','(←_←)','(¬_¬)','(¬‿¬)','UwU','OwO'],
+      '害怕': ['Σ(っ °Д °;)っ','Σ(°△°|||)︴','(°Д°)','(⊙口⊙)','(ﾟДﾟ)','(°◇°;)','(⊙o⊙)','(⚆_⚆)','(؛´Д`)','(╥﹏╥)','(ʘᴗʘ)'],
+      '特殊': ['♬♪']
+    };
+
     var map = lsGet('mj_panel_map', null);
     if(map && typeof map === 'object'){
       Object.keys(map).forEach(function(key){
@@ -9115,13 +9125,25 @@ function filterEmojiCats(cats){
         if(!panel || !Array.isArray(panel.kaoCats)) return;
         panel.kaoCats.forEach(function(cat){
           if(TARGET.indexOf(cat.name) < 0) return;
-          cat.list = JSON.parse(JSON.stringify(NEW[cat.name]));
+          if(!Array.isArray(cat.list)) cat.list = [];
+          
+          var olds = oldDefaults[cat.name] || [];
+          cat.list = cat.list.filter(function(item){
+            return olds.indexOf(String(item)) === -1; 
+          });
+
+          var news = NEW[cat.name] || [];
+          news.forEach(function(item){
+            if(cat.list.indexOf(item) === -1){
+              cat.list.push(item);
+            }
+          });
         });
       });
       lsSet('mj_panel_map', map);
       try{ panelMap = map; }catch(e){}
     }
-  }catch(e){ console.error('颜文字换新迁移失败', e); }
+  }catch(e){ console.error('颜文字定向清理迁移失败', e); }
   lsSet(FLAG, true);
 })();
 
@@ -20015,18 +20037,13 @@ function closeNewFriends(){
 function renderNewFriends(){
   const box = $('#nfList');
   if(!box) return;
-  const kw = ($('#nfSearchInput') ? $('#nfSearchInput').value : '').trim().toLowerCase();
-  const list = getApplyList().filter(a => {
-    if(!kw) return true;
-    return (a.name||'').toLowerCase().includes(kw);
-  }).sort((a,b)=>b.time - a.time);
+  const list = getApplyList().sort((a,b)=>b.time - a.time);
 
   if(!list.length){
     box.innerHTML = '<div class="nf-empty">还没有新的好友申请</div>';
     return;
   }
 
-  // 按时间分组
   const groups = {};
   list.forEach(a => {
     const lb = groupLabel(a.time);
@@ -20038,16 +20055,14 @@ function renderNewFriends(){
   box.innerHTML = order.map(lb => {
     const arr = groups[lb];
     return '<div class="nf-group">'
-  + '<div class="nf-group-head">'+ (groupLabelEn(lb)) +'</div>'
+      + '<div class="nf-group-head">'+ (groupLabelEn(lb)) +'</div>'
       + arr.map(a => {
         const isPending = a.state === 'pending';
         let acts = '';
         if(isPending){
           if(a.outgoing){
-            // 我方发出的：只显示「等待验证」，没有同意/拒绝按钮
             acts = '<div class="nf-state">等待验证</div>';
           } else {
-            // 对方来加我：用户可同意/拒绝
             acts = '<div class="nf-acts">'
               + '<button class="nf-btn ghost" data-act="reject" data-id="'+a.id+'">拒绝</button>'
               + '<button class="nf-btn primary" data-act="accept" data-id="'+a.id+'">同意</button>'
