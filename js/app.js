@@ -688,37 +688,47 @@ cardStore.public = cardStore.public.filter(g=>g && g.id !== 'g-open');
   });
 })();
 /* ★ 一次性迁移：公用 g-sign 整个删掉，每个角色专属各补一份 */
-(function cleanOldSignDuplicates(){
-  var FLAG = 'mj_sign_dedup_v2';
+(function cleanKnownSignBugs(){
+  var FLAG = 'mj_sign_dedup_v3';
   if(lsGet(FLAG, false)) return;
   try{
     var store = cardStore || {};
     var removed = 0;
+    
     function cleanGroups(groups){
       if(!Array.isArray(groups)) return;
-      groups.forEach(function(g){
-        if(!g || g.id !== 'g-sign' || !Array.isArray(g.cats)) return;
-        g.cats.forEach(function(cat){
-          if(!Array.isArray(cat.list)) return;
-          var seen = new Set();
+      for(var i = 0; i < groups.length; i++){
+        var g = groups[i];
+        if(!g || g.id !== 'g-sign' || !Array.isArray(g.cats)) continue;
+        for(var j = 0; j < g.cats.length; j++){
+          var cat = g.cats[j];
+          if(!Array.isArray(cat.list)) continue;
           var newList = [];
-          cat.list.forEach(function(item){
-            var txt = String(cardText(item) || '').trim();
-            if(!txt){ newList.push(item); return; }
-            if(seen.has(txt)){ removed++; } 
-            else { seen.add(txt); newList.push(item); }
-          });
+          for(var k = 0; k < cat.list.length; k++){
+            var item = cat.list[k];
+            var txt = String(cardText(item) || '');
+            if(txt.indexOf('아마도') >= 0 || txt.indexOf('创可贴') >= 0){
+              removed++;
+            } else {
+              newList.push(item);
+            }
+          }
           cat.list = newList;
-        });
-      });
+        }
+      }
     }
+    
     cleanGroups(store.public);
     if(store.roles){
-      Object.keys(store.roles).forEach(function(rid){ cleanGroups(store.roles[rid]); });
+      var keys = Object.keys(store.roles);
+      for(var r = 0; r < keys.length; r++){
+        cleanGroups(store.roles[keys[r]]);
+      }
     }
+    
     if(removed > 0){
       saveCardStore();
-      console.log('[个签大扫除] 自动清理了 ' + removed + ' 条重复的字卡');
+      console.log('[个签大扫除] 删除了历史遗留的 ' + removed + ' 条创可贴/韩文重复文案');
     }
     lsSet(FLAG, true);
   }catch(e){
