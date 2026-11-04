@@ -3121,15 +3121,12 @@
 </div>
 <!-- ============ 新的朋友（整页 · 方案 B） ============ -->
 <div class="screen" id="newFriendsScreen">
-  <div class="a-top">
-    <button class="a-back" id="nfBack" type="button">‹</button>
-    <div class="a-title">新 的 朋 友</div>
-    <button class="a-act" id="nfYouKnow" type="button" style="font-size:11px;width:auto;padding:0 4px;letter-spacing:1px;">你可能认识</button>
+  <div class="a-top" style="display:flex;align-items:center;gap:12px;padding:20px 22px 12px;">
+    <button class="a-back" id="nfBack" type="button" style="width:38px;height:38px;border:none;background:transparent;color:var(--th-text);font-size:22px;line-height:1;display:flex;align-items:center;justify-content:center;padding:0 0 4px;opacity:.55;cursor:pointer;font-family:inherit;">‹</button>
+    <div class="a-title" style="flex:1;font-size:15px;font-weight:300;letter-spacing:6px;text-align:center;color:var(--th-text);-webkit-text-stroke:.15px var(--th-text);">新 的 朋 友</div>
+    <button class="a-act" id="nfYouKnow" type="button" style="font-size:11px;letter-spacing:1px;color:var(--th-text);background:transparent;border:none;padding:0 4px;opacity:.55;cursor:pointer;font-family:inherit;">你可能认识</button>
   </div>
-  <div class="nf-search">
-    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="var(--th-text)" stroke-width="1.6"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
-    <input type="text" id="nfSearchInput" placeholder="搜索 账号 / 名字">
-  </div>
+  
   <div class="nf-list" id="nfList"></div>
 </div>
 <!-- ============ 加好友 · 写留言 ============ -->
