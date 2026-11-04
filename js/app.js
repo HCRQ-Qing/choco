@@ -2870,10 +2870,15 @@ function renderChatFull(forceBottom){
 	    mainText = '邀请' + _icRoleName + '切换' + (ic.type === 'user' ? userName() : _icRoleName) + '个签';
 	  } else if(ic.kind === 'accept'){
 	    tagText = '已切换';
-	    mainText = ic.newSign || '';
+	    var _accRole = getRoleById(ic.roleId || getCurrentRoleId()) || {};
+	    var _accRoleName = (_accRole.remark && String(_accRole.remark).trim()) || _accRole.name || '角色';
+	    mainText = '已切换「' + (ic.type === 'user' ? userName() : _accRoleName) + '」个签';
 	  } else {
 	    tagText = '已拒绝';
-	    mainText = ic.reason || '';
+	    var _rejRole = getRoleById(ic.roleId || getCurrentRoleId()) || {};
+	    var _rejRoleName = (_rejRole.remark && String(_rejRole.remark).trim()) || _rejRole.name || '角色';
+	    mainText = '拒绝切换「' + (ic.type === 'user' ? userName() : _rejRoleName) + '」个签';
+	    if(ic.reason){ mainText += '：' + ic.reason; }
 	  }
 	  /* tag 用内联 style + br 换行，不进任何 class，不会被自定义 CSS 污染 */
 	  const innerHTML =
@@ -29836,6 +29841,7 @@ function runSignSwitchTick(){
             inviteCard: {
               kind: 'accept',
               type: 'role',
+              roleId: rid,
               newSign: newSub
             }
           });
@@ -29854,6 +29860,7 @@ function runSignSwitchTick(){
             inviteCard: {
               kind: 'accept',
               type: 'user',
+              roleId: rid,
               newSign: newMySign
             }
           });
@@ -29872,6 +29879,7 @@ function runSignSwitchTick(){
         inviteCard: {
           kind: 'reject',
           type: inv.type,
+          roleId: rid,
           reason: reason
         }
       });
