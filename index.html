@@ -8,6 +8,24 @@
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#ffffff" id="metaThemeColor">
 
+<!-- ===== 存储兜底：手机浏览器直接打开本地文件时，部分环境禁用 localStorage，
+      会导致主题/设置读不到、初始化失败。这里用内存存储兜底，保证能正常进入。 ===== -->
+<script>
+(function(){
+  try{ localStorage.setItem('__choco_probe','1'); localStorage.removeItem('__choco_probe'); return; }catch(e){}
+  var mem = {};
+  var api = {
+    getItem: function(k){ k = String(k); return Object.prototype.hasOwnProperty.call(mem,k) ? mem[k] : null; },
+    setItem: function(k,v){ mem[String(k)] = String(v); },
+    removeItem: function(k){ delete mem[String(k)]; },
+    clear: function(){ mem = {}; },
+    key: function(i){ var ks = Object.keys(mem); return (i>=0 && i<ks.length) ? ks[i] : null; }
+  };
+  Object.defineProperty(api, 'length', { get: function(){ return Object.keys(mem).length; } });
+  try{ Object.defineProperty(window, 'localStorage', { configurable: true, get: function(){ return api; } }); }catch(e){}
+})();
+</script>
+
 <!-- ===== 主题系统（唯一颜色变量来源，必须最先加载） ===== -->
 <link rel="stylesheet" href="css/theme.css">
 <!-- ===== 设计常量表（字体 / 间距 / 圆角，不含颜色） ===== -->
