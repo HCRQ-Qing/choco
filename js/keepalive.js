@@ -29,22 +29,81 @@
 
   var isLeaderTab = false;
   var TAB_ID = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-  try {
+  var LEADER_KEY = 'mj_leader_v1';
+  var LEADER_TTL = 5000;
+  var LEADER_RENEW = 2000;
+
+  function _readLeader(){
+    try{
+      var raw = localStorage.getItem(LEADER_KEY);
+      if(!raw) return null;
+      var o = JSON.parse(raw);
+      if(!o || typeof o.id !== 'string' || typeof o.at !== 'number') return null;
+      return o;
+    }catch(e){ return null; }
+  }
+  function _writeLeader(){
+    try{
+      localStorage.setItem(LEADER_KEY, JSON.stringify({ id: TAB_ID, at: Date.now() }));
+    }catch(e){}
+  }
+  function _isLeaderAlive(){
+    var o = _readLeader();
+    if(!o) return false;
+    if(o.id === TAB_ID) return true;
+    return (Date.now() - o.at) < LEADER_TTL;
+  }
+  function _tryBecomeLeader(){
+    var o = _readLeader();
+    if(!o){ _writeLeader(); return true; }
+    if(o.id === TAB_ID) return true;
+    if((Date.now() - o.at) >= LEADER_TTL){ _writeLeader(); return true; }
+    return false;
+  }
+
+  try{
     var bc = new BroadcastChannel('mj_leader_chan');
-    bc.onmessage = function(e) {
-      if (e.data && e.data.type === 'ping' && isLeaderTab && e.data.id !== TAB_ID) {
-        bc.postMessage({ type: 'pong', id: TAB_ID });
+    bc.onmessage = function(e){
+      if(e.data && e.data.type === 'bye' && e.data.id === (_readLeader() || {}).id){
+        try{ localStorage.removeItem(LEADER_KEY); }catch(err){}
       }
     };
-    bc.postMessage({ type: 'ping', id: TAB_ID });
-    setTimeout(function() {
-      if (!isLeaderTab) isLeaderTab = true;
-    }, 300);
-  } catch (e) {
-    isLeaderTab = true;
+  }catch(e){}
+
+  isLeaderTab = _tryBecomeLeader();
+
+  function takeLeadership(reason){
+    if(isLeaderTab) return;
+    if(_tryBecomeLeader()){ isLeaderTab = true; }
   }
-  function takeLeadership(reason){}
-  function leaderTick(now){ return true; }
+  function leaderTick(now){
+    var alive = _isLeaderAlive();
+    if(alive && !isLeaderTab){
+      isLeaderTab = false;
+      return false;
+    }
+    if(!alive){
+      if(_tryBecomeLeader()){ isLeaderTab = true; }
+      else { isLeaderTab = false; return false; }
+    }
+    if(isLeaderTab && (now - (_lastLeaderRenew || 0) >= LEADER_RENEW)){
+      _writeLeader();
+      _lastLeaderRenew = now;
+    }
+    return isLeaderTab;
+  }
+  var _lastLeaderRenew = 0;
+  window.addEventListener('pagehide', function(){
+    if(isLeaderTab){
+      try{
+        var o = _readLeader();
+        if(o && o.id === TAB_ID) localStorage.removeItem(LEADER_KEY);
+      }catch(e){}
+      try{
+        if(typeof bc !== 'undefined' && bc.postMessage) bc.postMessage({ type:'bye', id: TAB_ID });
+      }catch(e){}
+    }
+  });
 
   var tasks = [];
   var lastTick = Date.now();

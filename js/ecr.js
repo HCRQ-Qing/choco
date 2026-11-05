@@ -60,10 +60,96 @@ var ECR_ORDER = [];
 })();
 
 var RADAR_AXES = ['依恋', '独立', '安全感', '空间需求', '信任'];
-var USER_COLOR = '#3a7bd5';   /* 用户：蓝 */
-var ROLE_COLOR = '#e0709a';   /* 角色：粉 */
 var ECR_HIS_KEY = 'mj_ecr_history_v1';
-var ROLE_CD = 120;            /* 角色每题 120 秒倒计时 */
+var ROLE_CD = 40;             /* 角色每题 40 秒倒计时 */
+
+/* ---------- 颜色存储与读取 ---------- */
+var ECR_COLOR_KEY = 'mj_ecr_colors_v1';
+function getEcrColor(target){
+  var m = lsGet(ECR_COLOR_KEY, null);
+  if(!m || typeof m !== 'object') m = {};
+  if(target === 'me') return m.me || '#8fb9df';
+  var rid = (typeof S !== 'undefined' && S) ? S.roleId : (typeof getCurrentRoleId === 'function' ? getCurrentRoleId() : '');
+  if(!rid) return '#e89eb8';
+  return m[rid] || '#e89eb8';
+}
+function saveEcrColor(target, color){
+  var m = lsGet(ECR_COLOR_KEY, null);
+  if(!m || typeof m !== 'object') m = {};
+  if(target === 'me') m.me = color;
+  else {
+    var rid = (typeof S !== 'undefined' && S) ? S.roleId : (typeof getCurrentRoleId === 'function' ? getCurrentRoleId() : '');
+    if(rid) m[rid] = color;
+  }
+  lsSet(ECR_COLOR_KEY, m);
+}
+
+/* 调色板 */
+var ECR_PRESET_COLORS = [
+  '#e89eb8', '#8fb9df', '#a3d2b3', '#f2d388', '#c1a7db', '#f09c9c',
+  '#88d4d4', '#f0b896', '#a0a5c8', '#d8b3c5', '#9dc0a2', '#b9b9b9'
+];
+
+function _openEcrColorPicker(target, onSelect){
+  var curColor = getEcrColor(target);
+  var mask = document.createElement('div');
+  mask.style.cssText = 'position:fixed;inset:0;z-index:2147483647;background:rgba(0,0,0,0.35);backdrop-filter:blur(3px);display:flex;align-items:flex-end;justify-content:center;';
+  
+  var sheet = document.createElement('div');
+  sheet.style.cssText = 'width:100%;max-width:420px;background:#fff;border-radius:24px 24px 0 0;padding:24px 20px calc(20px + env(safe-area-inset-bottom));transform:translateY(100%);transition:transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);box-shadow:0 -10px 40px rgba(0,0,0,0.1);box-sizing:border-box;';
+  
+  var html = 
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">' +
+      '<div style="font-size:15px;font-weight:300;letter-spacing:2px;color:#1a1a1a;">选择颜色</div>' +
+      '<div id="ecrCpClose" style="font-size:18px;color:#ccc;cursor:pointer;padding:0 4px;">✕</div>' +
+    '</div>' +
+    '<div style="display:grid;grid-template-columns:repeat(6, 1fr);gap:10px;margin-bottom:24px;" id="ecrCpGrid">' +
+      ECR_PRESET_COLORS.map(function(c){
+        var isOn = (c.toLowerCase() === curColor.toLowerCase()) ? 'border-color:#1a1a1a;' : 'border-color:transparent;';
+        return '<div class="ecr-c-btn" data-c="' + c + '" style="width:100%;aspect-ratio:1;border-radius:50%;background:' + c + ';border:2px solid transparent;cursor:pointer;box-sizing:border-box;' + isOn + '"></div>';
+      }).join('') +
+    '</div>' +
+    '<div id="ecrCpCustomBtn" style="width:100%;padding:14px;border-radius:14px;border:1px dashed #ccc;background:#fafafa;font-size:14px;font-family:inherit;color:#666;letter-spacing:1px;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;">' +
+      '<svg viewBox="0 0 24 24" style="width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.5;"><path d="M12 3l2 5 5 .5-4 3.5 1.3 5L12 14.5 7.7 17l1.3-5-4-3.5L10 8z"/></svg>' +
+      '调色盘（自选颜色）' +
+    '</div>' +
+    '<input type="color" id="ecrCpNative" value="' + curColor + '" style="position:absolute;opacity:0;pointer-events:none;">';
+
+  sheet.innerHTML = html;
+  mask.appendChild(sheet);
+  document.body.appendChild(mask);
+
+  requestAnimationFrame(function(){ sheet.style.transform = 'translateY(0)'; });
+
+  function close(){
+    sheet.style.transform = 'translateY(100%)';
+    setTimeout(function(){ mask.remove(); }, 300);
+  }
+
+  mask.querySelector('#ecrCpClose').onclick = close;
+  mask.addEventListener('click', function(e){ if(e.target === mask) close(); });
+
+  mask.querySelectorAll('.ecr-c-btn').forEach(function(btn){
+    btn.onclick = function(){
+      var c = btn.dataset.c;
+      saveEcrColor(target, c);
+      close();
+      if(typeof onSelect === 'function') onSelect(c);
+    };
+  });
+
+  var customBtn = mask.querySelector('#ecrCpCustomBtn');
+  var nativeInput = mask.querySelector('#ecrCpNative');
+  customBtn.onclick = function(){ nativeInput.click(); };
+  nativeInput.onchange = function(){
+    var c = this.value;
+    saveEcrColor(target, c);
+    close();
+    if(typeof onSelect === 'function') onSelect(c);
+  };
+}
+
+/* ---------- 入口 ---------- */
 
 /* ---------- 计分 ---------- */
 function _avg(a){ return a.length ? a.reduce(function(x, y){ return x + y; }, 0) / a.length : 4; }
@@ -141,6 +227,7 @@ window.startECR = function(roleId){
   var r = getRoleById(roleId);
   if(!r){ toast('请先选择一个角色'); return; }
   stopECR();
+  
   S = {
     roleId: roleId,
     idx: 0,
@@ -149,18 +236,106 @@ window.startECR = function(roleId){
     cdLeft: ROLE_CD,
     cdIv: null,
     roleTimer: null,
-    view: 'test'
+    view: 'invite'
   };
-  showScreen('ecrScreen');
-  renderTopBar({
-    host: 'utopHostEcr',
-    title: '依恋测试 · ECR',
-    onBack: function(){
-      if(S && S.view === 'his'){ _showResultView(); return; }
+
+  var roleName = displayName(r);
+  
+  var oldMask = document.getElementById('ecrInviteMask');
+  if(oldMask) oldMask.remove();
+
+  var mask = document.createElement('div');
+  mask.id = 'ecrInviteMask';
+  mask.style.cssText = 'position:fixed;inset:0;z-index:2147483647;background:rgba(0,0,0,.35);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;padding:24px;';
+  
+  /* 参照 uniAsk 的结构：白底大圆角，极简黑色主按钮 */
+  var sheet = document.createElement('div');
+  sheet.style.cssText = 'width:100%;max-width:300px;background:#fff;border-radius:20px;box-shadow:0 20px 60px rgba(0,0,0,.18);padding:26px 22px 20px;text-align:center;box-sizing:border-box;';
+
+  mask.appendChild(sheet);
+  document.body.appendChild(mask);
+
+  function renderInvite() {
+    sheet.innerHTML = 
+      '<div style="font-size:15px;color:#1a1a1a;font-weight:300;letter-spacing:3px;text-indent:3px;margin-bottom:8px;">邀请测试</div>' +
+      '<div style="font-size:11.5px;color:#bbb;letter-spacing:1.5px;margin-bottom:24px;">ECR TEST</div>' +
+      '<div style="font-size:13.5px;color:#666;line-height:1.8;letter-spacing:.5px;margin-bottom:26px;">是否邀请 <b style="color:#1a1a1a;font-weight:400">' + escapeHTML(roleName) + '</b> 一起做这个问卷？</div>' +
+      '<div style="display:flex;gap:10px;">' +
+        '<button id="ecrInviteCancel" style="flex:1;padding:12px 0;border-radius:14px;background:transparent;color:#999;border:0.7px solid rgba(0,0,0,.14);font-size:13.5px;letter-spacing:2px;cursor:pointer;font-family:inherit;">取 消</button>' +
+        '<button id="ecrInviteGo" style="flex:1;padding:12px 0;border-radius:14px;background:#1a1a1a;color:#fff;border:none;font-size:13.5px;letter-spacing:2px;cursor:pointer;font-family:inherit;">邀 请</button>' +
+      '</div>';
+      
+    document.getElementById('ecrInviteCancel').onclick = function(){
+      mask.remove();
       _abandon();
-    }
-  });
-  _renderQ();
+    };
+    
+    document.getElementById('ecrInviteGo').onclick = function(){
+      sheet.innerHTML = 
+        '<div style="font-size:15px;color:#1a1a1a;font-weight:300;letter-spacing:2px;margin-bottom:12px;">正在邀请 ' + escapeHTML(roleName) + ' 回应…</div>' +
+        '<div style="font-size:12px;color:#bbb;letter-spacing:1px;">请稍候</div>';
+        
+      var waitMs = 1000 + Math.floor(Math.random() * 9000);
+      setTimeout(function(){
+        if(Math.random() < 0.08) {
+          sheet.innerHTML = 
+            '<div style="font-size:15px;color:#DD1440;font-weight:300;letter-spacing:1px;margin-bottom:24px;">' + escapeHTML(roleName) + ' 拒绝了邀请</div>' +
+            '<div style="display:flex;gap:10px;">' +
+              '<button id="ecrInviteClose" style="flex:1;padding:12px 0;border-radius:14px;background:transparent;color:#999;border:0.7px solid rgba(0,0,0,.14);font-size:13.5px;letter-spacing:2px;cursor:pointer;font-family:inherit;">关 闭</button>' +
+              '<button id="ecrInviteRe" style="flex:1;padding:12px 0;border-radius:14px;background:#1a1a1a;color:#fff;border:none;font-size:13.5px;letter-spacing:2px;cursor:pointer;font-family:inherit;">重新邀请</button>' +
+            '</div>';
+          document.getElementById('ecrInviteClose').onclick = function(){ mask.remove(); _abandon(); };
+          document.getElementById('ecrInviteRe').onclick = renderInvite;
+        } else {
+          mask.remove();
+          showScreen('ecrScreen');
+          renderTopBar({
+            host: 'utopHostEcr',
+            title: '依恋测试 · ECR',
+            onBack: function(){
+              if(S && S.view === 'test'){
+                var _mask = document.createElement('div');
+                _mask.style.cssText = 'position:fixed;inset:0;z-index:2147483647;background:rgba(0,0,0,.4);backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;padding:24px;';
+                _mask.innerHTML = 
+                  '<div style="width:100%;max-width:300px;background:#fff;border-radius:20px;padding:24px 20px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.18);box-sizing:border-box;">' +
+                    '<div style="font-size:15px;color:#1a1a1a;font-weight:300;letter-spacing:2px;margin-bottom:24px;line-height:1.6;">测试还没做完，<br>要保存当前记录并退出吗？</div>' +
+                    '<div style="display:flex;gap:10px;">' +
+                      '<button id="ecrExitCancel" style="flex:1;padding:12px 0;border-radius:14px;background:transparent;color:#999;border:0.7px solid rgba(0,0,0,.14);font-size:13.5px;letter-spacing:2px;cursor:pointer;font-family:inherit;">取 消</button>' +
+                      '<button id="ecrExitSave" style="flex:1;padding:12px 0;border-radius:14px;background:#1a1a1a;color:#fff;border:none;font-size:13.5px;letter-spacing:2px;cursor:pointer;font-family:inherit;">保 存</button>' +
+                    '</div>' +
+                  '</div>';
+                document.body.appendChild(_mask);
+                _mask.querySelector('#ecrExitCancel').onclick = function(){ _mask.remove(); };
+                _mask.querySelector('#ecrExitSave').onclick = function(){
+                  _mask.remove();
+                  if(S.userAns.some(function(x){return x;}) || S.roleAns.some(function(x){return x;})){
+                    var rec = {
+                      id: 'ecr' + Date.now().toString(36),
+                      t: Date.now(),
+                      roleId: S.roleId,
+                      roleName: _rName(),
+                      userName: _uName(),
+                      user: ecrScore(S.userAns),
+                      role: ecrScore(S.roleAns)
+                    };
+                    ecrSaveHistory(rec);
+                  }
+                  _abandon();
+                };
+                return;
+              }
+              if(S && S.view === 'his'){ _showResultView(); return; }
+              _abandon();
+            }
+          });
+          S.view = 'test';
+          _renderQ();
+        }
+      }, waitMs);
+    };
+  }
+  
+  renderInvite();
 };
 
 function _abandon(){
@@ -188,39 +363,187 @@ function _renderQ(){
   if(rv) rv.style.display = 'none';
   if(hv) hv.style.display = 'none';
 
+  if(typeof window.ECR_CHAT !== 'undefined') {
+    window.ECR_CHAT.render();
+  }
+
   var q = ECR_ORDER[S.idx];
   var ua = S.userAns[S.idx], ra = S.roleAns[S.idx];
+
+  if(typeof window.ECR_CHAT !== 'undefined') {
+    setTimeout(function(){ window.ECR_CHAT.render(); }, 10);
+  }
+  
+  var cMe = (typeof getEcrColor === 'function') ? getEcrColor('me') : '#8fb9df';
+  var cRole = (typeof getEcrColor === 'function') ? getEcrColor('role') : '#e89eb8';
+
   var scale = '';
   for(var i = 1; i <= 7; i++){
-    scale += '<button class="ecr-dot' + (ua === i ? ' on' : '') + '" data-v="' + i + '" type="button">' + i + '</button>';
+    var isOn = ua === i;
+    /* ★ 强制锁死宽高和圆形边框 */
+    var st = 'width:28px;height:28px;min-width:28px;min-height:28px;max-width:28px;max-height:28px;font-size:13px;display:flex;align-items:center;justify-content:center;box-sizing:border-box;border-radius:50%;border:0.7px solid #d0d0d0;margin:0;padding:0;';
+    if(isOn) st += 'background:' + cMe + ';color:#fff;border-color:' + cMe + ';';
+    scale += '<button class="ecr-dot' + (isOn ? ' on' : '') + '" data-v="' + i + '" type="button" style="' + st + '">' + i + '</button>';
   }
   var rscale = '';
   for(var j = 1; j <= 7; j++){
-    rscale += '<span class="ecr-dot ro' + (ra === j ? ' on' : '') + '">' + j + '</span>';
+    var isOnR = ra === j;
+    var stR = 'width:28px;height:28px;min-width:28px;min-height:28px;max-width:28px;max-height:28px;font-size:13px;display:flex;align-items:center;justify-content:center;box-sizing:border-box;border-radius:50%;border:0.7px solid #d0d0d0;margin:0;padding:0;';
+    if(isOnR) stR += 'background:' + cRole + ';color:#fff;border-color:' + cRole + ';';
+    rscale += '<span class="ecr-dot ro' + (isOnR ? ' on' : '') + '" style="' + stR + '">' + j + '</span>';
   }
+
+  var avRadius = getComputedStyle(document.documentElement).getPropertyValue('--avatar-radius').trim() || '50%';
+  var userAv = (typeof userProfile !== 'undefined' && userProfile.avatar) ? userProfile.avatar : '';
+  var roleObj = _role();
+  var roleAv = roleObj.avatar || '';
+
   v.innerHTML =
+    '<div class="ecr-main-flex">' +
     '<div class="ecr-prog"><span>第 ' + (S.idx + 1) + ' / 36 题</span>' +
       '<div class="ecr-bar"><i style="width:' + Math.round((S.idx) / 36 * 100) + '%"></i></div></div>' +
     '<div class="ecr-q">' + escapeHTML(q.t) + '</div>' +
     '<div class="ecr-panel">' +
-      '<div class="ecr-p-head"><span class="who u">' + escapeHTML(_uName()) + '（我）</span><span class="hint">凭直觉选，没有对错</span></div>' +
-      '<div class="ecr-scale">' + scale + '</div>' +
+      '<div class="ecr-p-head">' +
+        '<div style="width:24px;height:24px;flex:none;border-radius:' + avRadius + ';overflow:hidden;background:#f0f0f0;display:flex;align-items:center;justify-content:center;position:relative">' +
+           (userAv ? '<img src="'+userAv+'" style="width:100%;height:100%;object-fit:cover">' : '<svg viewBox="0 0 100 100" style="width:100%;height:100%;fill:#c8c8c8"><circle cx="50" cy="38" r="19"/><path d="M12 100 C12 74 28 62 50 62 C72 62 88 74 88 100 Z"/></svg>') +
+        '</div>' +
+        '<div id="ecrNameMe" style="flex:1;display:flex;align-items:center;gap:6px;cursor:pointer;padding:4px 0;margin-left:8px;">' +
+          '<div style="width:2px;height:2px;border-radius:50%;background:' + cMe + ';"></div>' +
+          '<span style="font-size:14.5px;font-weight:400;color:' + cMe + '">' + escapeHTML(_uName()) + '</span>' +
+        '</div>' +
+        '<span style="font-size:11px;color:#bbb">凭直觉选</span>' +
+      '</div>' +
+      '<div class="ecr-scale" style="display:flex;justify-content:space-between;margin:16px 0;">' + scale + '</div>' +
       '<div class="ecr-cap"><span>非常不同意</span><span>非常同意</span></div>' +
     '</div>' +
     '<div class="ecr-panel">' +
-      '<div class="ecr-p-head"><span class="who r">' + escapeHTML(_rName()) + '</span><span class="ecr-cd" id="ecrCd">⏱ ' + S.cdLeft + 's</span></div>' +
-      '<div class="ecr-scale ro">' + rscale + '</div>' +
+      '<div class="ecr-p-head">' +
+        '<div style="width:24px;height:24px;flex:none;border-radius:' + avRadius + ';overflow:hidden;background:#f0f0f0;display:flex;align-items:center;justify-content:center;position:relative">' +
+           (roleAv ? '<img src="'+roleAv+'" style="width:100%;height:100%;object-fit:cover">' : '<svg viewBox="0 0 100 100" style="width:100%;height:100%;fill:#c8c8c8"><circle cx="50" cy="38" r="19"/><path d="M12 100 C12 74 28 62 50 62 C72 62 88 74 88 100 Z"/></svg>') +
+        '</div>' +
+        '<div id="ecrNameRole" style="flex:1;display:flex;align-items:center;gap:6px;cursor:pointer;padding:4px 0;margin-left:8px;">' +
+          '<div style="width:2px;height:2px;border-radius:50%;background:' + cRole + ';"></div>' +
+          '<span style="font-size:14.5px;font-weight:400;color:' + cRole + '">' + escapeHTML(_rName()) + '</span>' +
+        '</div>' +
+        '<span class="ecr-cd" id="ecrCd" style="font-size:11px;color:#999">⏱ ' + S.cdLeft + 's</span>' +
+      '</div>' +
+      '<div class="ecr-scale" style="display:flex;justify-content:space-between;margin:16px 0;">' + rscale + '</div>' +
       '<div class="ecr-cap"><span id="ecrRoleState">' + (ra ? 'Ta 已选好' : 'Ta 正在思考…') + '</span></div>' +
     '</div>' +
-    '<div class="ecr-quit" id="ecrQuit">退出测试</div>';
+    '<div class="ecr-chat-scroll" id="ecrChatArea"></div>' +
+    '<div class="ecr-input-wrap">' +
+      '<button class="ecr-mic-btn" id="ecrMicBtn" type="button" title="录音"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><line x1="12" y1="18" x2="12" y2="21"/></svg></button>' +
+      '<input type="text" class="ecr-ipt" id="ecrChatInput" placeholder="说点什么…">' +
+      '<div class="ecr-send" id="ecrSendBtn"><svg viewBox="0 0 24 24"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg></div>' +
+    '</div>' +
+    '<div class="ecr-bottom-area"><div class="ecr-next-text" id="ecrNextBtnWrap"></div></div>';
+
+  /* ★ 渲染时如果两人已经都答完了（比如切后台回来），直接补上下一题按钮 */
+  if(ua && ra) {
+    setTimeout(_maybeNext, 50);
+  }
+
+  // === 留言区真实发送与回复逻辑 ===
+  var chatInput = document.getElementById('ecrChatInput');
+  var sendBtn = document.getElementById('ecrSendBtn');
+  var micBtn = document.getElementById('ecrMicBtn');
+  if(micBtn) {
+    micBtn.onclick = function() {
+      if (typeof startRecording === 'function') {
+        window.__ecrVoiceTarget = true;
+        startRecording();
+      } else {
+        toast('录音模块未加载');
+      }
+    };
+  }
+  if(sendBtn && chatInput){
+    sendBtn.onclick = function(){
+      var txt = chatInput.value.trim();
+      if(!txt) return;
+      
+      // 1. 我方消息上屏
+      window.ECR_CHAT.addMsg({ role: 'user', text: txt });
+      chatInput.value = '';
+
+      // 2. 调用主程序的真实回复引擎（带真实的思考时间、气泡数、撤回概率）
+      if (S && typeof window.triggerECRRealReply === 'function') {
+        window.triggerECRRealReply(S.roleId);
+      }
+    };
+    chatInput.onkeydown = function(e){
+      if(e.key === 'Enter') sendBtn.click();
+    };
+  }
+
+  // 拦截主程序的录音发送，改为发给 ECR 留言区
+  if (!window.__ecrVoicePatched && typeof window.sendRecVoice === 'function') {
+    window.__ecrVoicePatched = true;
+    var origSendRecVoice = window.sendRecVoice;
+    window.sendRecVoice = function() {
+      if (window.__ecrVoiceTarget) {
+        window.__ecrVoiceTarget = false;
+        if (!window.pendingBlob) { toast('没有可发送的语音'); return; }
+        
+        var dur = window.pendingDur;
+        var tempUrl = window.pendingUrl || URL.createObjectURL(window.pendingBlob);
+        var idbKey = 'ecr_rec_' + Date.now().toString(36);
+        
+        try { __idb.set(idbKey, window.pendingBlob); } catch(e) {}
+        
+        if (typeof confirmAudio !== 'undefined' && confirmAudio) {
+          confirmAudio.pause(); confirmAudio = null;
+        }
+        
+        window.pendingBlob = null; window.pendingDur = 0; window.pendingUrl = null;
+        if (typeof resetRecUI === 'function') resetRecUI();
+        
+        // 推入 ECR 留言区
+        window.ECR_CHAT.addMsg({ 
+          role: 'user', 
+          voice: dur, 
+          voiceUrl: tempUrl, 
+          voiceIdbKey: idbKey,
+          time: Date.now()
+        });
+        
+        toast('已发送');
+        return;
+      }
+      return origSendRecVoice.apply(this, arguments);
+    };
+  }
 
   /* 用户作答 */
+  var nameMe = document.getElementById('ecrNameMe');
+  if(nameMe) nameMe.onclick = function(){
+    if(typeof _openEcrColorPicker === 'function') _openEcrColorPicker('me', function(){ _renderQ(); });
+  };
+  var nameRole = document.getElementById('ecrNameRole');
+  if(nameRole) nameRole.onclick = function(){
+    if(typeof _openEcrColorPicker === 'function') _openEcrColorPicker('role', function(){ _renderQ(); });
+  };
+
   v.querySelectorAll('.ecr-dot[data-v]').forEach(function(b){
     b.onclick = function(){
-      if(!S || S.userAns[S.idx]) return;
+      if(!S) return;
       S.userAns[S.idx] = parseInt(b.dataset.v, 10);
-      v.querySelectorAll('.ecr-dot[data-v]').forEach(function(x){ x.classList.toggle('on', x === b); });
-      _maybeNext();
+      
+      var parentScale = b.parentNode;
+      parentScale.querySelectorAll('.ecr-dot').forEach(function(dot){
+        dot.classList.remove('on');
+        dot.style.background = '';
+        dot.style.color = '';
+        dot.style.borderColor = '#d0d0d0';
+      });
+      b.classList.add('on');
+      b.style.background = cMe;
+      b.style.color = '#fff';
+      b.style.borderColor = cMe;
+      
+      /* 重新判断一次是否满足进入下一题的条件（如果你已经答了，只是切换选项，直接调即可） */
+      if (typeof _maybeNext === 'function') _maybeNext();
     };
   });
   var quit = document.getElementById('ecrQuit');
@@ -237,52 +560,225 @@ function _renderQ(){
     if(cd) cd.textContent = '⏱ ' + S.cdLeft + 's';
     if(S.cdLeft <= 0){ _rolePick(true); }
   }, 1000);
-  /* 角色随机作答：2~12 秒之间，倒计时只是上限 */
-  S.roleTimer = setTimeout(function(){ _rolePick(false); }, 2000 + Math.random() * 10000);
+  /* 角色作答时间：1~40 秒之间纯随机 */
+  var roleThinkMs = 1000 + Math.floor(Math.random() * 39000);
+  
+  /* 倒计时始终固定从 40 秒开始 */
+  _clearTimers();
+  var cdLeft = 40;
+  var cdEl = document.getElementById('ecrCd');
+  if(cdEl) cdEl.textContent = '⏱ ' + cdLeft + 's';
+
+  S.cdIv = setInterval(function(){
+    if(!S) return;
+    cdLeft--;
+    var cd = document.getElementById('ecrCd');
+    if(cd) cd.textContent = '⏱ ' + Math.max(0, cdLeft) + 's';
+    if(cdLeft <= 0) { clearInterval(S.cdIv); S.cdIv = null; }
+  }, 1000);
+
+  /* 真正的作答定时器（可能在倒计时归零前随时触发） */
+  S.roleTimer = setTimeout(function(){ 
+    _rolePick(false); 
+  }, roleThinkMs);
+
+  /* ★ 新增：定时主动发消息（仅在作答期间） */
+  if (window.__ecrActiveTimer) clearTimeout(window.__ecrActiveTimer);
+  function loopActiveMsg(){
+    if (!S || S.view !== 'test') return;
+    
+    // 1~60 秒随机挑一个时间点掷骰
+    var wait = 1000 + Math.random() * 59000;
+    window.__ecrActiveTimer = setTimeout(function(){
+      if (!S || S.view !== 'test') return;
+      
+      // 50% 概率触发
+      if (Math.random() < 0.5 && typeof genReply === 'function') {
+        try {
+          var res = genReply(true, S.roleId);
+          var outMsgs = buildMsgsFromBubbles(res[0].bubbles, S.roleId, null);
+          if (outMsgs.length) {
+            var idx = 0;
+            var r = getReply(S.roleId);
+            var cMin = r.minDelay || 1000;
+            var cMax = r.maxDelay || 10000;
+
+            function sendNextActive() {
+              if (idx >= outMsgs.length) {
+                if (window.ECR_CHAT.typingOff) window.ECR_CHAT.typingOff();
+                return;
+              }
+              
+              if (window.ECR_CHAT.typingOn) window.ECR_CHAT.typingOn();
+              
+              var waitNext = cMin + Math.random() * (cMax - cMin);
+              setTimeout(function() {
+                if (window.ECR_CHAT.typingOff) window.ECR_CHAT.typingOff();
+                
+                var m = outMsgs[idx];
+                if (m.text) {
+                  window.ECR_CHAT.addMsg({ role: 'char', text: m.text, kind: m.kind, pinyin: m.pinyin, han: m.han, time: Date.now(), active: true });
+                } else if (m.sticker) {
+                  window.ECR_CHAT.addMsg({ role: 'char', sticker: m.sticker, time: Date.now(), active: true });
+                } else if (m.voice) {
+                  window.ECR_CHAT.addMsg({ role: 'char', voice: m.voice, voiceUrl: m.voiceUrl, voiceIdbKey: m.voiceIdbKey, time: Date.now(), active: true });
+                }
+                
+                idx++;
+                sendNextActive();
+              }, waitNext);
+            }
+            sendNextActive();
+          }
+        } catch(e) { console.error('ECR主动消息失败', e); }
+      }
+      // 不管这轮有没有发，都接着排下一次
+      loopActiveMsg();
+    }, wait);
+  }
+  loopActiveMsg();
 }
+window.triggerECRRealReply = function(roleId) {
+  if (typeof genReply !== 'function') return;
+
+  var r = (typeof getReply === 'function') ? getReply(roleId) : { minDelay:1000, maxDelay:10000, readDelayMinLo:1, readDelayMinHi:5, readDelayMaxLo:8, readDelayMaxHi:10 };
+  var res = genReply(true, roleId);
+  var outMsgs = buildMsgsFromBubbles(res[0].bubbles, roleId, null);
+
+  if (!outMsgs.length) return;
+
+  var lastUser = null;
+  for(var i = window.ECR_CHAT.msgs.length - 1; i >= 0; i--){
+    if(window.ECR_CHAT.msgs[i].role === 'user'){ lastUser = window.ECR_CHAT.msgs[i]; break; }
+  }
+
+  function applyRead(){
+    if(!lastUser) return;
+    lastUser.readState = 'read';
+    lastUser.readNoReply = false;
+    window.ECR_CHAT.render();
+  }
+
+  var rMin = (r.readDelayMinLo != null ? r.readDelayMinLo : 1) + Math.random() * ((r.readDelayMinHi != null ? r.readDelayMinHi : 5) - (r.readDelayMinLo != null ? r.readDelayMinLo : 1));
+  var rMax = (r.readDelayMaxLo != null ? r.readDelayMaxLo : 8) + Math.random() * ((r.readDelayMaxHi != null ? r.readDelayMaxHi : 10) - (r.readDelayMaxLo != null ? r.readDelayMaxLo : 8));
+  var readWait = Math.max(rMin, rMax) * 1000;
+
+  setTimeout(applyRead, readWait);
+
+  var currentIdx = 0;
+  function sendNext() {
+    if (currentIdx >= outMsgs.length){
+      window.ECR_CHAT.typingOff();
+      return;
+    }
+
+    window.ECR_CHAT.typingOn();
+
+    var cMin = r.minDelay || 1000;
+    var cMax = r.maxDelay || 10000;
+    var wait = cMin + Math.random() * (cMax - cMin);
+
+    setTimeout(function(){
+      var m = outMsgs[currentIdx];
+      if (m.text) {
+        window.ECR_CHAT.addMsg({ role: 'char', text: m.text, kind: m.kind, pinyin: m.pinyin, han: m.han, time: Date.now(), active: true });
+      } else if (m.sticker) {
+        window.ECR_CHAT.addMsg({ role: 'char', sticker: m.sticker, time: Date.now(), active: true });
+      } else if (m.voice) {
+        window.ECR_CHAT.addMsg({ role: 'char', voice: m.voice, voiceUrl: m.voiceUrl, voiceIdbKey: m.voiceIdbKey, time: Date.now(), active: true });
+      }
+      applyRead();
+      currentIdx++;
+      if(currentIdx < outMsgs.length){
+        sendNext();
+      } else {
+        window.ECR_CHAT.typingOff();
+      }
+    }, wait);
+  }
+  sendNext();
+};
+
 function _clearTimers(){
   if(S.cdIv){ clearInterval(S.cdIv); S.cdIv = null; }
   if(S.roleTimer){ clearTimeout(S.roleTimer); S.roleTimer = null; }
+  if(window.__ecrActiveTimer){ clearTimeout(window.__ecrActiveTimer); window.__ecrActiveTimer = null; }
 }
+
 function _rolePick(forced){
   if(!S || S.roleAns[S.idx]) return;
   _clearTimers();
   var v = 1 + Math.floor(Math.random() * 7);
   S.roleAns[S.idx] = v;
-  var dots = document.querySelectorAll('#ecrTestView .ecr-scale.ro .ecr-dot');
-  dots.forEach(function(d, i){ d.classList.toggle('on', (i + 1) === v); });
-  var st = document.getElementById('ecrRoleState');
-  if(st) st.textContent = 'Ta 已选好';
-  var cd = document.getElementById('ecrCd');
-  if(cd) cd.textContent = '✓';
-  _maybeNext();
+
+  /* 直接全量重绘，确保角色的选中颜色和大小立刻生效 */
+  _renderQ();
+  
+  if(typeof window.ECR_CHAT !== 'undefined') {
+    window.ECR_CHAT.render(); 
+  }
+
+  /* 直接在这里强制喊一次生成按钮，确保它绝对出来 */
+  if(S && S.userAns[S.idx] && S.roleAns[S.idx]) {
+    _maybeNext();
+  }
 }
 function _maybeNext(){
   if(!S) return;
   if(!S.userAns[S.idx] || !S.roleAns[S.idx]) return;
   _clearTimers();
-  setTimeout(function(){
-    if(!S) return;
-    S.idx++;
-    if(S.idx >= 36){ _finish(); }
-    else _renderQ();
-  }, 420);
+  
+  var wrap = document.getElementById('ecrNextBtnWrap');
+  if(!wrap) return;
+  
+  if(wrap.innerHTML.trim() !== '') return;
+  
+  var isLast = (S.idx >= 35);
+  var btnText = isLast ? '查 看 结 果' : '下 一 题';
+  
+  wrap.style.cssText = 'margin-top: 10px; text-align: center; animation: pop .3s ease; margin-bottom: 20px;';
+  wrap.innerHTML = '<div id="ecrNextBtn" style="font-size: 13px; color: #888; letter-spacing: 2px; padding: 10px 30px; cursor: pointer; font-family: inherit;">' + btnText + '</div>';
+  
+  var btn = document.getElementById('ecrNextBtn');
+  if(btn){
+    btn.onclick = function(){
+      if(!S) return;
+      S.idx++;
+      if(S.idx >= 36){ _finish(); }
+      else _renderQ();
+    };
+  }
 }
 
 /* ---------- 完成 ---------- */
 function _finish(){
-  var rec = {
-    id: 'ecr' + Date.now().toString(36),
-    t: Date.now(),
-    roleId: S.roleId,
-    roleName: _rName(),
-    userName: _uName(),
-    user: ecrScore(S.userAns),
-    role: ecrScore(S.roleAns)
-  };
-  ecrSaveHistory(rec);
-  S.lastRec = rec;
-  _showResultView();
+  try{
+    _clearTimers();
+    if(window.__ecrActiveTimer){ clearTimeout(window.__ecrActiveTimer); window.__ecrActiveTimer = null; }
+    if(typeof window.ECR_CHAT !== 'undefined' && window.ECR_CHAT.typingOff) window.ECR_CHAT.typingOff();
+    
+    /* 兜底：万一有几题是空的，补个 4 分（中位数），防止算出 NaN 导致雷达图崩溃 */
+    for(var i=0; i<36; i++){
+      if(!S.userAns[i]) S.userAns[i] = 4;
+      if(!S.roleAns[i]) S.roleAns[i] = 4;
+    }
+
+    var rec = {
+      id: 'ecr' + Date.now().toString(36),
+      t: Date.now(),
+      roleId: S.roleId,
+      roleName: _rName(),
+      userName: _uName(),
+      user: ecrScore(S.userAns),
+      role: ecrScore(S.roleAns)
+    };
+    ecrSaveHistory(rec);
+    S.lastRec = rec;
+    _showResultView();
+  }catch(e){
+    console.error('生成结果失败', e);
+    if(typeof toast === 'function') toast('生成结果失败，请重试');
+  }
 }
 
 /* ---------- 结果界面 ---------- */
@@ -306,6 +802,8 @@ function _showResultView(rec){
   rec = (S && S.lastRec) || rec;
   if(!rec) return;
   if(S) S.view = 'result';
+  var USER_COLOR = getEcrColor('me');
+  var ROLE_COLOR = getEcrColor('role');
   var v = document.getElementById('ecrTestView');
   var rv = document.getElementById('ecrResultView');
   var hv = document.getElementById('ecrHisView');
@@ -335,8 +833,14 @@ function _showResultView(rec){
       '<button class="ecr-btn" id="ecrHisBtn" type="button">历史回顾</button>' +
     '</div>';
 
-  var _isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-  _drawRadarInto(document.getElementById('ecrRadar'), rec.user.radar, rec.role.radar, _isDark);
+  try {
+    var _isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    var cv = document.getElementById('ecrRadar');
+    if(cv) _drawRadarInto(cv, rec.user.radar, rec.role.radar, _isDark);
+  } catch(err) {
+    console.error('雷达图渲染失败', err);
+    /* 图挂了也不能白屏，文字还在 */
+  }
 
   var b1 = document.getElementById('ecrSaveImg');
   if(b1) b1.onclick = function(){ _exportImage(rec); };
@@ -387,7 +891,9 @@ function _showHisView(){
 }
 
 /* ---------- 雷达图绘制（屏幕 & 导出共用） ---------- */
-function _drawRadarInto(canvas, uRadar, rRadar, dark){
+function _drawRadarInto(canvas, uRadar, rRadar, dark, uColor, rColor){
+  var USER_COLOR = uColor || getEcrColor('me');
+  var ROLE_COLOR = rColor || getEcrColor('role');
   if(!canvas) return;
   var ctx = canvas.getContext('2d');
   var W = canvas.width, H = canvas.height;
@@ -460,6 +966,8 @@ function _wrapLines(ctx, text, maxW){
 }
 function _exportImage(rec){
   try{
+    var USER_COLOR = getEcrColor('me');
+    var ROLE_COLOR = getEcrColor('role');
     var W = 750, pad = 56, contentW = W - pad * 2;
     /* 先量高度 */
     var meas = document.createElement('canvas').getContext('2d');
@@ -546,6 +1054,7 @@ function _exportImage(rec){
 }
 
 /* ---------- 从问卷桌面进入：角色选择 ---------- */
+window.__ecrDebug = { showResult: _showResultView, finish: _finish, score: ecrScore, save: ecrSaveHistory, name: _rName, uname: _uName };
 window.ecrOpenRolePick = function(){
   var mask = document.getElementById('mEcrRolePick');
   if(!mask) return;

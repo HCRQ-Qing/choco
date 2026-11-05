@@ -14,6 +14,24 @@ var platformClass = window.platformClass;
 const $ = s => document.querySelector(s);
 const $$ = s => Array.from(document.querySelectorAll(s));
 
+/* 探测 preserve-3d 是否真生效，不生效加 no-preserve3d 降级 */
+(function probePreserve3d(){
+  try{
+    var wrap = document.createElement('div');
+    wrap.style.cssText = 'position:absolute;left:-9999px;top:-9999px;width:10px;height:10px;perspective:100px';
+    var inner = document.createElement('div');
+    inner.style.cssText = 'width:10px;height:10px;transform-style:preserve-3d;transform:rotateY(45deg)';
+    wrap.appendChild(inner);
+    document.body.appendChild(wrap);
+    var st = window.getComputedStyle(inner);
+    var ok = (st.transformStyle === 'preserve-3d' || st.webkitTransformStyle === 'preserve-3d');
+    document.body.removeChild(wrap);
+    if(!ok) document.documentElement.classList.add('no-preserve3d');
+  }catch(e){
+    try{ document.documentElement.classList.add('no-preserve3d'); }catch(_){}
+  }
+})();
+
 /* ===== 新增：全局数据急救清洗（防范导入备份后的死循环/爆栈） ===== */
 (function fixImportedDataCrash() {
   try {
@@ -93,7 +111,24 @@ function safeStringify(v){
     return '{}';
   }
 }
-function lsSet(k,v){ try{localStorage.setItem(k,safeStringify(v));}catch(e){_mem[k]=v;} }
+var _lsSetWarnAt = {};
+function lsSet(k,v){
+  try{
+    localStorage.setItem(k,safeStringify(v));
+  }catch(e){
+    _mem[k] = v;
+    try{
+      var now = Date.now();
+      if(!_lsSetWarnAt[k] || now - _lsSetWarnAt[k] > 600000){
+        _lsSetWarnAt[k] = now;
+        if(typeof toast === 'function') toast('存储快满了，部分数据可能没存上');
+      }
+    }catch(err){}
+    if(window.MJ_LOGGER && typeof window.MJ_LOGGER.log === 'function'){
+      try{ window.MJ_LOGGER.log('Storage', '写入失败', 'Key: ' + k + ' | Error: ' + (e && e.message ? e.message : String(e))); }catch(err){}
+    }
+  }
+}
 function escapeHTML(s){ if(s === null || s === undefined) s = ''; return String(s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
 const esc = escapeHTML;
 let _toastTimer=null;
@@ -8887,15 +8922,30 @@ function ensureDefaultQuizTpl(){
     saveQuizTpls([ecrTpl]);
     return [ecrTpl];
   }
-  /* ★ 迁移：旧的系统默认「认识你」换成「依恋类型测试」（只动 builtin，用户自建的不碰） */
+  /* ★ 彻底清除旧版系统默认「认识你」问卷 */
   let changed = false;
   const hasEcr = arr.some(t => t && t.id === 'qt-builtin-ecr');
   arr = arr.filter(t => {
-    if(t && t.builtin && (t.id === 'qt-default-1' || t.name === '认识你')){ changed = true; return false; }
+    if(t && t.builtin && (t.id === 'qt-default-1' || t.name === '认识你' || t.name === '认识我的问卷')){ changed = true; return false; }
     return true;
   });
   if(!hasEcr){ arr.unshift(ecrTpl); changed = true; }
   if(changed) saveQuizTpls(arr);
+
+  /* ★ 清理本地浏览器里可能残留的旧问卷存档（彻底根除） */
+  try {
+    let raw = localStorage.getItem('mj_quiz_tpl_v1');
+    if(raw) {
+      let list = JSON.parse(raw);
+      if(Array.isArray(list)) {
+        let filtered = list.filter(t => t && !(t.builtin && (t.id === 'qt-default-1' || t.name === '认识你' || t.name === '认识我的问卷')));
+        if(filtered.length !== list.length) {
+          localStorage.setItem('mj_quiz_tpl_v1', JSON.stringify(filtered));
+        }
+      }
+    }
+  } catch(e) {}
+
   return arr;
 }
 
@@ -9081,9 +9131,10 @@ function openQuizTplDetail(tid){
   const arr = getQuizTpls();
   const t = arr.find(function(x){ return x.id === tid; });
   if(!t){ toast('问卷不存在'); return; }
-  /* ★ 依恋测试：私聊限定，选一个角色开始 */
+  /* ★ 依恋测试：直接用当前聊天角色开始，不再弹选择框 */
   if(t.type === 'ecr'){
-    if(window.ecrOpenRolePick) window.ecrOpenRolePick();
+    if(window.startECR) window.startECR(getCurrentRoleId());
+    else toast('测试模块还没加载好');
     return;
   }
   /* 先提示一句，后续再做详情页 */
@@ -10997,9 +11048,25 @@ function showDrawAnimation(q,picked){
         const backEl = wrap.querySelector('.flip-card-back');
         backEl.innerHTML = tarotHTML(p.card, p.reversed);
         hydrateTarotImages(backEl);
-        setTimeout(() => {
-          wrap.classList.add('flipped');
-        }, 50);
+        (function(w, b){
+          var done = false;
+          function flipNow(){
+            if(done) return;
+            done = true;
+            try{ w.classList.add('flipped'); }catch(e){}
+          }
+          var img = b ? b.querySelector('img') : null;
+          if(img){
+            if(img.complete && img.naturalWidth > 0){ setTimeout(flipNow, 30); }
+            else {
+              img.addEventListener('load', function(){ setTimeout(flipNow, 30); }, {once:true});
+              img.addEventListener('error', function(){ setTimeout(flipNow, 30); }, {once:true});
+              setTimeout(flipNow, 800);
+            }
+          } else {
+            setTimeout(flipNow, 50);
+          }
+        })(wrap, backEl);
       }
       
       if(i===picked.length-1){ 
