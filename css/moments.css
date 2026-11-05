@@ -244,7 +244,7 @@
 .mm-shape-btn .pv.ci{border-radius:50%}
 .apply-role-row{display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:12px;margin-bottom:6px;background:var(--th-accent-soft);border:1px solid var(--th-accent-line);cursor:pointer}
 .apply-role-row.on{background:var(--th-accent-soft-2);border-color:var(--th-accent)}
-.apply-role-row .pav{width:32px;height:32px;border-radius:50%;flex:none;overflow:hidden;position:relative;background:var(--th-av-bg)}
+.apply-role-row .pav{width:32px;height:32px;border-radius:var(--avatar-radius);flex:none;overflow:hidden;position:relative;background:var(--th-av-bg)}
 .apply-role-row .pav svg{position:absolute;inset:0;width:100%;height:100%}
 .apply-role-row .pav .silhouette{fill:var(--th-av-sil)}
 .apply-role-row .pav img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}

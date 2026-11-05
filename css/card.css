@@ -115,11 +115,11 @@ body.sel-mode-on .cd-tab .cd-tab-del{display:flex}
 .cd-list{height:100%;overflow-y:auto;padding:10px 20px 40px;scrollbar-width:none;position:relative}
 .cd-list::-webkit-scrollbar{display:none}
 
-.cl-line{display:flex;align-items:center;gap:14px;padding:21px 0;border-bottom:0.6px solid #f6f6f6;min-height:0}
+.cl-line{display:flex;align-items:center;gap:14px;padding:21px 0;border-bottom:0.6px solid var(--th-divider);min-height:0}
 .cl-line .chk{
   width:22px;height:22px;flex:none;
   border-radius:50%;
-  border:1.5px solid rgba(0,0,0,.45);
+  border:1.5px solid var(--th-faint);
   background:var(--th-bg1);
   color:var(--th-bg1);
   font-size:14px;

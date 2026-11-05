@@ -689,7 +689,7 @@
   display:none;
   flex-direction:column;
   overflow:hidden;
-  background:var(--th-bg0,var(--th-bg1));
+  background:var(--th-bg1);
 }
 #cardDemandScreen.on{
   display:flex;

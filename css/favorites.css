@@ -316,7 +316,7 @@
   border-radius:8px;
 }
 .col-item .col-av svg{position:absolute;inset:0;width:100%;height:100%}
-.col-item .col-av .silhouette{fill:#d4d4d4}
+.col-item .col-av .silhouette{fill:var(--th-av-sil)}
 .col-item .col-av img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;opacity:0.85}
 .col-item .col-main{
   flex:1;

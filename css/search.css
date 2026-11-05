@@ -121,7 +121,7 @@
 
 /* 美化整页：跟字卡库/收藏页一样，整页铺满，从右滑入 */
 /* 美化整页：跟字卡库/收藏页一样，瞬间显隐，无过渡 */
-.beauty-panel{position:fixed;inset:0;z-index:100;max-width:520px;margin:0 auto;background:var(--th-bg0,var(--th-bg1));display:none;flex-direction:column;visibility:visible}
+.beauty-panel{position:fixed;inset:0;z-index:100;max-width:520px;margin:0 auto;background:var(--th-bg1);display:none;flex-direction:column;visibility:visible}
 .beauty-panel.show{display:flex}
 /* 美化顶部栏：跟字卡库/收藏页一致 —— 左箭头 + 居中标题 + 右侧占位 */
 .bp-head{
@@ -130,7 +130,7 @@
   align-items:center;
   gap:12px;
   padding:20px 22px 12px;
-  background:var(--th-bg0,var(--th-bg1));
+  background:var(--th-bg1);
   border-bottom:none;
 }
 .bp-head .bp-back{
@@ -179,5 +179,5 @@
 .bp-row .r-val{font-size:11px;color:#bbb;flex:none;font-weight:300;letter-spacing:.5px;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
 .bp-row .r-arr{color:var(--th-border);opacity:1;font-size:12px;transition:transform .18s ease}
 .bp-row:active .r-arr{transform:translateX(2px)}
-.sub-panel{position:fixed;inset:0;z-index:110;max-width:520px;margin:0 auto;background:var(--th-bg0,var(--th-bg1));display:flex;flex-direction:column;transform:translateX(100%);visibility:hidden;transition:none}
+.sub-panel{position:fixed;inset:0;z-index:110;max-width:520px;margin:0 auto;background:var(--th-bg1);display:flex;flex-direction:column;transform:translateX(100%);visibility:hidden;transition:none}
 .sub-panel.show{transform:translateX(0);visibility:visible}
