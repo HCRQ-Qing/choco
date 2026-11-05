@@ -743,3 +743,21 @@
 .flip-card-back {
   transform: rotateY(180deg);
 }
+
+/* 不支持 preserve-3d 的内核：直接切 DOM，不做 3D 旋转 */
+html.no-preserve3d .flip-card-inner{
+  transform: none !important;
+  transform-style: flat !important;
+  transition: none !important;
+}
+html.no-preserve3d .flip-card-front,
+html.no-preserve3d .flip-card-back{
+  -webkit-backface-visibility: visible !important;
+  backface-visibility: visible !important;
+  transform: none !important;
+  transition: opacity .25s ease !important;
+}
+html.no-preserve3d .flip-card-front{ opacity: 1; }
+html.no-preserve3d .flip-card-back{ opacity: 0; pointer-events: none; }
+html.no-preserve3d .flip-card-wrapper.flipped .flip-card-front{ opacity: 0; pointer-events: none; }
+html.no-preserve3d .flip-card-wrapper.flipped .flip-card-back{ opacity: 1; pointer-events: auto; }

@@ -1,8 +1,52 @@
 /* ============================================================
    ECR 依恋类型测试 · 样式
    ============================================================ */
+#ecrScreen .ecr-body .ecr-msg-wrap .msg,
+#ecrScreen .ecr-body .ecr-msg-wrap .msg-body{
+  width:100% !important;
+  max-width:100% !important;
+  display:flex !important;
+  flex-direction:column !important;
+}
+#ecrScreen .ecr-body .ecr-msg-wrap.me .msg-body{
+  align-items:flex-end !important;
+}
+#ecrScreen .ecr-body .ecr-msg-wrap.other .msg-body{
+  align-items:flex-start !important;
+}
+#ecrScreen .ecr-body .ecr-msg-wrap .bubble{
+  width:fit-content !important;
+  max-width:85% !important;
+  word-break:break-word !important;
+  white-space:pre-wrap !important;
+  display:inline-block !important;
+  box-sizing:border-box !important;
+  padding:var(--bubble-pad-v, 8px) var(--bubble-pad-h, 14px) !important;
+  font-size:var(--bubble-font-size, 13.5px) !important;
+  line-height:1.55 !important;
+  letter-spacing:.5px !important;
+  color:var(--th-text);
+  background-color:var(--th-accent-soft);
+  border:none;
+  border-radius:14px 14px 14px 4px;
+}
+#ecrScreen .ecr-body .ecr-msg-wrap .bubble.message-sent,
+#ecrScreen .ecr-body .ecr-msg-wrap .bubble.msg-out{
+  color:var(--th-text);
+  background-color:var(--th-bubble-me);
+  border:none;
+  border-radius:14px 14px 4px 14px;
+}
+body[data-bubble="custom"] #ecrScreen .ecr-body .ecr-msg-wrap .bubble.message-sent,
+body[data-bubble="custom"] #ecrScreen .ecr-body .ecr-msg-wrap .bubble.message-received{
+  background-color:transparent !important;
+  border:none !important;
+  border-radius:0 !important;
+  padding:0 !important;
+  color:var(--th-text) !important;
+}
 #ecrScreen{background:var(--th-bg1)}
-#ecrScreen .ecr-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding:8px 22px 60px}
+#ecrScreen .ecr-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding:8px 22px 40px}
 #ecrScreen .ecr-body::-webkit-scrollbar{display:none}
 
 /* --- 答题页 --- */
@@ -11,7 +55,7 @@
 .ecr-bar{flex:1;height:2px;background:var(--th-divider);border-radius:2px;overflow:hidden}
 .ecr-bar i{display:block;height:100%;background:var(--th-text);border-radius:2px;transition:width .3s ease}
 .ecr-q{font-size:18px;color:var(--th-text);line-height:1.7;letter-spacing:.5px;margin-bottom:26px;font-weight:400;-webkit-font-smoothing:antialiased}
-.ecr-panel{border:0.7px solid var(--th-border);border-radius:16px;padding:18px 16px 14px;margin-bottom:16px;background:var(--th-card)}
+.ecr-panel{padding:0;margin-bottom:32px;background:transparent}
 .ecr-p-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
 .ecr-p-head .who{font-size:13.5px;color:var(--th-text);letter-spacing:1px;font-weight:500}
 .ecr-p-head .who.u::before{content:'';display:inline-block;width:8px;height:8px;border-radius:50%;background:#3a7bd5;margin-right:8px;vertical-align:1px}
@@ -72,3 +116,178 @@
 .ecr-pick-av .uni-avatar{width:100%;height:100%}
 .ecr-pick-name{flex:1;font-size:14px;color:var(--th-text);letter-spacing:1px}
 .ecr-pick-item .chev{color:var(--th-faint);font-weight:300}
+/* --- 留言区与底栏排版 --- */
+.ecr-chat-scroll{
+  flex:none;
+  height:320px;
+  margin:20px 0 10px;
+  overflow-y:auto;
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+  padding-bottom:10px;
+  scrollbar-width:none;
+}
+#ecrChatArea .ecr-typing-bar{
+  display:flex;
+  align-items:center;
+  gap:5px;
+  padding:6px 4px 4px;
+  font-size:10.5px;
+  color:var(--th-text-soft);
+  letter-spacing:1px;
+  visibility:hidden;
+}
+#ecrChatArea .ecr-typing-bar.show{ visibility:visible; }
+#ecrChatArea .ecr-typing-bar .dots{
+  display:inline-flex;
+  gap:2px;
+  align-items:center;
+}
+#ecrChatArea .ecr-typing-bar .dots span{
+  width:3px;
+  height:3px;
+  border-radius:50%;
+  background:var(--th-text-soft);
+  display:block;
+  animation:ecrTypingDot 1.2s ease-in-out infinite;
+}
+#ecrChatArea .ecr-typing-bar .dots span:nth-child(2){ animation-delay:.2s; }
+#ecrChatArea .ecr-typing-bar .dots span:nth-child(3){ animation-delay:.4s; }
+@keyframes ecrTypingDot{
+  0%,60%,100%{opacity:.3;transform:translateY(0)}
+  30%{opacity:1;transform:translateY(-2px)}
+}
+#ecrChatArea .ecr-time-sep{
+  font-size:9px;
+  color:var(--th-faint);
+  letter-spacing:1px;
+  font-family:Georgia,serif;
+  padding:0 2px 4px;
+}
+#ecrChatArea .ecr-active-row{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  margin-bottom:6px;
+}
+#ecrChatArea .ecr-active-line{
+  width:8px;
+  height:1px;
+  background:var(--th-faint);
+  flex:none;
+}
+#ecrChatArea .ecr-active-text{
+  font-size:9.5px;
+  color:var(--th-faint);
+  letter-spacing:3px;
+  font-family:Georgia,serif;
+  line-height:1;
+}
+.ecr-chat-scroll::-webkit-scrollbar{display:none}
+.ecr-input-wrap{
+  flex:none;
+  display:flex;
+  align-items:center;
+  gap:6px;
+  margin:0 22px 8px;
+  padding:6px 10px;
+  background:var(--th-card);
+  border-radius:22px;
+  box-shadow:0 1px 5px var(--c-shadow);
+}
+.ecr-ipt{
+  flex:1;
+  min-width:0;
+  height:30px;
+  border:none;
+  outline:none;
+  background:transparent !important;
+  -webkit-appearance:none;
+  appearance:none;
+  box-shadow:none;
+  font-size:13.5px;
+  color:var(--th-text);
+  font-family:inherit;
+  padding:0 4px;
+  line-height:1.5;
+}
+.ecr-ipt::placeholder{
+  color:var(--th-faint);
+}
+.ecr-mic-btn{
+  width:30px;
+  height:30px;
+  border-radius:50%;
+  flex:none;
+  border:none;
+  background:transparent;
+  color:var(--th-text);
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:0;
+}
+.ecr-mic-btn svg{
+  width:16px;
+  height:16px;
+  stroke:var(--th-text);
+  fill:none;
+  stroke-width:1.4;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+}
+.ecr-send{
+  width:30px;
+  height:30px;
+  border-radius:50%;
+  flex:none;
+  border:none;
+  background:transparent !important;
+  color:var(--th-text);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+  padding:0;
+  transition:background .2s ease;
+}
+.ecr-send svg{
+  width:16px;
+  height:16px;
+  stroke:var(--th-text);
+  fill:none;
+  stroke-width:1.4;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+  display:block;
+}
+.ecr-send:active{
+  background:var(--th-accent-soft);
+}
+.ecr-bottom-area{
+  flex:none;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  padding:0 0 calc(20px + env(safe-area-inset-bottom));
+}
+.ecr-next-text{
+  font-size:13px;
+  color:#888;
+  letter-spacing:2px;
+  padding:10px 30px;
+  cursor:pointer;
+  text-align:center;
+  font-family:inherit;
+}
+.ecr-next-text:active{color:#1a1a1a}
+.ecr-msg-wrap{
+  display:flex;
+  width:100%;
+  margin-bottom:10px;
+}
+.ecr-msg-wrap.me{justify-content:flex-end}
+.ecr-msg-wrap.other{justify-content:flex-start}
+.ecr-msg-wrap .msg{max-width:85%}
