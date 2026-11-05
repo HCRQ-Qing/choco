@@ -1427,6 +1427,7 @@
     <div class="bg-tabs" id="myBgTabs">
       <button class="bg-tab on" data-mytab="me" type="button">个人界面</button>
       <button class="bg-tab" data-mytab="card" type="button">字卡页</button>
+      <button class="bg-tab" data-mytab="watch" type="button">一起看</button>
     </div>
     <div class="bg-pane on" id="myBgPaneMe">
       <div class="up-sec">
@@ -1460,6 +1461,20 @@
         <input type="file" id="myGroupIconFile" accept="image/*" style="display:none">
         <input type="file" id="myCardBgFile" accept="image/*" style="display:none">
       </div>
+    </div>
+    <div class="bg-pane" id="myBgPaneWatch">
+      <div class="up-sec">
+        <div class="up-title">一起看背景</div>
+        <div class="up-desc">换了以后，「一起看」页那层底就变成这张图。</div>
+        <div class="up-prev" id="myWatchBgPrev">还没上传</div>
+        <div class="up-acts">
+          <button class="up-btn primary" id="myWatchBgUpload" type="button">上传背景</button>
+          <button class="up-btn ghost" id="myWatchBgReset" type="button">恢复默认</button>
+        </div>
+        <div class="op-row"><span class="op-lbl">透明度</span><input type="range" class="op-range" id="myWatchBgOpacity" min="0" max="100" value="100"><span class="op-val" id="myWatchBgOpacityVal">100%</span></div>
+        <div class="op-row"><span class="op-lbl">模糊</span><input type="range" class="op-range" id="myWatchBgBlur" min="0" max="20" value="0"><span class="op-val" id="myWatchBgBlurVal">0px</span></div>
+      </div>
+      <input type="file" id="myWatchBgFile" accept="image/*" style="display:none">
     </div>
   </div>
 </div>
@@ -2521,7 +2536,7 @@
     <!-- 输入区 -->
     <div class="watch-input-bar" id="watchInputBar">
       <input type="text" id="watchBvInput" placeholder="粘贴 B站 BV号 / 油管 / 抖音链接" />
-      <button class="primary-btn" id="watchLoadBtn" type="button">播 放</button>
+      <button class="watch-play-btn" id="watchLoadBtn" type="button">播放</button>
     </div>
     <!-- 最近看过 -->
     <div class="watch-recent" id="watchRecent">
@@ -2547,6 +2562,8 @@
       <button class="wc-btn" id="wcPip" type="button">🗔 画中画</button>
       <button class="wc-btn" id="wcChatToggle" type="button">💬 聊天</button>
       <button class="wc-btn" id="wcDanmakuToggle" type="button">☰ 弹幕</button>
+      <!-- ★ 新增：全屏时手动切横竖 -->
+      <button class="wc-btn" id="wcScreenMode" type="button" style="display:none;">↔ 横屏</button>
     </div>
     <!-- 陪说话痨程度 -->
     <div class="watch-talk" id="watchTalk">
@@ -2555,14 +2572,15 @@
       <span class="wt-val" id="wcTalkVal">正常</span>
     </div>
   </div>
-  <!-- 透明聊天悬浮框（左下角，可拖拽/收起） -->
+  <!-- 透明聊天悬浮框（底部白卡，可收起） -->
   <div class="watch-chat" id="watchChat">
     <div class="wc-head" id="wcHead">
-      <div class="wc-avatars" id="wcAvatars"></div>
       <span class="wc-title">和 TA 一起看</span>
       <button class="wc-collapse" id="wcCollapse" type="button">▾</button>
     </div>
-    <div class="wc-body" id="wcBody"></div>
+    <div class="wc-body" id="wcBody">
+      <div class="wc-msg role">准备好一起看了吗？</div>
+    </div>
     <div class="wc-input-row">
       <input type="text" id="wcInput" placeholder="说点什么…" />
       <button id="wcSend" type="button">发送</button>
