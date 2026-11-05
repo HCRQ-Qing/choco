@@ -25364,6 +25364,13 @@ function renderReplyPanel(tab){
 		</div>
 	  </div>
 	  <div class="section">
+		<div class="title title-sw">
+		  <span>回车键发送消息</span>
+		  <label class="switch"><input type="checkbox" id="rsEnterSendOn" ${lsGet('mj_enter_send_v1', false)?'checked':''}><span class="slider"></span></label>
+		</div>
+		<div class="desc">开：按回车直接发出去；关：按回车换行</div>
+	  </div>
+	  <div class="section">
 		<div class="title">气泡</div>
 		<div class="rs-line">
 		  <div class="rs-item"><span class="lbl">最多</span><input class="rs-num" type="number" id="rsMaxBubbles" min="1" max="10" value="${r.maxBubbles||3}"><span class="unit">个</span></div>
@@ -27812,6 +27819,16 @@ function sendRecVoice(){
 }
 
 on('#micBtn','click',e=>{ e.stopPropagation(); startRecording(); });
+
+/* ★ 回复设置 · 回车键发送消息开关 */
+document.addEventListener('change', function(e){
+  var t = e.target;
+  if(!t || t.id !== 'rsEnterSendOn') return;
+  e.stopPropagation();
+  var on = t.checked;
+  lsSet('mj_enter_send_v1', on);
+  toast(on ? '已开启：回车直接发送' : '已关闭：回车换行');
+}, true);
 on('#recBackdrop','click',()=>{ if(recState==='rec') cancelRec(); else cancelRec(); });
 $('#chatList').addEventListener('click', e=>{
   const vb = e.target.closest('.voice-bubble');
@@ -28064,9 +28081,12 @@ document.addEventListener('click', function(e){
 	  });
 
 	  chatInput.addEventListener('keydown',e=>{
-		if(e.key==='Enter' && !e.shiftKey && !isMobileKeyboard()){
-		  e.preventDefault();
-		  sendMessage();
+		if(e.key==='Enter' && !e.shiftKey){
+		  var _enterSend = lsGet('mj_enter_send_v1', false);
+		  if(_enterSend || !isMobileKeyboard()){
+			e.preventDefault();
+			sendMessage();
+		  }
 		}
 	  });
 	  chatInput.addEventListener('input',function(){
