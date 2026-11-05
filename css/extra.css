@@ -506,42 +506,185 @@
 .ud-prob{color:#ff9aae;margin-top:4px;font-weight:700}
 
 /* ============ 一起看 ============ */
-#watchScreen{background:var(--th-accent-deep);color:var(--th-bg1)}
-.watch-wrap{display:flex;flex-direction:column;height:100%}
-.watch-input-bar{display:flex;gap:8px;padding:12px 16px;background:#111;flex:none}
-.watch-input-bar input{flex:1;padding:10px 14px;border-radius:10px;border:0.6px solid var(--th-text);background:#1c1c1e;color:var(--th-bg1);font-size:14px;outline:none}
-.watch-input-bar input::placeholder{color:var(--th-text-soft)}
-.watch-player-box{flex:1;position:relative;background:var(--th-accent-deep);min-height:0}
-.watch-empty{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;color:var(--th-text-soft);font-size:14px;letter-spacing:1px}
+#watchScreen{
+  position:relative;
+  background-color:var(--th-bg1);
+  color:var(--th-text);
+  font-family:var(--app-font);
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+  height:100%;
+  overflow-y:auto;
+  -webkit-overflow-scrolling:touch;
+}
+#watchScreen::before{
+  content:"";
+  position:absolute;inset:0;z-index:0;
+  background-image:var(--watch-bg-img,none);
+  background-size:cover;
+  background-position:center;
+  background-repeat:no-repeat;
+  opacity:var(--watch-bg-opacity,1);
+  filter:blur(var(--watch-bg-blur,0px));
+  pointer-events:none;
+}
+#watchScreen::after{
+  content:"";
+  position:absolute;inset:0;z-index:1;
+  background:var(--th-bg1);
+  opacity:calc(1 - var(--watch-bg-opacity,1));
+  pointer-events:none;
+}
+#watchScreen > *{position:relative;z-index:2}
+.watch-wrap{
+  display:flex;flex-direction:column;
+  padding:0 16px;
+  padding-bottom:calc(46vh + 20px);
+}
+
+/* 顶部输入栏 */
+.watch-input-bar{
+  display:flex;align-items:center;gap:8px;
+  padding:12px 0 10px;flex:none;
+}
+.watch-input-bar input{
+  flex:1;min-width:0;height:38px;
+  padding:0 16px;border:none;border-radius:19px;
+  background:var(--th-accent-soft);color:var(--th-text);
+  font-size:13px;font-family:inherit;font-weight:300;letter-spacing:.5px;
+  outline:none;box-sizing:border-box;
+}
+.watch-input-bar input::placeholder{color:var(--th-faint);font-weight:300}
+.watch-input-bar .watch-play-btn{
+  flex:none;height:38px;padding:0 18px;
+  border:none;border-radius:19px;
+  background:var(--th-text);color:var(--th-bg1);
+  font-size:13px;font-weight:400;letter-spacing:2px;text-indent:2px;
+  font-family:inherit;cursor:pointer;
+  transition:opacity .18s ease;
+}
+.watch-input-bar .watch-play-btn:active{opacity:.75}
+
+/* 播放器 */
+.watch-player-box{
+  flex:none;
+  width:100%;
+  aspect-ratio: 16 / 9;
+  position:relative;
+  background:var(--th-accent-deep);
+  border-radius:12px;overflow:hidden;
+  box-shadow:0 4px 16px rgba(0,0,0,.08);
+}
+.watch-empty{
+  position:absolute;inset:0;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  color:var(--th-faint);font-size:0;
+}
+.watch-empty svg{display:none}
+.watch-empty::before{
+  content:"▶";width:52px;height:52px;border-radius:50%;
+  border:0.8px solid var(--th-border);
+  display:flex;align-items:center;justify-content:center;
+  color:var(--th-text-soft);font-size:16px;line-height:1;margin-bottom:14px;padding-left:3px;box-sizing:border-box;
+}
+.watch-empty::after{
+  content:"和 TA 一起看";font-size:12.5px;color:var(--th-text-soft);
+  font-weight:300;letter-spacing:1.5px;
+}
 .watch-frame{width:100%;height:100%;border:0;background:var(--th-accent-deep)}
-.watch-ctrl{display:flex;gap:10px;padding:10px 16px;background:#0c0c0c;flex:none}
-.wc-btn{padding:8px 16px;border-radius:8px;background:#1c1c1e;color:#ddd;border:none;font-size:13px;cursor:pointer;letter-spacing:.5px}
-.wc-btn:active{background:#2c2c2e}
-.wc-btn.on{background:#0a84ff;color:var(--th-bg1)}
-/* 全屏模式：播放器撑满，控制条和聊天框悬浮 */
+
+/* 控制条：缩进胶囊，贴紧播放器下方 */
+.watch-ctrl{
+  display:flex;flex-wrap:wrap;gap:6px;
+  padding:10px 0 6px;flex:none;
+}
+.wc-btn{
+  padding:6px 12px;border-radius:14px;
+  background:var(--th-accent-soft);color:var(--th-text-soft);
+  border:none;font-size:11.5px;font-family:inherit;font-weight:300;letter-spacing:.5px;
+  cursor:pointer;transition:background .18s ease,color .18s ease;
+}
+.wc-btn:active{background:var(--th-line)}
+.wc-btn.on{background:var(--th-text);color:var(--th-bg1)}
+
+/* 全屏模式 */
+#watchScreen.fullscreen{
+  position:fixed;inset:0;z-index:99999;background:#000;
+  display:flex;flex-direction:column;
+}
 #watchScreen.fullscreen .watch-input-bar,
-#watchScreen.fullscreen .watch-ctrl,
 #watchScreen.fullscreen .watch-recent,
-#watchScreen.fullscreen .watch-talk{display:none}
-#watchScreen.fullscreen .watch-player-box{position:fixed;inset:0;z-index:50}
+#watchScreen.fullscreen .watch-talk{
+  display:none;
+}
+#watchScreen.fullscreen .watch-wrap{
+  padding:0;height:100%;justify-content:center;
+}
+#watchScreen.fullscreen .watch-player-box{
+  flex:none;width:100%;aspect-ratio:auto;height:100%;
+  border-radius:0;box-shadow:none;background:#000;
+}
+/* ★ 新增：竖屏模式，播放器收窄居中 */
+#watchScreen.fullscreen.watch-portrait .watch-player-box{
+  width: 56.25vh;
+  margin: 0 auto;
+  max-width: 100%;
+}
+#watchScreen.fullscreen .watch-ctrl{
+  position:absolute;left:0;right:0;bottom:20px;
+  padding:16px 24px;z-index:100;
+  background:linear-gradient(transparent, rgba(0,0,0,0.8));
+  display:flex;justify-content:center;
+  flex-wrap:wrap;
+}
+#watchScreen.fullscreen .wc-btn{
+  background:rgba(255,255,255,0.2);color:#fff;border:none;
+  padding:8px 16px;border-radius:20px;font-size:13px;
+}
+#watchScreen.fullscreen .wc-btn:active{
+  background:rgba(255,255,255,0.3);
+}
+#watchScreen.fullscreen .watch-chat{
+  display:none !important;
+}
+#watchScreen.fullscreen .utop{
+  position:absolute;top:0;left:0;right:0;z-index:100;
+  background:linear-gradient(rgba(0,0,0,0.8), transparent);
+  border-bottom:none;
+}
+#watchScreen.fullscreen .utop-title,
+#watchScreen.fullscreen .utop-back{
+  color:#fff !important;-webkit-text-stroke:0 !important;
+}
+
 /* 小屏模式：播放器固定右下小窗 */
-#watchScreen.small .watch-player-box{position:fixed;right:16px;bottom:16px;width:42vw;max-width:320px;height:28vh;max-height:240px;border-radius:14px;overflow:hidden;z-index:60;box-shadow:0 8px 30px var(--mask-bg)}
+#watchScreen.small .watch-player-box{
+  position:fixed;right:16px;bottom:16px;
+  width:42vw;max-width:320px;height:28vh;max-height:240px;
+  border-radius:12px;overflow:hidden;z-index:60;
+  box-shadow:0 8px 30px rgba(0,0,0,.18);
+}
 #watchScreen.small .watch-wrap{padding-top:0}
 
 /* 最近看过 */
-.watch-recent{display:flex;align-items:center;gap:8px;padding:8px 16px;background:#111;flex:none;overflow:hidden}
-.wr-label{font-size:12px;color:var(--th-text-soft);letter-spacing:.5px;flex:none}
-.wr-list{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;flex:1}
+.watch-recent{
+  display:flex;align-items:center;gap:6px;
+  padding:2px 0 12px;flex:none;overflow:hidden;
+}
+.wr-label{font-size:11px;color:var(--th-text-soft);letter-spacing:.5px;flex:none;font-weight:300}
+.wr-list{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;flex:1}
 .wr-list::-webkit-scrollbar{height:0}
-.wr-chip{flex:none;padding:4px 12px;border-radius:14px;background:#1c1c1e;color:#bbb;font-size:12px;cursor:pointer;border:0.6px solid #2c2c2e;white-space:nowrap}
-.wr-chip:active{background:#2c2c2e}
-.wr-chip .wr-x{margin-left:6px;color:var(--th-text-soft);font-size:11px}
+.wr-chip{
+  flex:none;padding:4px 12px;border-radius:14px;
+  background:var(--th-accent-soft);color:var(--th-text-soft);
+  font-size:11.5px;font-weight:300;letter-spacing:.3px;
+  cursor:pointer;border:none;white-space:nowrap;
+}
+.wr-chip:active{background:var(--th-line)}
+.wr-chip .wr-x{margin-left:6px;color:var(--th-faint);font-size:10px}
 
-/* 话痨度滑块 */
-.watch-talk{display:flex;align-items:center;gap:10px;padding:8px 16px;background:#0c0c0c;flex:none}
-.wt-label{font-size:12px;color:var(--th-text-soft);letter-spacing:.5px;flex:none}
-#wcTalkRange{flex:1;accent-color:#0a84ff}
-.wt-val{font-size:12px;color:#0a84ff;min-width:32px;text-align:center}
+/* 话痨度：已按需求移除，保留空壳不报错 */
+.watch-talk{display:none !important}
 
 /* 角色弹幕层 */
 .watch-danmaku{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:2}
@@ -559,28 +702,74 @@
 .wo-rewind{animation:woRewind .6s ease}
 @keyframes woRewind{0%{transform:scale(.8) rotate(-8deg)}50%{transform:scale(1.1) rotate(4deg)}100%{transform:scale(1) rotate(0)}}
 
-/* 透明聊天悬浮框 */
-.watch-chat{position:fixed;left:14px;bottom:16px;width:82vw;max-width:340px;max-height:52vh;display:flex;flex-direction:column;background:rgba(20,20,22,.55);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:0.6px solid rgba(255,255,255,.12);border-radius:16px;overflow:hidden;z-index:70;transition:background .25s ease,max-height .25s ease,border-color .25s ease}
+/* 悬浮聊天框（底部白卡） */
+.watch-chat{
+  position:absolute;
+  left:0;right:0;bottom:0;
+  margin:0 auto;
+  max-width:520px;width:100%;
+  max-height:46vh;
+  display:flex;flex-direction:column;
+  background:var(--th-bg1);
+  border:0.7px solid var(--th-accent-line);
+  border-bottom:none;
+  border-radius:18px 18px 0 0;
+  overflow:hidden;
+  z-index:70;
+  box-shadow:0 -4px 20px rgba(0,0,0,.06);
+  transition:max-height .25s ease;
+}
 .watch-chat.collapsed{max-height:44px}
-.watch-chat.dragging{transition:none;user-select:none}
-.wc-head{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;flex:none;cursor:grab}
-.wc-title{font-size:13px;letter-spacing:1px;color:var(--th-bg1);font-weight:300}
-.wc-collapse{background:none;border:none;color:#aaa;font-size:14px;cursor:pointer;padding:0 4px}
-.wc-body{flex:1;overflow-y:auto;padding:8px 12px;display:flex;flex-direction:column;gap:8px;min-height:0;scrollbar-width:none}
+.wc-head{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:12px 16px;flex:none;cursor:pointer;
+  border-bottom:0.6px dashed var(--th-bg0);
+}
+.wc-title{font-size:13px;letter-spacing:1px;color:var(--th-text);font-weight:400}
+.wc-collapse{
+  background:none;border:none;color:var(--th-text-soft);
+  font-size:14px;cursor:pointer;padding:0 4px;
+}
+.wc-body{
+  flex:1;overflow-y:auto;padding:12px 16px;
+  display:flex;flex-direction:column;gap:8px;
+  min-height:0;scrollbar-width:none;background:var(--th-bg1);
+}
 .wc-body::-webkit-scrollbar{width:0}
-.wc-msg{max-width:85%;padding:7px 12px;border-radius:12px;font-size:13px;line-height:1.5;word-break:break-word}
-.wc-msg.role{align-self:flex-start;background:rgba(255,255,255,.14);color:#fff}
-.wc-msg.me{align-self:flex-end;background:rgba(255,255,255,.85);color:#1a1a1a}
-.wc-whosay{display:block;font-size:11px;color:#7dd3fc;margin-bottom:2px;font-weight:500}
-/* 多人放映厅：参与者头像条 */
-.wc-avatars{display:flex;align-items:center;gap:4px}
-.wc-av{width:22px;height:22px;border-radius:50%;background:#333;color:#fff;font-size:11px;display:flex;align-items:center;justify-content:center;border:1.5px solid rgba(255,255,255,.3);flex:none;overflow:hidden}
-.wc-av img{width:100%;height:100%;object-fit:cover}
-.wc-av-add{background:rgba(255,255,255,.1);border:1.5px dashed rgba(255,255,255,.3);cursor:pointer;font-size:14px}
-.wc-input-row{display:flex;gap:6px;padding:8px 10px;border-top:0.6px solid rgba(255,255,255,.08);flex:none}
-.wc-input-row input{flex:1;padding:8px 12px;border-radius:10px;border:none;background:rgba(255,255,255,.12);color:#fff;font-size:13px;outline:none}
-.wc-input-row input::placeholder{color:var(--th-text-soft)}
-.wc-input-row button{padding:8px 14px;border-radius:10px;border:none;background:var(--th-bg1);color:var(--th-text);font-size:13px;cursor:pointer;font-weight:500}
+.wc-msg{
+  max-width:85%;padding:8px 12px;border-radius:14px;
+  font-size:13.5px;line-height:1.6;word-break:break-word;font-weight:300;
+}
+.wc-msg.role{align-self:flex-start;background:var(--th-accent-soft);color:var(--th-text)}
+.wc-msg.me{align-self:flex-end;background:var(--th-text);color:var(--th-bg1)}
+.wc-whosay{display:block;font-size:10.5px;color:var(--th-text-soft);margin-bottom:4px;font-weight:300}
+
+/* 输入栏 */
+.wc-input-row{
+  display:flex;align-items:center;gap:8px;
+  padding:10px 16px calc(10px + env(safe-area-inset-bottom));
+  border-top:0.6px dashed var(--th-bg0);
+  flex:none;background:var(--th-bg1);
+}
+.wc-input-row input{
+  flex:1;height:36px;padding:0 14px;
+  border-radius:18px;border:none;
+  background:var(--th-accent-soft);
+  color:var(--th-text);
+  font-size:13px;font-family:inherit;font-weight:300;
+  outline:none;box-sizing:border-box;
+}
+.wc-input-row input::placeholder{color:var(--th-faint);font-weight:300}
+.wc-input-row button{
+  flex:none;height:36px;padding:0 16px;
+  border-radius:18px;border:none;
+  background:var(--th-text);color:var(--th-bg1);
+  font-size:13px;font-family:inherit;font-weight:400;
+  letter-spacing:1.5px;cursor:pointer;
+}
+/* 小屏和全屏时隐藏聊天 */
+#watchScreen.fullscreen .watch-chat,
+#watchScreen.small .watch-chat { display:none !important; }
 
 /* ============ 一起刷已移除 ============ */
 
