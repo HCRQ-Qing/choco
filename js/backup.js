@@ -80,7 +80,41 @@
   }
 
   /* ---------- 导出 ---------- */
-  function exportAll(){
+  function showExportPicker(){
+    var old = document.getElementById('bkExportPicker');
+    if(old) old.remove();
+    var layer = document.createElement('div');
+    layer.id = 'bkExportPicker';
+    layer.style.cssText = 'position:fixed;inset:0;z-index:2147483640;background:rgba(0,0,0,.35);display:flex;align-items:flex-end;justify-content:center';
+    function item(act, title, sub){
+      return '<div data-act="' + act + '" style="padding:15px 18px;border-bottom:0.7px solid #f1f1f1;cursor:pointer">' +
+        '<div style="font-size:13px;color:#1a1a1a;letter-spacing:1px">' + title + '</div>' +
+        '<div style="font-size:11px;color:#999;margin-top:4px">' + sub + '</div>' +
+      '</div>';
+    }
+    layer.innerHTML =
+      '<div style="width:100%;max-width:520px;background:#fff;border-radius:18px 18px 0 0;padding:6px 0 calc(10px + env(safe-area-inset-bottom))">' +
+        '<div style="text-align:center;font-size:14px;letter-spacing:4px;text-indent:4px;padding:16px 0 10px;color:#1a1a1a">导 出 备 份</div>' +
+        item('all', '全部备份', '角色 / 字卡 / 聊天 / 表情 / 设置，全打包') +
+        item('chat', '聊天备份', '只导聊天记录，文件小') +
+        item('sticker', '表情包备份', '只导表情图，可单独分享') +
+        '<div data-act="cancel" style="text-align:center;padding:16px;font-size:13px;color:#999;letter-spacing:2px;cursor:pointer">取 消</div>' +
+      '</div>';
+    document.body.appendChild(layer);
+    layer.addEventListener('click', function(e){
+      if(e.target === layer){ layer.remove(); return; }
+      var el = e.target.closest('[data-act]');
+      if(!el) return;
+      var act = el.dataset.act;
+      layer.remove();
+      if(act === 'all') exportAll('all');
+      else if(act === 'chat') exportAll('chat');
+      else if(act === 'sticker') exportAll('sticker');
+    });
+  }
+
+  function exportAll(mode){
+    mode = mode || 'all';
     var ls = {};
     try{
       for(var i = 0; i < localStorage.length; i++){
@@ -96,16 +130,40 @@
       __type: 'choco-backup',
       version: 1,
       app: 'choco',
+      mode: mode,
       exportedAt: new Date().toISOString(),
-      localStorage: ls,
+      localStorage: {},
       idb: {}
     };
 
     var skipped = 0;
     var totalBytes = 0;
 
+    var stickerIdbKeys = [];
+    if(mode === 'sticker'){
+      try{
+        if(window.__stickerBackup && window.__stickerBackup.makeExportPayload){
+          payload.sticker = window.__stickerBackup.makeExportPayload();
+        }
+        if(window.__stickerBackup && window.__stickerBackup.listIdbStickerKeys){
+          stickerIdbKeys = window.__stickerBackup.listIdbStickerKeys();
+        }
+      }catch(e){ console.error('[backup] 表情导出准备失败', e); }
+    }
+
+    function keepKey(k){
+      if(mode === 'chat') return k.indexOf('mj_msgs_') === 0;
+      if(mode === 'sticker') return false;
+      return true;
+    }
+
+    Object.keys(ls).forEach(function(k){
+      if(keepKey(k)) payload.localStorage[k] = ls[k];
+    });
+
     function finish(){
-      var size = download('choco-backup-' + stamp() + '.json', payload);
+      var _sfx = mode === 'chat' ? '-chat' : (mode === 'sticker' ? '-sticker' : '-all');
+      var size = download('choco-backup-' + stamp() + _sfx + '.json', payload);
       var mb = (size / 1024 / 1024).toFixed(1);
       var nLS = Object.keys(ls).length;
       /* 统计字卡与消息数量，让用户知道备份了多少内容 */
@@ -142,6 +200,12 @@
     say('正在打包备份…');
     __idb.keys().then(function(keys){
       keys = Array.from(keys || []);
+      if(mode === 'chat') keys = [];
+      else if(mode === 'sticker'){
+        var _set = {};
+        stickerIdbKeys.forEach(function(k){ _set[k] = 1; });
+        keys = keys.filter(function(k){ return _set[k]; });
+      }
       var idx = 0;
 
       function next(){
@@ -177,34 +241,78 @@
   /* ---------- 恢复 ---------- */
   function applyImport(data, done){
     try{
-      /* 1. 清掉现有本应用键，再写回备份里的键（真正的"恢复"而不是合并） */
+      var mode = __pendingImportMode || 'all';
+      var ls = data.localStorage || {};
+
+      function keyMatch(k){
+        if(mode === 'chat') return k.indexOf('mj_msgs_') === 0;
+        if(mode === 'sticker') return false;
+        return true;
+      }
+
+      /* 1. 只清要覆盖的那一类键，其它类保留 */
       var oldKeys = [];
       for(var i = 0; i < localStorage.length; i++){
         var k = localStorage.key(i);
-        if(isAppKey(k)) oldKeys.push(k);
+        if(isAppKey(k) && keyMatch(k)) oldKeys.push(k);
       }
       oldKeys.forEach(function(k){ try{ localStorage.removeItem(k); }catch(e){} });
-      var ls = data.localStorage || {};
+
       var wrote = 0, failed = 0;
       Object.keys(ls).forEach(function(k){
         if(!isAppKey(k)) return;
-        if(typeof ls[k] !== 'string') return; // 只接受字符串，防御畸形备份
+        if(typeof ls[k] !== 'string') return;
         try{ localStorage.setItem(k, ls[k]); wrote++; }catch(e){ failed++; console.error('[backup] 写入失败', k, e); }
       });
 
-      /* 2. IndexedDB：先清空，再逐个写回 */
+      if(mode === 'sticker'){
+        try{
+          if(window.__stickerBackup && window.__stickerBackup.replaceStickersFromPayload && data.sticker){
+            window.__stickerBackup.replaceStickersFromPayload(data.sticker);
+          }
+        }catch(e){ console.error('[backup] 表情写回失败', e); }
+      }
+
+      /* 2. IndexedDB：按模式处理 */
       var idb = data.idb || {};
       var entries = Object.keys(idb);
+      if(mode === 'chat'){
+        done({ wrote: wrote, failed: failed, idb: 0 });
+        return;
+      }
       if(!entries.length || !(window.__idb && __idb.set)){
         done({ wrote: wrote, failed: failed, idb: 0 });
         return;
       }
-      __idb.clear().catch(function(){}).then(function(){
+
+      var clearPromise = Promise.resolve();
+      if(mode === 'all'){
+        clearPromise = __idb.clear().catch(function(){});
+      } else if(mode === 'sticker'){
+        clearPromise = (window.__stickerBackup && window.__stickerBackup.clearIdbStickers)
+          ? window.__stickerBackup.clearIdbStickers().catch(function(){})
+          : Promise.resolve();
+      }
+
+      var stickerKeySet = null;
+      if(mode === 'sticker'){
+        stickerKeySet = {};
+        try{
+          if(window.__stickerBackup && window.__stickerBackup.listIdbStickerKeys){
+            window.__stickerBackup.listIdbStickerKeys().forEach(function(k){ stickerKeySet[k] = 1; });
+          }
+        }catch(e){}
+      }
+
+      clearPromise.then(function(){
         var idx = 0;
         var idbOk = 0;
         function next(){
           if(idx >= entries.length) return Promise.resolve();
           var key = entries[idx++];
+          if(mode === 'sticker' && stickerKeySet && !stickerKeySet[key]){
+            return next();
+          }
           var it = idb[key] || {};
           var blob = null;
           try{
@@ -219,7 +327,7 @@
         return next().then(function(){
           done({ wrote: wrote, failed: failed, idb: idbOk });
         });
-      }).then(function(){}, function(){ done({ wrote: wrote, failed: failed, idb: 0 }); });
+      }).catch(function(){ done({ wrote: wrote, failed: failed, idb: 0 }); });
     }catch(e){
       console.error('[backup] 恢复失败', e);
       say('恢复失败：' + (e && e.message ? e.message : '未知错误'));
@@ -272,6 +380,41 @@
     reader.readAsText(file);
   }
 
+  var __pendingImportMode = 'all';
+
+  function showImportPicker(){
+    var old = document.getElementById('bkImportPicker');
+    if(old) old.remove();
+    var layer = document.createElement('div');
+    layer.id = 'bkImportPicker';
+    layer.style.cssText = 'position:fixed;inset:0;z-index:2147483640;background:rgba(0,0,0,.35);display:flex;align-items:flex-end;justify-content:center';
+    function item(act, title, sub){
+      return '<div data-act="' + act + '" style="padding:15px 18px;border-bottom:0.7px solid #f1f1f1;cursor:pointer">' +
+        '<div style="font-size:13px;color:#1a1a1a;letter-spacing:1px">' + title + '</div>' +
+        '<div style="font-size:11px;color:#999;margin-top:4px">' + sub + '</div>' +
+      '</div>';
+    }
+    layer.innerHTML =
+      '<div style="width:100%;max-width:520px;background:#fff;border-radius:18px 18px 0 0;padding:6px 0 calc(10px + env(safe-area-inset-bottom))">' +
+        '<div style="text-align:center;font-size:14px;letter-spacing:4px;text-indent:4px;padding:16px 0 10px;color:#1a1a1a">恢 复 备 份</div>' +
+        item('all', '恢复全部', '角色 / 字卡 / 聊天 / 表情 / 设置，全部覆盖') +
+        item('chat', '只恢复聊天', '只覆盖聊天记录，其它类保留') +
+        item('sticker', '只恢复表情包', '只覆盖表情图，其它类保留') +
+        '<div data-act="cancel" style="text-align:center;padding:16px;font-size:13px;color:#999;letter-spacing:2px;cursor:pointer">取 消</div>' +
+      '</div>';
+    document.body.appendChild(layer);
+    layer.addEventListener('click', function(e){
+      if(e.target === layer){ layer.remove(); return; }
+      var el = e.target.closest('[data-act]');
+      if(!el) return;
+      var act = el.dataset.act;
+      layer.remove();
+      if(act === 'cancel') return;
+      __pendingImportMode = act;
+      pickImport();
+    });
+  }
+
   function pickImport(){
     try {
       var active = document.activeElement;
@@ -302,6 +445,8 @@
   window.ChocoBackup = {
     exportAll: exportAll,
     importFromFile: importFromFile,
-    pickImport: pickImport
+    pickImport: pickImport,
+    showExportPicker: showExportPicker,
+    showImportPicker: showImportPicker
   };
 })();

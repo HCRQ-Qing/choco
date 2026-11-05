@@ -20097,8 +20097,10 @@ document.addEventListener('click', function(e){
     else if(key === 'wipe')    wipeAllData();
     else if(key === 'backup-export'){
       try {
-        if(window.ChocoBackup && typeof window.ChocoBackup.exportAll === 'function') {
-          window.ChocoBackup.exportAll();
+        if(window.ChocoBackup && typeof window.ChocoBackup.showExportPicker === 'function') {
+          window.ChocoBackup.showExportPicker();
+        } else if(window.ChocoBackup && typeof window.ChocoBackup.exportAll === 'function') {
+          window.ChocoBackup.exportAll('all');
         } else {
           toast('导出模块未加载，请刷新重试');
         }
@@ -20106,7 +20108,9 @@ document.addEventListener('click', function(e){
     }
     else if(key === 'backup-import'){
       try {
-        if(window.ChocoBackup && typeof window.ChocoBackup.pickImport === 'function') {
+        if(window.ChocoBackup && typeof window.ChocoBackup.showImportPicker === 'function') {
+          window.ChocoBackup.showImportPicker();
+        } else if(window.ChocoBackup && typeof window.ChocoBackup.pickImport === 'function') {
           window.ChocoBackup.pickImport();
         } else {
           toast('恢复模块未加载，请刷新重试');
@@ -27864,6 +27868,13 @@ function toggleRecConfirmPlay(){
   });
 }
 function sendRecVoice(){
+  if(window.__ecrVoiceTarget){
+    window.__ecrVoiceTarget = false;
+    if(typeof window.__ecrSendVoiceToChat === 'function'){
+      var handled = window.__ecrSendVoiceToChat();
+      if(handled) return;
+    }
+  }
   if(!pendingBlob){ toast('没有可发送的语音'); return; }
   const dur = pendingDur;
   const blob = pendingBlob;

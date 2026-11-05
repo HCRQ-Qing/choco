@@ -477,41 +477,40 @@ function _renderQ(){
     };
   }
 
-  // 拦截主程序的录音发送，改为发给 ECR 留言区
-  if (!window.__ecrVoicePatched && typeof window.sendRecVoice === 'function') {
-    window.__ecrVoicePatched = true;
-    var origSendRecVoice = window.sendRecVoice;
-    window.sendRecVoice = function() {
-      if (window.__ecrVoiceTarget) {
-        window.__ecrVoiceTarget = false;
-        if (!window.pendingBlob) { toast('没有可发送的语音'); return; }
-        
-        var dur = window.pendingDur;
-        var tempUrl = window.pendingUrl || URL.createObjectURL(window.pendingBlob);
-        var idbKey = 'ecr_rec_' + Date.now().toString(36);
-        
-        try { __idb.set(idbKey, window.pendingBlob); } catch(e) {}
-        
-        if (typeof confirmAudio !== 'undefined' && confirmAudio) {
-          confirmAudio.pause(); confirmAudio = null;
-        }
-        
-        window.pendingBlob = null; window.pendingDur = 0; window.pendingUrl = null;
-        if (typeof resetRecUI === 'function') resetRecUI();
-        
-        // 推入 ECR 留言区
-        window.ECR_CHAT.addMsg({ 
-          role: 'user', 
-          voice: dur, 
-          voiceUrl: tempUrl, 
-          voiceIdbKey: idbKey,
-          time: Date.now()
-        });
-        
-        toast('已发送');
-        return;
+  window.__ecrVoiceTarget = false;
+
+  if (!window.__ecrVoiceBridgeReady) {
+    window.__ecrVoiceBridgeReady = true;
+    window.__ecrSendVoiceToChat = function(){
+      if (!window.ECR_CHAT) return false;
+      if (typeof window.pendingBlob === 'undefined' || !window.pendingBlob) {
+        if (typeof toast === 'function') toast('没有可发送的语音');
+        return true;
       }
-      return origSendRecVoice.apply(this, arguments);
+      var dur = window.pendingDur || 0;
+      var tempUrl = window.pendingUrl || URL.createObjectURL(window.pendingBlob);
+      var idbKey = 'ecr_rec_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 6);
+      try { if (window.__idb && window.__idb.set) window.__idb.set(idbKey, window.pendingBlob); } catch(e) {}
+      if (typeof window.confirmAudio !== 'undefined' && window.confirmAudio) {
+        try { window.confirmAudio.pause(); } catch(e) {}
+        window.confirmAudio = null;
+      }
+      window.pendingBlob = null;
+      window.pendingDur = 0;
+      window.pendingUrl = null;
+      if (typeof window.resetRecUI === 'function') window.resetRecUI();
+      window.ECR_CHAT.addMsg({
+        role: 'user',
+        voice: dur,
+        voiceUrl: tempUrl,
+        voiceIdbKey: idbKey,
+        time: Date.now()
+      });
+      if (typeof toast === 'function') toast('已发送');
+      if (S && typeof window.triggerECRRealReply === 'function') {
+        window.triggerECRRealReply(S.roleId);
+      }
+      return true;
     };
   }
 
