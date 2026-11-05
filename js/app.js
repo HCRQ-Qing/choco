@@ -716,17 +716,43 @@ cardStore.public = cardStore.public.filter(g=>g && g.id !== 'g-open');
      1) 内置新增的字卡 → 补进去（标记 src:'builtin'）
      2) 作者下架的内置字卡 → 只删掉 src==='builtin' 的，用户加的不动
      3) 用户自己加的字卡 → 永远不动
+     4) 用户删过的内置字卡 → 记黑名单，永远不再补回来
    - 每次加载都跑（幂等，按文本比对），保证作者一更新老用户就能看到
    ============================================================ */
-(function syncBuiltinCards(){
+const BUILTIN_DEL_KEY = 'mj_builtin_card_del_v1';
+function builtinItemKey(it){
+  if(it && typeof it === 'object' && it.mood !== undefined) return 'mood:' + String(it.mood);
+  return 'text:' + String(cardText(it)).trim();
+}
+function getBuiltinDelSet(){ let m = lsGet(BUILTIN_DEL_KEY, null); if(!m || typeof m !== 'object') m = {}; return m; }
+function markBuiltinCardDeleted(gid, cid, item){
   try{
+    const m = getBuiltinDelSet();
+    m[gid + '|' + cid + '|' + builtinItemKey(item)] = 1;
+    lsSet(BUILTIN_DEL_KEY, m);
+  }catch(e){}
+}
+/* ★ 是否使用系统内置字卡（可在字卡页 ⋯ 菜单里关） */
+function useBuiltinCards(){ return lsGet('mj_use_builtin_cards_v1', true); }
+/* ★ 判断某条字卡是否属于系统内置（老用户库里是未标记的纯字符串，需和默认题库比对） */
+function isBuiltinDefaultItem(gid, cid, item){
+  try{
+    const dft = DEFAULT_CARD_GROUPS.find(function(dg){ return dg.id === gid; });
+    if(!dft) return false;
+    const dc = (dft.cats || []).find(function(c){ return c.id === cid; });
+    if(!dc) return false;
+    const k = builtinItemKey(item);
+    return (dc.list || []).some(function(dit){ return builtinItemKey(dit) === k; });
+  }catch(e){ return false; }
+}
+function syncBuiltinCards(){
+  try{
+    /* 用户关掉了内置字卡 → 不同步、不新增（已有的仅隐藏，不删用户数据） */
+    if(!useBuiltinCards()) return;
     function isBuiltinItem(it){
       return it && typeof it === 'object' && it.src === 'builtin';
     }
-    function itemKey(it){
-      if(it && typeof it === 'object' && it.mood !== undefined) return 'mood:' + String(it.mood);
-      return 'text:' + String(cardText(it)).trim();
-    }
+    var delSet = getBuiltinDelSet();
     function syncGroups(storeGroups){
       if(!Array.isArray(storeGroups)) return false;
       var changed = false;
@@ -739,10 +765,12 @@ cardStore.public = cardStore.public.filter(g=>g && g.id !== 'g-open');
           if(!sc) return;
           if(!Array.isArray(sc.list)){ sc.list = []; changed = true; }
           var existKeys = {};
-          sc.list.forEach(function(it){ existKeys[itemKey(it)] = 1; });
+          sc.list.forEach(function(it){ existKeys[builtinItemKey(it)] = 1; });
           (dc.list || []).forEach(function(dit){
-            var k = itemKey(dit);
+            var k = builtinItemKey(dit);
             if(existKeys[k]) return;
+            /* ★ 用户删过的内置卡不再复活 */
+            if(delSet[g.id + '|' + dc.id + '|' + k]) return;
             var obj;
             if(typeof dit === 'string'){
               obj = { text: dit, t: Date.now(), src: 'builtin' };
@@ -756,11 +784,11 @@ cardStore.public = cardStore.public.filter(g=>g && g.id !== 'g-open');
             changed = true;
           });
           var dftKeys = {};
-          (dc.list || []).forEach(function(dit){ dftKeys[itemKey(dit)] = 1; });
+          (dc.list || []).forEach(function(dit){ dftKeys[builtinItemKey(dit)] = 1; });
           var before = sc.list.length;
           sc.list = sc.list.filter(function(it){
             if(!isBuiltinItem(it)) return true;
-            return !!dftKeys[itemKey(it)];
+            return !!dftKeys[builtinItemKey(it)];
           });
           if(sc.list.length !== before) changed = true;
         });
@@ -776,7 +804,8 @@ cardStore.public = cardStore.public.filter(g=>g && g.id !== 'g-open');
     }
     if(c1 || c2) saveCardStore();
   }catch(e){ console.error('[内置字卡同步] 出错', e); }
-})();
+}
+syncBuiltinCards();
 
 /* ★ 一次性迁移：公用 g-sign 整个删掉，每个角色专属各补一份 */
 (function cleanKnownSignBugs(){
@@ -1802,10 +1831,13 @@ function getAllCards(owner){ const arr = []; getGroupsByOwner(owner).forEach(g=>
 /* 只从「普通字卡」分组抽：角色用来发聊天的内容只用这个池 */
 function getAllNormalCards(owner){
   const arr = [];
+  const useBuiltin = useBuiltinCards();
   getGroupsByOwner(owner).forEach(g=>{
     if(!g || g.id !== 'g-normal') return;
     (g.cats||[]).forEach(c=>{
       (c.list||[]).forEach(line=>{
+        if(!useBuiltin && isBuiltinDefaultItem(g.id, c.id, line)) return;
+        if(!useBuiltin && line && typeof line === 'object' && line.src === 'builtin') return;
         const text = String(cardText(line)).trim();
         if(text) arr.push(text);
       });
@@ -1861,10 +1893,13 @@ function pickWeatherCard(){
 /* 从指定分组抽卡 */
 function getCardsFromGroup(owner, groupId){
   const arr = [];
+  const useBuiltin = useBuiltinCards();
   getGroupsByOwner(owner).forEach(function(g){
     if(!g || g.id !== groupId) return;
     (g.cats || []).forEach(function(c){
       (c.list || []).forEach(function(line){
+        if(!useBuiltin && isBuiltinDefaultItem(g.id, c.id, line)) return;
+        if(!useBuiltin && line && typeof line === 'object' && line.src === 'builtin') return;
         const text = String(cardText(line)).trim();
         if(text) arr.push(text);
       });
@@ -2424,7 +2459,8 @@ function getNamecardCat(kind){
 }
 function pickNamecardKao(kind){
   const arr = getNamecardCat(kind);
-  if(arr && arr.length) return arr[Math.floor(Math.random()*arr.length)];
+  /* ★ item 可能是 {text, src:'builtin'} 对象，必须 cardText 取文本，否则消息渲染会消失 */
+  if(arr && arr.length) return String(cardText(arr[Math.floor(Math.random()*arr.length)])).trim();
   if(kind==='agree') return '加了';
   if(kind==='reject') return '不加';
   return '让我考虑考虑';
@@ -2964,6 +3000,8 @@ function renderChatFull(forceBottom){
 	    var _accRole = getRoleById(ic.roleId || getCurrentRoleId()) || {};
 	    var _accRoleName = (_accRole.remark && String(_accRole.remark).trim()) || _accRole.name || '角色';
 	    mainText = '已切换「' + (ic.type === 'user' ? userName() : _accRoleName) + '」个签';
+	    /* ★ 显示切换成了什么个签 */
+	    if(ic.newSign){ mainText += '：' + ic.newSign; }
 	  } else {
 	    tagText = '已拒绝';
 	    var _rejRole = getRoleById(ic.roleId || getCurrentRoleId()) || {};
@@ -8833,26 +8871,31 @@ function getQuizTpls(){
 }
 function saveQuizTpls(a){ lsSet(QUIZ_TPL_KEY, a); }
 
-/* 首次进入：如果一条都没有，塞一份系统默认问卷（单选 + 填空题） */
+/* 首次进入：如果一条都没有，塞一份系统默认问卷（依恋类型测试） */
 function ensureDefaultQuizTpl(){
   let arr = getQuizTpls();
-  if(arr.length) return arr;
-  arr = [{
-    id: 'qt-default-1',
-    name: '认识你',
-    type: 'multi',
+  const ecrTpl = {
+    id: 'qt-builtin-ecr',
+    name: '依恋类型测试',
+    type: 'ecr',
     builtin: true,
     fav: false,
     t: Date.now(),
-    questions: [
-      { id: uid(), kind: 'choice',   title: '今天心情怎么样？', options: ['很好','还不错','一般','有点低落','很差'] },
-      { id: uid(), kind: 'choice',   title: '现在最想做的是？', options: ['睡觉','出去玩','刷手机','和你聊天','学习'] },
-      { id: uid(), kind: 'choice',   title: '喜欢什么天气？',   options: ['晴天','多云','雨天','下雪','都行'] },
-      { id: uid(), kind: 'text',     title: '有什么想对我说的吗？',  placeholder: '在这里写下来…' },
-      { id: uid(), kind: 'text',     title: '最近有什么开心的或烦心的事？', placeholder: '随便写写…' }
-    ]
-  }];
-  saveQuizTpls(arr);
+    questions: []
+  };
+  if(!arr.length){
+    saveQuizTpls([ecrTpl]);
+    return [ecrTpl];
+  }
+  /* ★ 迁移：旧的系统默认「认识你」换成「依恋类型测试」（只动 builtin，用户自建的不碰） */
+  let changed = false;
+  const hasEcr = arr.some(t => t && t.id === 'qt-builtin-ecr');
+  arr = arr.filter(t => {
+    if(t && t.builtin && (t.id === 'qt-default-1' || t.name === '认识你')){ changed = true; return false; }
+    return true;
+  });
+  if(!hasEcr){ arr.unshift(ecrTpl); changed = true; }
+  if(changed) saveQuizTpls(arr);
   return arr;
 }
 
@@ -8867,7 +8910,8 @@ function renderQuizDesk(){
   }
   box.innerHTML = arr.map(function(t){
     const n = (t.questions || []).length;
-    const label = t.type === 'multi' ? '多问 · ' + n + ' 题' : '单问';
+    let label = t.type === 'multi' ? '多问 · ' + n + ' 题' : '单问';
+    if(t.type === 'ecr') label = '依恋测试 · 双人同测';
     return '<div class="qd-item" data-tid="' + escapeHTML(t.id) + '">' +
       '<div class="qd-name">' + escapeHTML(t.name || '未命名问卷') + '</div>' +
       '<div class="qd-sub">' + label + (t.builtin ? ' · 系统默认' : '') + (t.fav ? ' · 已收藏' : '') + '</div>' +
@@ -9037,6 +9081,11 @@ function openQuizTplDetail(tid){
   const arr = getQuizTpls();
   const t = arr.find(function(x){ return x.id === tid; });
   if(!t){ toast('问卷不存在'); return; }
+  /* ★ 依恋测试：私聊限定，选一个角色开始 */
+  if(t.type === 'ecr'){
+    if(window.ecrOpenRolePick) window.ecrOpenRolePick();
+    return;
+  }
   /* 先提示一句，后续再做详情页 */
   toast('问卷：' + (t.name || '未命名') + ' · 详情页开发中');
 }
@@ -9110,6 +9159,19 @@ document.addEventListener('click', function(e){
     if(pickMask) pickMask.classList.remove('show');
     document.querySelectorAll('.screen.on').forEach(function(s){ s.classList.remove('on'); });
     setTimeout(openQuizDesk, 100);
+    return;
+  }
+
+  /* ★ 选择弹窗：依恋测试（ECR）→ 和当前私聊角色一起测 */
+  if(t.closest('#qpEcr')){
+    e.preventDefault();
+    e.stopPropagation();
+    const pickMask = document.getElementById('mQuizPick');
+    if(pickMask) pickMask.classList.remove('show');
+    setTimeout(function(){
+      if(window.startECR) window.startECR(getCurrentRoleId());
+      else toast('测试模块还没加载好');
+    }, 120);
     return;
   }
 
@@ -9294,8 +9356,8 @@ let pendingDelete=null;
 function getPanelOwner(){
   try{ return getCurrentRoleId() || 'me'; }catch(e){ return 'me'; }
 }
-let editSide = getPanelOwner();
-let viewAs = editSide;
+let editSide = 'me';   /* 面板固定只看自己：表情/颜文字/常用全部读用户数据 */
+let viewAs = 'me';
 /* ===== 表情包 · 新结构 =====
    stickerStore = {
      mine: { cats: [ {name, list}, ... ] },        // 只有我用
@@ -9468,8 +9530,8 @@ function setStickerCats(cats){
   const key = (editSide === 'me') ? 'mine' : (editSide || 'mine');
   setStickerBucket(key, cats);
 }
-function curData(){ return getPanel(editSide); }
-/* 把某个 cats 数组里的"常用"分类，动态替换成角色的最常用；没数据就不动（保留原样） */
+function curData(){ return getPanel('me'); }  /* 表情/颜文字面板固定读用户数据 */
+/* 把某个 cats 数组里的"常用"分类，动态替换成用户的最常用；没数据就不动（保留原样） */
 function _injectUsage(cats, usageArr){
   if(!Array.isArray(cats)) return cats;
   const idx = cats.findIndex(c => c.name === '常用');
@@ -9486,8 +9548,8 @@ function _injectUsage(cats, usageArr){
 }
 function curEmojiCats(){
   const raw = curData().emojiCats;
-  /* 我的面板 → 我自己的常用；角色面板 → 角色的常用 */
-  const usageArr = (editSide === 'me') ? myUsageEmojiList() : usageEmojiList(getCurrentRoleId());
+  /* 面板固定只看自己 → 常用永远是用户自己的 */
+  const usageArr = myUsageEmojiList();
   return _injectUsage(raw, usageArr);
 }
 function curKaoCats(){
@@ -9496,7 +9558,7 @@ function curKaoCats(){
   if(!cats.some(c => c.name === '常用')){
     cats = [{ name:'常用', list: [] }].concat(raw);
   }
-  const usageArr = (editSide === 'me') ? myUsageKaoList() : usageKaoList(getCurrentRoleId());
+  const usageArr = myUsageKaoList();
   return _injectUsage(cats, usageArr);
 }
 function renderEmojiDrawer(){ renderDrawer(); }
@@ -9812,8 +9874,7 @@ function renderBody(){
 
     const isUsage = (c.name === '常用');
     if(isUsage && (!c.list || !c.list.length)){
-      const who = (editSide === 'me') ? '你' : 'Ta';
-      box.innerHTML = bodyEmptyHTML(['暂无数据', who + ' 还没用过 emoji']);
+      box.innerHTML = bodyEmptyHTML(['暂无数据', '你还没用过 emoji']);
       return;
     }
 
@@ -9881,7 +9942,7 @@ function renderBody(){
         const i = +el.dataset.i;
         if(emojiEditing && !isUsage){
           // ★ 不用 c（拷贝），直接从原始 panelMap 里找当前分类删
-          const rawData = getPanel(editSide);
+          const rawData = getPanel('me');
           const rawCat = (rawData.emojiCats || []).find(x => x.name === curEmojiCat);
           if(rawCat && rawCat.list){ rawCat.list.splice(i, 1); }
           savePanelMap();
@@ -9898,7 +9959,7 @@ function renderBody(){
         const i = +el.dataset.i;
         if(emojiEditing && !isUsage){
           // ★ 不用 c（拷贝），直接从原始 panelMap 里找当前分类删
-          const rawData = getPanel(editSide);
+          const rawData = getPanel('me');
           const rawCat = (rawData.emojiCats || []).find(x => x.name === curEmojiCat);
           if(rawCat && rawCat.list){ rawCat.list.splice(i, 1); }
           savePanelMap();
@@ -9922,8 +9983,7 @@ function renderBody(){
 
     const isUsage = (c.name === '常用');
     if(isUsage && (!c.list || !c.list.length)){
-      const who = (editSide === 'me') ? '你' : 'Ta';
-      box.innerHTML = bodyEmptyHTML(['暂无数据', who + ' 还没用过颜文字']);
+      box.innerHTML = bodyEmptyHTML(['暂无数据', '你还没用过颜文字']);
       return;
     }
 
@@ -9973,7 +10033,7 @@ function renderBody(){
         const i = +el.dataset.i;
         if(kaoEditing && !isUsage){
           // ★ 不用 c（拷贝），直接从原始 panelMap 里找当前分类删
-          const rawData = getPanel(editSide);
+          const rawData = getPanel('me');
           const rawCat = (rawData.kaoCats || []).find(x => x.name === curKaoCat);
           if(rawCat && rawCat.list){ rawCat.list.splice(i, 1); }
           savePanelMap();
@@ -9990,7 +10050,7 @@ function renderBody(){
         const i = +el.dataset.i;
         if(kaoEditing && !isUsage){
           // ★ 不用 c（拷贝），直接从原始 panelMap 里找当前分类删
-          const rawData = getPanel(editSide);
+          const rawData = getPanel('me');
           const rawCat = (rawData.kaoCats || []).find(x => x.name === curKaoCat);
           if(rawCat && rawCat.list){ rawCat.list.splice(i, 1); }
           savePanelMap();
@@ -10319,7 +10379,7 @@ on('#btnAddEmojiOk','click',()=>{
   // 必须从原始 panelMap 里取分类，不能用 curEmojiCats()，
   // 因为只要存在「常用」分类，_injectUsage 会返回一份深拷贝，
   // push 进拷贝里的数据不会写回存储。
-  const rawData = getPanel(editSide);
+  const rawData = getPanel('me');
   const rawCats = rawData.emojiCats || [];
   const cat = rawCats.find(c=>c.name === aeTargetCat) || rawCats[0];
   if(!cat){ toast('分类不存在'); return; }
@@ -10475,7 +10535,7 @@ on('#btnAddKaoOk','click',()=>{
   const list = parseAddKao(raw, akMode);
   if(!list.length){ toast('没有解析到内容'); return; }
   // 同 emoji 的坑：必须从原始 panelMap 里取，不能走 curKaoCats()
-  const rawData = getPanel(editSide);
+  const rawData = getPanel('me');
   const rawCats = rawData.kaoCats || [];
   const cat = rawCats.find(c=>c.name === akTargetCat) || rawCats[0];
   if(!cat){ toast('分类不存在'); return; }
@@ -10562,7 +10622,7 @@ let roleCatType='emoji';
 function openRoleCats(type){ roleCatType=type; $('#mRoleCatsTitle').textContent=type==='emoji'?'可用分类（表情）':'可用分类（颜文字）'; renderRoleCatChips(); $('#mRoleCats').classList.add('show'); }
 function renderRoleCatChips(){
   const box=$('#roleCatChips');
-  const sideName=editSide==='me'?'我':getCurrentRoleName();
+  const sideName='我';
   $('#roleCatsWhoTip').textContent=`正在编辑【${sideName}】的可用分类：点亮的能用，点灰的不显示在消息面板。`;
   const data=curData();
   const cats=roleCatType==='emoji'?data.emojiCats:data.kaoCats;
@@ -10573,7 +10633,7 @@ function renderRoleCatChips(){
     chip.addEventListener('click', function(){
       const n = chip.dataset.c;
       // 每次点击都重新读最新数据，避免闭包里的旧引用
-      const fresh = getPanel(editSide);
+      const fresh = getPanel('me');
       const arr = roleCatType==='emoji' ? fresh.disabledEmojiCats : fresh.disabledKaoCats;
       const i = arr.indexOf(n);
       if(i >= 0) arr.splice(i, 1); else arr.push(n);
@@ -12039,7 +12099,8 @@ function userSendNameCard(cardId, targetId){
   const targetDisp = displayName(target);
   dispatchUserMsg({ id:uid(), role:'user', time:Date.now(), namecard:{ id:card.id, name:cardDisp, avatar:card.avatar } });
   pushBehavior({ type:'card', toName:targetDisp, cardName:cardDisp, cardId:card.id, targetId:target.id });
-  const delay = 1000 + Math.random()*9000;
+  /* ★ 角色同意/拒绝加好友：1秒 ~ 10分钟内随机 */
+  const delay = 1000 + Math.random()*599000;
   setTimeout(()=>{
 	const roll = Math.random();
 	let result;
@@ -12047,48 +12108,46 @@ function userSendNameCard(cardId, targetId){
 	else if(roll < NAME_CARD_PROB.agree + NAME_CARD_PROB.reject) result = 'reject';
 	else result = 'hold';
 	const kao = pickNamecardKao(result);
-	msgs.push({ id:uid(), role:'char', text:kao, time:Date.now() });
-	saveMsgs(); renderChat();
+	/* ★ 用 appendMsgToRole 定点写入：延时期间用户切换角色也不会写错聊天 */
+	appendMsgToRole(target.id, { id:uid(), role:'char', text:kao, time:Date.now() });
 	if(result === 'agree'){ setTimeout(()=>{ userAgree(target.id, card.id, targetDisp, cardDisp); }, 1200); }
 	else if(result === 'reject'){ setTimeout(()=>{ userReject(target.id, card.id, targetDisp, cardDisp); }, 1200); }
 	else{ setTimeout(()=>{ holdFlowUser(target.id, card.id, targetDisp, cardDisp); }, 1200); }
   }, delay);
 }
 function userAgree(targetId, cardId, targetName, cardName){
-  msgs.push({ id:uid(), time:Date.now(), sys:`<b>${esc(targetName)}</b> 同意添加 <b>${esc(cardName)}</b> 为好友` });
-  saveMsgs(); renderChat();
+  appendMsgToRole(targetId, { id:uid(), time:Date.now(), sys:`<b>${esc(targetName)}</b> 同意添加 <b>${esc(cardName)}</b> 为好友` });
   addFriendPair(targetId, cardId);
   pushBehavior({ type:'agree', aName:targetName, bName:cardName, aId:targetId, bId:cardId });
 }
 function userReject(targetId, cardId, targetName, cardName){
-  msgs.push({ id:uid(), time:Date.now(), sys:`<b>${esc(targetName)}</b> 拒绝添加 <b>${esc(cardName)}</b> 为好友` });
-  saveMsgs(); renderChat();
+  appendMsgToRole(targetId, { id:uid(), time:Date.now(), sys:`<b>${esc(targetName)}</b> 拒绝添加 <b>${esc(cardName)}</b> 为好友` });
   markRefused(cardId, targetId);
   pushBehavior({ type:'reject', aName:targetName, bName:cardName, aId:targetId, bId:cardId });
-  pushBehavior({ type:'cooldown', aName:targetName, bName:cardName, aId:targetId, bId:cardId });
+  /* ★ 加好友冷却已删除 */
 }
 function holdFlowUser(targetId, cardId, targetName, cardName){
   pushBehavior({ type:'hold', aName:targetName, bName:cardName, aId:targetId, bId:cardId });
+  /* ★ 考虑结果同样在 1秒 ~ 10分钟内给出 */
+  const holdDelay = 1000 + Math.random()*599000;
   setTimeout(()=>{
 	const isAgree = Math.random() < 0.5;
 	if(isAgree){
 	  const kao = pickNamecardKao('agree');
-	  msgs.push({ id:uid(), role:'char', text:kao, time:Date.now() });
-	  saveMsgs(); renderChat();
+	  appendMsgToRole(targetId, { id:uid(), role:'char', text:kao, time:Date.now() });
 	  setTimeout(()=>{
 		userAgree(targetId, cardId, targetName, cardName);
 		pushBehavior({ type:'hold_settle_agree', aName:targetName, bName:cardName, aId:targetId, bId:cardId });
 	  }, 1000);
 	} else {
 	  const kao = pickNamecardKao('reject');
-	  msgs.push({ id:uid(), role:'char', text:kao, time:Date.now() });
-	  saveMsgs(); renderChat();
+	  appendMsgToRole(targetId, { id:uid(), role:'char', text:kao, time:Date.now() });
 	  setTimeout(()=>{
 		userReject(targetId, cardId, targetName, cardName);
 		pushBehavior({ type:'hold_settle_reject', aName:targetName, bName:cardName, aId:targetId, bId:cardId });
 	  }, 1000);
 	}
-  }, 12*3600*1000);
+  }, holdDelay);
 }
 
 /* ============================================================
@@ -23163,6 +23222,15 @@ function renderCdList(){
       });
     }
   }
+  /* ★ 关闭「使用系统内置字卡」时：列表里隐藏内置卡（含个签内置池），不删数据 */
+  if(!useBuiltinCards()){
+    items = items.filter(function(it){
+      if(it.builtin) return false;
+      if(it.line && typeof it.line === 'object' && it.line.src === 'builtin') return false;
+      if(isBuiltinDefaultItem(g.id, it.cid || cat.id, it.line)) return false;
+      return true;
+    });
+  }
   if(sortMode === 'newest'){
 	items.sort((a,b)=>(b.line.t||0)-(a.line.t||0));
   } else if(sortMode === 'oldest'){
@@ -23621,6 +23689,16 @@ on('#confirmDelOk','click',()=>{
   });
   addToCardTrash(trashItems);
 
+  /* ★ 删掉的是内置字卡 → 记黑名单，下次同步不再复活（含老数据里的纯字符串内置卡） */
+  pendingDelete.forEach(i => {
+    const it = cat.list[i];
+    if(it == null) return;
+    const isBuiltin = (typeof it === 'object' && it.src === 'builtin') || isBuiltinDefaultItem(g ? g.id : '', cat.id, it);
+    if(isBuiltin){
+      markBuiltinCardDeleted(g ? g.id : '', cat.id, it);
+    }
+  });
+
   /* 再从原分类删掉 */
   const sorted = pendingDelete.slice().sort((a,b)=>b-a);
   sorted.forEach(i => cat.list.splice(i, 1));
@@ -23765,6 +23843,11 @@ function toggleCdMenu(){
   if(_mvLabel){
     const _mvOn = lsGet('mj_move_only_same', true);
     _mvLabel.textContent = '只移动到该分组 · ' + (_mvOn ? '开' : '关');
+  }
+  /* ★ 同步「使用系统内置字卡」开关文字 */
+  const _biLabel = document.getElementById('cdBuiltinLabel');
+  if(_biLabel){
+    _biLabel.textContent = '使用系统内置字卡 · ' + (useBuiltinCards() ? '开' : '关');
   }
 
   const r=cdMore.getBoundingClientRect();
@@ -23986,6 +24069,18 @@ if(cdMenu) cdMenu.addEventListener('click',e=>{
     const label = document.getElementById('cdMoveOnlyLabel');
     if(label) label.textContent = '只移动到该分组 · ' + (!cur ? '开' : '关');
     toast(!cur ? '已开启：移动时只显示该分组' : '已关闭：移动时可选择其它分组');
+    return;
+  }
+
+  /* ★ 「使用系统内置字卡」开关：点一下切换，不关菜单；重新打开时会补同步 */
+  if(act === 'builtin-toggle'){
+    const cur = useBuiltinCards();
+    lsSet('mj_use_builtin_cards_v1', !cur);
+    const label = document.getElementById('cdBuiltinLabel');
+    if(label) label.textContent = '使用系统内置字卡 · ' + (!cur ? '开' : '关');
+    if(!cur){ try{ syncBuiltinCards(); }catch(e){} }
+    renderCdList();
+    toast(!cur ? '已开启系统内置字卡' : '已关闭：内置字卡将隐藏，不参与抽卡');
     return;
   }
 
@@ -29874,7 +29969,7 @@ function pickSignCardText(catId, roleId){
         }
       }catch(e){ console.error('读角色专属我的个签失败', e); }
     }
-    var pool0 = localPool0.concat(getBuiltinSignPool('cs-me'));
+    var pool0 = useBuiltinCards() ? localPool0.concat(getBuiltinSignPool('cs-me')) : localPool0;
     if(!pool0.length) return '';
     return pool0[Math.floor(Math.random() * pool0.length)];
   }
@@ -29894,7 +29989,7 @@ function pickSignCardText(catId, roleId){
         }
       }catch(e){ console.error('读角色专属个签失败', e); }
     }
-    var pool = localPool.concat(getBuiltinSignPool(catId));
+    var pool = useBuiltinCards() ? localPool.concat(getBuiltinSignPool(catId)) : localPool;
     if(!pool.length) return '';
     return pool[Math.floor(Math.random() * pool.length)];
   }
@@ -30054,6 +30149,9 @@ function runSignSwitchTick(){
           if(typeof getCurrentRoleId === 'function' && getCurrentRoleId() === rid){
             try{ refreshChatRole(); }catch(e){}
             try{ applyTopbarBg(); }catch(e){}
+            /* ★ 即时刷新：个签列表/好友页/聊天顶部立刻显示新个签 */
+            try{ if(typeof renderFriends === 'function') renderFriends(); }catch(e){}
+            try{ refreshChatCustomLineInput(); }catch(e){}
           }
           appendMsgToRole(rid, {
             id: uid(),
@@ -31166,7 +31264,7 @@ function switchToRole(id){
   closeAllOverlays();
   try { clearActiveDivinePending(); } catch(e){}
   setCurrentRoleId(id);
-  try{ editSide = id; viewAs = id; }catch(e){}
+  /* editSide/viewAs 固定为 'me'，不随角色切换（面板只看自己） */
   msgs = loadMsgs();
   chatRenderLimit = CHAT_RENDER_STEP;   /* 换角色 → 渲染上限复位 */
   try{ settleQuizCards(); }catch(e){}
