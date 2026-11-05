@@ -706,8 +706,107 @@
   overscroll-behavior:contain;
   box-sizing:border-box;
 }
+/* ===== 图标排版拖拽模式 ===== */
+#app.icon-edit-mode #page-chat {
+  padding-bottom: 60px;
+}
+#app.icon-edit-mode .d-bar,
+#app.icon-edit-mode #drawerFunc {
+  border: 1.5px dashed #c0c0c0;
+  background: #fafafa;
+}
+#app.icon-edit-mode .d-icon,
+#app.icon-edit-mode .func-item {
+  cursor: grab;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  background: #fff;
+  border-radius: 12px;
+}
+#app.icon-edit-mode .d-icon:active,
+#app.icon-edit-mode .func-item:active {
+  cursor: grabbing;
+}
+.icon-edit-ghost {
+  position: fixed;
+  z-index: 9999;
+  pointer-events: none;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+  opacity: 0.9;
+  transform: translate(-50%, -50%) scale(1.1);
+}
+.icon-edit-dragging {
+  opacity: 0.3;
+}
+.icon-edit-dropzone {
+  background: #f0f0f0 !important;
+}
+#iconEditBar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: #fff;
+  padding: 12px 20px calc(12px + env(safe-area-inset-bottom));
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+  z-index: 2000;
+  max-width: 780px;
+  margin: 0 auto;
+}
+#iconEditBar span {
+  font-size: 13px;
+  color: #999;
+  letter-spacing: 1px;
+}
+#iconEditBar button {
+  padding: 8px 24px;
+  border-radius: 16px;
+  border: none;
+  background: #1a1a1a;
+  color: #fff;
+  font-size: 14px;
+  font-family: inherit;
+  cursor: pointer;
+  letter-spacing: 1px;
+}
 
- 
+/* ===== 夜间模式：图标编辑模式统一暗色 ===== */
+[data-theme="dark"] #app.icon-edit-mode .d-icon,
+[data-theme="dark"] #app.icon-edit-mode .func-item {
+  background: #2a2a2a !important;
+}
+[data-theme="dark"] .icon-edit-ghost {
+  background: #2a2a2a !important;
+}
+[data-theme="dark"] .icon-edit-dropzone {
+  background: #333 !important;
+}
+[data-theme="dark"] #iconEditBar {
+  background: #1e1e1e !important;
+  box-shadow: 0 -2px 10px rgba(0,0,0,0.4);
+}
+[data-theme="dark"] #iconEditBar span {
+  color: #aaa !important;
+}
+[data-theme="dark"] #iconEditBar button {
+  background: #fff !important;
+  color: #1a1a1a !important;
+}
+/* 聊天气泡我发的消息：夜间模式保持浅色气泡深色文字（可读） */
+[data-theme="dark"] .wc-msg.me {
+  background: rgba(255,255,255,.9) !important;
+  color: #1a1a1a !important;
+}
+
 
  
  

@@ -148,6 +148,51 @@
 }
 
 /* ============================================================
+ *  夜间模式兜底：强制统一，杜绝黑字黑底 / 白底黑字
+ *  - 大量弹窗/面板用内联 style 写死了 color:#1a1a1a / background:#fff
+ *  - 用属性选择器 + !important 在暗色下覆盖，保证所有文字可读
+ * ========================================================== */
+[data-theme="dark"] [style*="color:#1a1a1a" i],
+[data-theme="dark"] [style*="color: #1a1a1a" i],
+[data-theme="dark"] [style*="color:#000" i],
+[data-theme="dark"] [style*="color: #000" i],
+[data-theme="dark"] [style*="color:#000000" i],
+[data-theme="dark"] [style*="color: #000000" i],
+[data-theme="dark"] [style*="color:#222" i],
+[data-theme="dark"] [style*="color:#333" i],
+[data-theme="dark"] [style*="color:#444" i] {
+  color: var(--th-text) !important;
+}
+[data-theme="dark"] [style*="color:#666" i],
+[data-theme="dark"] [style*="color:#555" i],
+[data-theme="dark"] [style*="color:#777" i],
+[data-theme="dark"] [style*="color:#888" i] {
+  color: var(--th-text-soft) !important;
+}
+[data-theme="dark"] [style*="background:#fff" i],
+[data-theme="dark"] [style*="background: #fff" i],
+[data-theme="dark"] [style*="background:#ffffff" i],
+[data-theme="dark"] [style*="background: #ffffff" i],
+[data-theme="dark"] [style*="background-color:#fff" i],
+[data-theme="dark"] [style*="background-color: #fff" i],
+[data-theme="dark"] [style*="background-color:#ffffff" i],
+[data-theme="dark"] [style*="background-color: #ffffff" i] {
+  background-color: var(--th-card) !important;
+}
+[data-theme="dark"] [style*="border-bottom:1px solid #ccc" i],
+[data-theme="dark"] [style*="border-bottom:0.7px solid #eee" i],
+[data-theme="dark"] [style*="border:0.7px solid #ddd" i],
+[data-theme="dark"] [style*="border:1px solid #ccc" i] {
+  border-color: var(--th-line) !important;
+}
+/* 弹窗遮罩统一加深 */
+[data-theme="dark"] .overlay,
+[data-theme="dark"] [style*="rgba(0,0,0,.35)"],
+[data-theme="dark"] [style*="rgba(0,0,0,.5)"] {
+  background-color: rgba(0,0,0,.6) !important;
+}
+
+/* ============================================================
  *  主题切换过渡（只对需要跟随主题的属性加过渡，避免全局抖动）
  * ========================================================== */
 body,
