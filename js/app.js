@@ -172,6 +172,8 @@ function applyTheme(id){
   }
   /* ★ 字卡页背景是 JS 内联的，换主题后要重算，否则会残留白色/旧蒙层 */
   try{ if(typeof applyMyCardBg === 'function') applyMyCardBg(); }catch(e){}
+  /* ★ 输入栏胶囊背景也是 JS 内联 !important，换主题后必须重算 */
+  try{ if(typeof updateChatBarStyle === 'function') updateChatBarStyle(); }catch(e){}
 }
 try{
   // 旧主题 id 回退：如果 localStorage 里存的是已删除的主题，自动改成 bw
@@ -12019,7 +12021,7 @@ function openCardPicker(){
   const box = $('#cardPickerBody');
   if(!box) return;
   if(!friends.length){ box.innerHTML = `<div class="empty">没有可以发送的名片</div>`; $('#mCardPicker').classList.add('show'); return; }
-  box.innerHTML = friends.map(f=>`<div class="pick" data-cid="${f.id}" style="display:flex;align-items:center;gap:12px;padding:12px;border-radius:14px;background:var(--th-accent-soft);border:1.5px solid var(--th-accent-line);margin-bottom:10px;cursor:pointer"><div style="width:42px;height:42px;border-radius:50%;flex:none;background:var(--th-av-bg);overflow:hidden;position:relative">${avatarHTML(f.avatar)}</div><div style="flex:1;min-width:0"><div style="font-size:14.5px;font-weight:700;color:var(--th-text);margin-bottom:4px">${escapeHTML(displayName(f))}</div><div style="font-size:11px;color:var(--th-text-soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHTML(getRoleSign(f))}</div></div></div>`).join('');
+  box.innerHTML = friends.map(f=>`<div class="pick" data-cid="${f.id}" style="display:flex;align-items:center;gap:12px;padding:12px;border-radius:14px;background:var(--th-accent-soft);border:1.5px solid var(--th-accent-line);margin-bottom:10px;cursor:pointer"><div style="width:42px;height:42px;flex:none;position:relative">${avatarHTML(f.avatar)}</div><div style="flex:1;min-width:0"><div style="font-size:14.5px;font-weight:700;color:var(--th-text);margin-bottom:4px">${escapeHTML(displayName(f))}</div><div style="font-size:11px;color:var(--th-text-soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHTML(getRoleSign(f))}</div></div></div>`).join('');
   box.querySelectorAll('.pick').forEach(p=>{
 	p.addEventListener('click',()=>{
 	  const cid = p.dataset.cid;
@@ -12032,8 +12034,11 @@ function openCardPicker(){
 function userSendNameCard(cardId, targetId){
   const card = getRoleById(cardId); const target = getRoleById(targetId);
   if(!card || !target) return;
-  dispatchUserMsg({ id:uid(), role:'user', time:Date.now(), namecard:{ id:card.id, name:card.name, avatar:card.avatar } });
-  pushBehavior({ type:'card', toName:target.name, cardName:card.name, cardId:card.id, targetId:target.id });
+  /* ★ 名字统一用 displayName，支持备注，防止系统消息里出现 "角色" 这种默认值 */
+  const cardDisp = displayName(card);
+  const targetDisp = displayName(target);
+  dispatchUserMsg({ id:uid(), role:'user', time:Date.now(), namecard:{ id:card.id, name:cardDisp, avatar:card.avatar } });
+  pushBehavior({ type:'card', toName:targetDisp, cardName:cardDisp, cardId:card.id, targetId:target.id });
   const delay = 1000 + Math.random()*9000;
   setTimeout(()=>{
 	const roll = Math.random();
@@ -12044,9 +12049,9 @@ function userSendNameCard(cardId, targetId){
 	const kao = pickNamecardKao(result);
 	msgs.push({ id:uid(), role:'char', text:kao, time:Date.now() });
 	saveMsgs(); renderChat();
-	if(result === 'agree'){ setTimeout(()=>{ userAgree(target.id, card.id, target.name, card.name); }, 1200); }
-	else if(result === 'reject'){ setTimeout(()=>{ userReject(target.id, card.id, target.name, card.name); }, 1200); }
-	else{ setTimeout(()=>{ holdFlowUser(target.id, card.id, target.name, card.name); }, 1200); }
+	if(result === 'agree'){ setTimeout(()=>{ userAgree(target.id, card.id, targetDisp, cardDisp); }, 1200); }
+	else if(result === 'reject'){ setTimeout(()=>{ userReject(target.id, card.id, targetDisp, cardDisp); }, 1200); }
+	else{ setTimeout(()=>{ holdFlowUser(target.id, card.id, targetDisp, cardDisp); }, 1200); }
   }, delay);
 }
 function userAgree(targetId, cardId, targetName, cardName){
@@ -14527,10 +14532,21 @@ let _barPreviewCssUrl = '';
 function updateChatBarStyle() {
   const alpha = beautyCfg.chatBarAlpha;
   const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-  const r = isDark ? 42 : 255;
-  const g = isDark ? 42 : 255;
-  const b = isDark ? 42 : 255;
-  const bgRgba = 'rgba(' + r + ',' + g + ',' + b + ',' + (alpha / 100) + ')';
+  /* ★ 不再硬编码 rgba(255,255,255) / rgba(42,42,42)
+     改为读 CSS 变量 --th-card 的 RGB 值，主题切换时自动跟随 */
+  let baseR = 255, baseG = 255, baseB = 255;
+  try {
+    const rootStyle = getComputedStyle(document.documentElement);
+    const cardVar = (rootStyle.getPropertyValue('--th-card') || '').trim();
+    if(cardVar.startsWith('#')){
+      const h = cardVar.slice(1);
+      const n = h.length === 3 ? h.split('').map(c=>c+c).join('') : h;
+      baseR = parseInt(n.slice(0,2),16); baseG = parseInt(n.slice(2,4),16); baseB = parseInt(n.slice(4,6),16);
+    } else if(cardVar.startsWith('rgb')){
+      const m = cardVar.match(/\d+/g); if(m && m.length>=3){ baseR=+m[0]; baseG=+m[1]; baseB=+m[2]; }
+    }
+  } catch(e){ baseR = isDark ? 42 : 255; baseG = baseR; baseB = baseR; }
+  const bgRgba = 'rgba(' + baseR + ',' + baseG + ',' + baseB + ',' + (alpha / 100) + ')';
   
   // 1. 把外层整个胶囊的底色调成可变透明
   const dBar = document.querySelector('#page-chat .d-bar');
