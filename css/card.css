@@ -19,9 +19,9 @@
 .cd-his-head{
   display:flex;align-items:center;justify-content:space-between;
   padding:8px 14px 6px;
-  font-size:10.5px;letter-spacing:2px;color:#bbb;
+  font-size:10.5px;letter-spacing:2px;color:var(--th-faint);
   font-weight:300;
-  border-bottom:0.6px dashed #f2f2f2;
+  border-bottom:0.6px dashed var(--th-divider);
   margin-bottom:2px;
   -webkit-font-smoothing:antialiased;
 }
@@ -64,7 +64,7 @@
 .cd-search svg{flex:none;stroke:var(--th-faint);stroke-width:1.4}
 .cd-search input{flex:1;border:none;background:transparent;outline:none;font-size:13px;color:var(--th-text);font-family:var(--app-font);-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
 .cd-search input::placeholder{color:var(--th-faint);letter-spacing:1px}
-.cd-tabs-wrap{border-bottom:0.6px solid #f2f2f2;flex:none}
+.cd-tabs-wrap{border-bottom:0.6px solid var(--th-divider);flex:none}
 .rename-hint{display:none;padding:6px 20px 0;font-size:10.5px;color:#bbb;letter-spacing:.5px;line-height:1.5}
 body.sel-mode-on .rename-hint{display:block}
 /* 重命名分类弹窗 */
