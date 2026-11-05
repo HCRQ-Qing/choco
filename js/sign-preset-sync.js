@@ -53,7 +53,7 @@
       if(!t) return;
       if(existSet[t]) return;
       if(blockedSet[t]) return;
-      cat.list.push({ text: t, t: Date.now() });
+      cat.list.push({ text: t, t: Date.now(), src: 'builtin' });
       existSet[t] = 1;
       added++;
     });
@@ -176,5 +176,23 @@
       }catch(e){}
       return r;
     };
+  }
+
+  /* ★ 页面加载时自动同步一次内置个签（老用户也能拿到作者新增的个签）
+     - 只补不删，绝不碰用户自己加的个签
+     - 用节流 + try/catch 包住，避免任何异常拖垮初始化 */
+  function autoSyncSign(){
+    try{
+      if(typeof runSync !== 'function') return;
+      var r = runSync(true, true);
+      if((r.me || 0) + (r.role || 0) > 0){
+        console.log('[个签自动同步] 我的个签补了 ' + r.me + ' 条，角色个签补了 ' + r.role + ' 条');
+      }
+    }catch(e){ console.error('[个签自动同步] 出错', e); }
+  }
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', function(){ setTimeout(autoSyncSign, 300); });
+  } else {
+    setTimeout(autoSyncSign, 300);
   }
 })();

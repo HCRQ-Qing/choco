@@ -77,7 +77,23 @@ const $$ = s => Array.from(document.querySelectorAll(s));
 const uid = () => Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 const _mem = {};
 function lsGet(k,d){ try{const v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch(e){return _mem[k]!==undefined?_mem[k]:d;} }
-function lsSet(k,v){ try{localStorage.setItem(k,JSON.stringify(v));}catch(e){_mem[k]=v;} }
+/* ★ 安全序列化：检测循环引用，防止 JSON.stringify 爆栈（Maximum call stack） */
+function safeStringify(v){
+  try{
+    var seen = new WeakSet();
+    return JSON.stringify(v, function(key, val){
+      if(val && typeof val === 'object'){
+        if(seen.has(val)) return undefined; // 循环引用直接丢弃
+        seen.add(val);
+      }
+      return val;
+    });
+  }catch(e){
+    console.error('[safeStringify] 序列化失败，回退到 {}', e);
+    return '{}';
+  }
+}
+function lsSet(k,v){ try{localStorage.setItem(k,safeStringify(v));}catch(e){_mem[k]=v;} }
 function escapeHTML(s){ if(s === null || s === undefined) s = ''; return String(s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
 const esc = escapeHTML;
 let _toastTimer=null;
@@ -154,6 +170,8 @@ function applyTheme(id){
   if(meta){
     meta.setAttribute('content', t.id === 'dark' ? '#1a1a1a' : '#ffffff');
   }
+  /* ★ 字卡页背景是 JS 内联的，换主题后要重算，否则会残留白色/旧蒙层 */
+  try{ if(typeof applyMyCardBg === 'function') applyMyCardBg(); }catch(e){}
 }
 try{
   // 旧主题 id 回退：如果 localStorage 里存的是已删除的主题，自动改成 bw
@@ -687,6 +705,77 @@ cardStore.public = cardStore.public.filter(g=>g && g.id !== 'g-open');
     try{ getGroupsByOwner(rid); }catch(e){}
   });
 })();
+
+/* ============================================================
+   ★ 内置字卡同步（解决老用户缓存看不到作者更新的问题）
+   - 把 DEFAULT_CARD_GROUPS 里的内置字卡同步到用户已有的分组里
+   - 内置字卡标记 src:'builtin'；用户自己加的没有 src（或 src:'user'）
+   - 同步规则（绝不误删用户数据）：
+     1) 内置新增的字卡 → 补进去（标记 src:'builtin'）
+     2) 作者下架的内置字卡 → 只删掉 src==='builtin' 的，用户加的不动
+     3) 用户自己加的字卡 → 永远不动
+   - 每次加载都跑（幂等，按文本比对），保证作者一更新老用户就能看到
+   ============================================================ */
+(function syncBuiltinCards(){
+  try{
+    function isBuiltinItem(it){
+      return it && typeof it === 'object' && it.src === 'builtin';
+    }
+    function itemKey(it){
+      if(it && typeof it === 'object' && it.mood !== undefined) return 'mood:' + String(it.mood);
+      return 'text:' + String(cardText(it)).trim();
+    }
+    function syncGroups(storeGroups){
+      if(!Array.isArray(storeGroups)) return false;
+      var changed = false;
+      storeGroups.forEach(function(g){
+        if(!g || !g.id) return;
+        var dft = DEFAULT_CARD_GROUPS.find(function(dg){ return dg.id === g.id; });
+        if(!dft || !Array.isArray(dft.cats) || !Array.isArray(g.cats)) return;
+        dft.cats.forEach(function(dc){
+          var sc = g.cats.find(function(c){ return c && c.id === dc.id; });
+          if(!sc) return;
+          if(!Array.isArray(sc.list)){ sc.list = []; changed = true; }
+          var existKeys = {};
+          sc.list.forEach(function(it){ existKeys[itemKey(it)] = 1; });
+          (dc.list || []).forEach(function(dit){
+            var k = itemKey(dit);
+            if(existKeys[k]) return;
+            var obj;
+            if(typeof dit === 'string'){
+              obj = { text: dit, t: Date.now(), src: 'builtin' };
+            } else if(dit && typeof dit === 'object'){
+              obj = JSON.parse(JSON.stringify(dit));
+              obj.src = 'builtin';
+              if(obj.t === undefined) obj.t = Date.now();
+            } else return;
+            sc.list.push(obj);
+            existKeys[k] = 1;
+            changed = true;
+          });
+          var dftKeys = {};
+          (dc.list || []).forEach(function(dit){ dftKeys[itemKey(dit)] = 1; });
+          var before = sc.list.length;
+          sc.list = sc.list.filter(function(it){
+            if(!isBuiltinItem(it)) return true;
+            return !!dftKeys[itemKey(it)];
+          });
+          if(sc.list.length !== before) changed = true;
+        });
+      });
+      return changed;
+    }
+    var c1 = syncGroups(cardStore.public);
+    var c2 = false;
+    if(cardStore.roles){
+      Object.keys(cardStore.roles).forEach(function(rid){
+        if(syncGroups(cardStore.roles[rid])) c2 = true;
+      });
+    }
+    if(c1 || c2) saveCardStore();
+  }catch(e){ console.error('[内置字卡同步] 出错', e); }
+})();
+
 /* ★ 一次性迁移：公用 g-sign 整个删掉，每个角色专属各补一份 */
 (function cleanKnownSignBugs(){
   var FLAG = 'mj_sign_dedup_v3';
@@ -13032,12 +13121,16 @@ function applyMyCardBg(){
     if(!scr) return;
     if(!c.key){
       scr.style.backgroundImage = '';
-      scr.style.backgroundColor = '#ffffff';
+      /* ★ 不要写死白色：交给 CSS 变量（#cardLibScreen{background:var(--th-bg1)}）
+         夜间模式下白底会让浅色文字看不清 */
+      scr.style.backgroundColor = '';
       return;
     }
+    var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
     __idb.toURL(c.key).then(function(url){
       if(!url) return;
-      var bgColor = 'rgba(255,255,255,' + ((100 - c.opacity) / 100) + ')';
+      var shade = isDark ? '26,26,26' : '255,255,255';
+      var bgColor = 'rgba(' + shade + ',' + ((100 - c.opacity) / 100) + ')';
       scr.style.backgroundImage = 'linear-gradient(' + bgColor + ',' + bgColor + '), url(' + url + ')';
       scr.style.backgroundSize = 'cover';
       scr.style.backgroundPosition = 'center';
@@ -13511,6 +13604,24 @@ function renderBeautyPanel(){
 	});
   });
 }
+/* ★ 主题切换兜底：委托式监听，保证美化面板里点「夜间/黑白」一定生效
+   - 即使 renderBeautyPanel 内部绑定因异常没跑到，这里也能接住 */
+document.addEventListener('click', function(e){
+  var el = e.target.closest && e.target.closest('#presetGrid .preset');
+  if(!el) return;
+  /* 已在 renderBeautyPanel 里绑定过的不重复处理，避免一次点击触发两遍 */
+  if(el._bound) return;
+  e.preventDefault();
+  var th = el.dataset.theme;
+  if(!th) return;
+  applyTheme(th);
+  $$('#presetGrid .preset').forEach(function(x){ x.classList.toggle('on', x===el); });
+  var tVal = document.getElementById('themeVal');
+  if(tVal) tVal.textContent = THEME_NAMES[th] || '黑白';
+  var t = THEMES.find(function(x){ return x.id===th; });
+  if(window.toast) toast('已切换到：' + (t?t.name:th));
+  try{ applyTopbarBg(); }catch(err){}
+}, true);
 on('#beautyBack','click',()=>closeBeauty());
 /* 统一关闭：所有 .sub-panel 里的 [data-close] 点一下关自己那层 */
 document.addEventListener('click', function(e){
@@ -27638,12 +27749,17 @@ document.addEventListener('click', function(e){
 }, false);
 
 (function init(){
+  /* ★ 分步兜底：每一步独立 try/catch，避免某一处爆栈（Maximum call stack）
+     导致整个 init 中断、页面卡在"初始化出错"。某步失败只跳过那一步。 */
+  function safe(name, fn){ try{ fn(); }catch(e){ console.error('[init:'+name+']', e); } }
+
   try{
-	const role = getRole();
-	/* ★ 用 displayName 而不是 role.name，否则重进页面顶部栏会丢掉备注 */
-	$('#chatName').textContent = displayName(role);
-	$('#chatAvatar').innerHTML = avatarHTML(role.avatar);
-	renderMePage();
+	safe('role', function(){
+	  const role = getRole();
+	  $('#chatName').textContent = displayName(role);
+	  $('#chatAvatar').innerHTML = avatarHTML(role.avatar);
+	});
+	safe('mePage', function(){ renderMePage(); });
 	(function rebindMeName(){
 	  const el = document.getElementById('meBigName');
 	  if(el && !el._nameBound){
@@ -27665,16 +27781,16 @@ document.addEventListener('click', function(e){
 	})();
 
 
-	msgs = loadMsgs();
+	msgs = loadMsgs() || [];
 	try{ settleQuizCards(); }catch(e){ console.error('试卷结算失败', e); }
-	renderChat();
-	renderFriends();
+	safe('renderChat', function(){ renderChat(); });
+	safe('renderFriends', function(){ renderFriends(); });
 	/* 刚上线：所有 user 消息 90% 未读 / 10% 已读 */
  
-	applyMoodUI();
-	applyTopbarBg();
-	applyBeautyCfg();
-	injectCustomCss();
+	safe('moodUI', function(){ applyMoodUI(); });
+	safe('topbarBg', function(){ applyTopbarBg(); });
+	safe('beauty', function(){ applyBeautyCfg(); });
+	safe('customCss', function(){ injectCustomCss(); });
 	scheduleMood();
 	scheduleStatus();
 	scheduleApplyTick();
@@ -29868,6 +29984,10 @@ function runSignSwitchTick(){
       if(typeof getCurrentRoleId === 'function' && getCurrentRoleId() === rid){
         try{ refreshChatRole(); }catch(e){}
         try{ applyTopbarBg(); }catch(e){}
+        /* ★ 即时刷新个签显示：避免聊天界面要等一会才看到换了什么个签 */
+        try{ if(typeof renderFriends === 'function') renderFriends(); }catch(e){}
+        try{ refreshChatCustomLineInput(); }catch(e){}
+        try{ if(typeof renderChat === 'function') renderChat(); }catch(e){}
       }
     }
     slot.nextAt = pickNextSignSwitchAt();

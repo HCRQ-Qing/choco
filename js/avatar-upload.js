@@ -36,27 +36,40 @@
           if (typeof renderNfAvatar === 'function') renderNfAvatar();
         } else if (context === 'cip') {
           var rid = typeof getCurrentRoleId === 'function' ? getCurrentRoleId() : '';
-          if (rid && typeof saveRoleField === 'function') saveRoleField(rid, 'avatar', dataUrl);
-          var cipAv = document.getElementById('cipAvatar');
-          if (cipAv) cipAv.innerHTML = typeof avatarHTML === 'function' ? avatarHTML(dataUrl) : '';
-          if (typeof refreshChatRole === 'function') refreshChatRole();
-          if (typeof forceRepaintChat === 'function') forceRepaintChat('cip avatar');
+          if (rid && typeof saveRoleField === 'function' && window.__avatarStore) {
+            window.__avatarStore.set(rid, dataUrl, function(stored){
+              saveRoleField(rid, 'avatar', stored);
+              var cipAv = document.getElementById('cipAvatar');
+              if (cipAv) cipAv.innerHTML = typeof avatarHTML === 'function' ? avatarHTML(stored) : '';
+              if (typeof refreshChatRole === 'function') refreshChatRole();
+              if (typeof forceRepaintChat === 'function') forceRepaintChat('cip avatar');
+            });
+          }
         } else if (context === 'profile') {
           var pid = window.__profileViewId || (typeof getCurrentRoleId === 'function' ? getCurrentRoleId() : '');
-          if (pid && typeof saveRoleField === 'function') saveRoleField(pid, 'avatar', dataUrl);
-          var pAv = document.getElementById('profileAvatar');
-          if (pAv) pAv.innerHTML = typeof avatarHTML === 'function' ? avatarHTML(dataUrl) : '';
-          if (pid === (typeof getCurrentRoleId === 'function' ? getCurrentRoleId() : '')) {
-            if (typeof refreshChatRole === 'function') refreshChatRole();
+          if (pid && typeof saveRoleField === 'function' && window.__avatarStore) {
+            window.__avatarStore.set(pid, dataUrl, function(stored){
+              saveRoleField(pid, 'avatar', stored);
+              var pAv = document.getElementById('profileAvatar');
+              if (pAv) pAv.innerHTML = typeof avatarHTML === 'function' ? avatarHTML(stored) : '';
+              if (pid === (typeof getCurrentRoleId === 'function' ? getCurrentRoleId() : '')) {
+                if (typeof refreshChatRole === 'function') refreshChatRole();
+              }
+              if (typeof forceRepaintChat === 'function') forceRepaintChat('profile avatar');
+            });
           }
-          if (typeof forceRepaintChat === 'function') forceRepaintChat('profile avatar');
         } else if (context === 'me') {
-          if (typeof userProfile !== 'undefined') {
-            userProfile.avatar = dataUrl;
-            if (typeof saveUser === 'function') saveUser();
-            if (typeof renderMePage === 'function') renderMePage();
-            if (typeof refreshChatRole === 'function') refreshChatRole();
-            if (typeof forceRepaintChat === 'function') forceRepaintChat('me avatar');
+          if (typeof userProfile !== 'undefined' && window.__avatarStore) {
+            window.__avatarStore.set('me', dataUrl, function(stored){
+              if (typeof window.__avatarStore.del === 'function') {
+                window.__avatarStore.del(userProfile.avatar);
+              }
+              userProfile.avatar = stored;
+              if (typeof saveUser === 'function') saveUser();
+              if (typeof renderMePage === 'function') renderMePage();
+              if (typeof refreshChatRole === 'function') refreshChatRole();
+              if (typeof forceRepaintChat === 'function') forceRepaintChat('me avatar');
+            });
           }
         }
       };

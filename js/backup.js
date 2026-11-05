@@ -107,8 +107,31 @@
     function finish(){
       var size = download('choco-backup-' + stamp() + '.json', payload);
       var mb = (size / 1024 / 1024).toFixed(1);
+      var nLS = Object.keys(ls).length;
+      /* 统计字卡与消息数量，让用户知道备份了多少内容 */
+      var cardCount = 0, msgCount = 0;
+      try{
+        var raw = ls['mj_card_groups_v5'];
+        if(raw){
+          var cs = JSON.parse(raw);
+          function countCards(groups){
+            (groups||[]).forEach(function(g){
+              (g.cats||[]).forEach(function(c){
+                cardCount += (c.list||[]).length;
+              });
+            });
+          }
+          countCards(cs.public);
+          Object.keys(cs.roles||{}).forEach(function(rid){ countCards(cs.roles[rid]); });
+        }
+      }catch(e){}
+      Object.keys(ls).forEach(function(k){
+        if(k.indexOf('mj_msgs_') === 0){
+          try{ msgCount += (JSON.parse(ls[k])||[]).length; }catch(e){}
+        }
+      });
       var extra = skipped ? '（' + skipped + ' 个大文件超过上限已跳过）' : '';
-      say('已导出备份 ' + mb + ' MB' + extra);
+      say('已导出 ' + mb + ' MB：' + nLS + ' 项设置 / ' + cardCount + ' 张字卡 / ' + msgCount + ' 条消息' + extra);
     }
 
     if(!(window.__idb && __idb.keys && __idb.get)){
@@ -162,20 +185,23 @@
       }
       oldKeys.forEach(function(k){ try{ localStorage.removeItem(k); }catch(e){} });
       var ls = data.localStorage || {};
+      var wrote = 0, failed = 0;
       Object.keys(ls).forEach(function(k){
         if(!isAppKey(k)) return;
-        try{ localStorage.setItem(k, ls[k]); }catch(e){ console.error('[backup] 写入失败', k, e); }
+        if(typeof ls[k] !== 'string') return; // 只接受字符串，防御畸形备份
+        try{ localStorage.setItem(k, ls[k]); wrote++; }catch(e){ failed++; console.error('[backup] 写入失败', k, e); }
       });
 
       /* 2. IndexedDB：先清空，再逐个写回 */
       var idb = data.idb || {};
       var entries = Object.keys(idb);
       if(!entries.length || !(window.__idb && __idb.set)){
-        done();
+        done({ wrote: wrote, failed: failed, idb: 0 });
         return;
       }
       __idb.clear().catch(function(){}).then(function(){
         var idx = 0;
+        var idbOk = 0;
         function next(){
           if(idx >= entries.length) return Promise.resolve();
           var key = entries[idx++];
@@ -186,12 +212,14 @@
             else if(it.data !== undefined) blob = it.data;
           }catch(e){ console.warn('[backup] 解析大文件失败', key, e); }
           if(!blob) return next();
-          return __idb.set(key, blob).catch(function(e){
+          return __idb.set(key, blob).then(function(){ idbOk++; }).catch(function(e){
             console.warn('[backup] 写回大文件失败', key, e);
           }).then(next);
         }
-        return next();
-      }).then(done, done);
+        return next().then(function(){
+          done({ wrote: wrote, failed: failed, idb: idbOk });
+        });
+      }).then(function(){}, function(){ done({ wrote: wrote, failed: failed, idb: 0 }); });
     }catch(e){
       console.error('[backup] 恢复失败', e);
       say('恢复失败：' + (e && e.message ? e.message : '未知错误'));
@@ -214,8 +242,12 @@
 
       function go(){
         say('正在恢复数据…');
-        applyImport(data, function(){
-          say('恢复完成，正在刷新…');
+        applyImport(data, function(stats){
+          stats = stats || {};
+          var msg = '恢复完成：写入 ' + (stats.wrote||0) + ' 项设置';
+          if(stats.failed) msg += '，' + stats.failed + ' 项失败';
+          if(stats.idb) msg += '，' + stats.idb + ' 个文件';
+          say(msg + '，正在刷新…');
           setTimeout(function(){ location.reload(); }, 600);
         });
       }

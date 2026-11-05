@@ -107,6 +107,11 @@
       '<div class="w-title">背 单 词</div>' +
       '<button class="w-add" id="wAdd" title="添加">＋</button>' +
     '</div>' +
+    '<div class="w-io" style="display:flex;gap:8px;padding:0 22px 10px">' +
+      '<button id="wExport" style="flex:1;padding:8px;border-radius:10px;border:0.7px solid var(--th-line, #eee);background:var(--th-bg1,#fff);color:var(--th-text,#1a1a1a);font-family:inherit;font-size:12px;cursor:pointer;letter-spacing:1px">导出字卡</button>' +
+      '<button id="wImport" style="flex:1;padding:8px;border-radius:10px;border:0.7px solid var(--th-line, #eee);background:var(--th-bg1,#fff);color:var(--th-text,#1a1a1a);font-family:inherit;font-size:12px;cursor:pointer;letter-spacing:1px">导入字卡</button>' +
+      '<input type="file" id="wImportFile" accept="application/json,.json" style="display:none">' +
+    '</div>' +
     '<div class="w-stats">' +
       '<div class="w-stat"><div class="w-stat-v" id="wTotal">0</div><div class="w-stat-l">TOTAL</div></div>' +
       '<div class="w-stat"><div class="w-stat-v" id="wWordCount">0</div><div class="w-stat-l">WORDS</div></div>' +
@@ -291,6 +296,70 @@
 
   scr.querySelector('#wBack').onclick = function(){ window.closeWordsScreen(); };
   scr.querySelector('#wAdd').onclick = function(){ addMask.style.display = 'flex'; };
+
+  /* ★ 背单词字卡导出 / 导入 */
+  function wStamp(){
+    var d = new Date();
+    function p(n){ return String(n).padStart(2,'0'); }
+    return d.getFullYear()+p(d.getMonth()+1)+p(d.getDate())+'_'+p(d.getHours())+p(d.getMinutes());
+  }
+  scr.querySelector('#wExport').onclick = function(){
+    var arr = getWords();
+    if(!arr.length){ if(window.toast) toast('没有字卡可导出'); return; }
+    var data = { __type:'choco-words', __version:1, exportedAt:Date.now(), words: arr };
+    var json = JSON.stringify(data, null, 2);
+    var blob = new Blob([json], { type:'application/json' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url; a.download = 'choco-words_' + wStamp() + '.json';
+    document.body.appendChild(a); a.click();
+    setTimeout(function(){ URL.revokeObjectURL(url); a.remove(); }, 1000);
+    if(window.toast) toast('已导出 ' + arr.length + ' 张字卡');
+  };
+  scr.querySelector('#wImport').onclick = function(){
+    var f = document.getElementById('wImportFile');
+    if(f){ f.value = ''; f.click(); }
+  };
+  document.getElementById('wImportFile').addEventListener('change', function(){
+    var file = this.files && this.files[0];
+    this.value = '';
+    if(!file) return;
+    var reader = new FileReader();
+    reader.onload = function(){
+      try{
+        var data = JSON.parse(String(reader.result||''));
+        var incoming = Array.isArray(data) ? data : (Array.isArray(data.words) ? data.words : null);
+        if(!incoming){ if(window.toast) toast('文件里没有字卡'); return; }
+        var exist = getWords();
+        var existKey = {};
+        exist.forEach(function(w){ existKey[String((w.word||'')).trim().toLowerCase()] = 1; });
+        var added = 0, skipped = 0;
+        incoming.forEach(function(it){
+          if(!it || typeof it !== 'object') return;
+          var word = String(it.word || '').trim();
+          if(!word) return;
+          if(existKey[word.toLowerCase()]){ skipped++; return; }
+          exist.push({
+            id: 'w' + Date.now().toString(36) + Math.random().toString(36).slice(2,6),
+            type: it.type === 'sentence' ? 'sentence' : 'word',
+            word: word,
+            phonetic: String(it.phonetic || '').trim(),
+            meaning: String(it.meaning || '').trim(),
+            example: String(it.example || '').trim()
+          });
+          existKey[word.toLowerCase()] = 1;
+          added++;
+        });
+        saveWords(exist);
+        renderWords();
+        if(window.toast) toast('导入 ' + added + ' 张，跳过 ' + skipped + ' 张重复');
+      }catch(e){
+        if(window.toast) toast('导入失败：文件格式不对');
+      }
+    };
+    reader.readAsText(file);
+  });
+
   scr.querySelectorAll('.w-tab').forEach(function(t){
     t.onclick = function(){
       wFilter = t.dataset.t;
