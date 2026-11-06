@@ -3062,11 +3062,34 @@ function renderChatFull(forceBottom){
 	    if(ic.reason){ mainText += '：' + ic.reason; }
 	  }
 	  /* tag 用内联 style + br 换行，不进任何 class，不会被自定义 CSS 污染 */
-	  const innerHTML =
-	    '<span style="font-size:10.5px;letter-spacing:2px;opacity:.6;font-weight:300">' +
-	      escapeHTML(tagText) +
-	    '</span><br>' +
-	    escapeHTML(mainText);
+	  let line1 = '';
+	  let line2 = '';
+	  if (ic.kind === 'accept') {
+	    var _accRole = getRoleById(ic.roleId || getCurrentRoleId()) || {};
+	    var _accRoleName = (_accRole.remark && String(_accRole.remark).trim()) || _accRole.name || '角色';
+	    line1 = '已切换「' + (ic.type === 'user' ? userName() : _accRoleName) + '」个签';
+	    line2 = ic.newSign || '';
+	  } else if (ic.kind === 'reject') {
+	    var _rejRole = getRoleById(ic.roleId || getCurrentRoleId()) || {};
+	    var _rejRoleName = (_rejRole.remark && String(_rejRole.remark).trim()) || _rejRole.name || '角色';
+	    line1 = '拒绝切换「' + (ic.type === 'user' ? userName() : _rejRoleName) + '」个签';
+	    line2 = ic.reason || '';
+	  } else {
+	    var _icRole = getRoleById(ic.roleId || getCurrentRoleId()) || {};
+	    var _icRoleName = (_icRole.remark && String(_icRole.remark).trim()) || _icRole.name || '角色';
+	    line1 = '邀请' + _icRoleName + '切换' + (ic.type === 'user' ? userName() : _icRoleName) + '个签';
+	    line2 = '';
+	  }
+
+	  let innerHTML = 
+	    '<div style="font-size:10.5px;color:#bbb;letter-spacing:1px;margin-bottom:4px;font-weight:300;">' + 
+	      escapeHTML(line1) + 
+	    '</div>';
+	  if (line2) {
+	    innerHTML += '<div style="font-size:13.5px;line-height:1.6;word-break:break-word;color:var(--th-text);">' + 
+	      escapeHTML(line2) + 
+	    '</div>';
+	  }
 	  const bubbleCls = isUser
 	    ? 'bubble message-sent message-bubble-user'
 	    : 'bubble message-received message-bubble-char';
@@ -23593,7 +23616,7 @@ function renderCdList(){
           items.push({ line, i, cid: c.id, cname: c.name });
         }
       });
-      if(isSignGroup && signCatIds.indexOf(c.id) >= 0){
+      if(isSignGroup && signCatIds.indexOf(c.id) >= 0 && useBuiltinCards()){
         const localTexts = {};
         (c.list || []).forEach(function(x){ localTexts[String(cardText(x) || '').trim()] = 1; });
         getBuiltinSignPool(c.id).forEach(function(t){
@@ -23619,6 +23642,10 @@ function renderCdList(){
     items = items.filter(function(it){
       if(it.builtin) return false;
       if(it.line && typeof it.line === 'object' && it.line.src === 'builtin') return false;
+      if(isSignGroup && (it.cid === 'cs-me' || it.cid === 'cs-role') && it.line){
+        var txt = String(cardText(it.line) || '').trim();
+        if(BUILTIN_SIGN_POOL[it.cid] && BUILTIN_SIGN_POOL[it.cid].indexOf(txt) >= 0) return false;
+      }
       if(isBuiltinDefaultItem(g.id, it.cid || cat.id, it.line)) return false;
       return true;
     });
@@ -24285,7 +24312,7 @@ function openTimedRate(){
   $('#mTimedRate').classList.add('show');
 }
 
-/* ★ 个签切换设置弹窗：从字卡页 ⋯ 菜单打开 */
+/* ★ 邀请角色切换个签弹窗：从字卡页 ⋯ 菜单打开 */
 function openSignSwitchSetting(){
   var s = getSignSwitchStore();
   var rid = getCurrentRoleId();
@@ -24443,9 +24470,9 @@ function inviteSignSwitch(type){
     if(typeof toast === 'function'){
       toast('邀请已发出，等 Ta 回应');
     }
-    /* 关弹窗 */
-    var m = document.getElementById('mSignSwitch');
-    if(m) m.classList.remove('show');
+    if(typeof openSignSwitchSetting === 'function'){
+      openSignSwitchSetting();
+    }
   });
 }
 
@@ -24464,15 +24491,38 @@ if(cdMenu) cdMenu.addEventListener('click',e=>{
     return;
   }
 
-  /* ★ 「使用系统内置字卡」开关：点一下切换，不关菜单；重新打开时会补同步 */
   if(act === 'builtin-toggle'){
     const cur = useBuiltinCards();
     lsSet('mj_use_builtin_cards_v1', !cur);
     const label = document.getElementById('cdBuiltinLabel');
     if(label) label.textContent = '使用系统内置字卡 · ' + (!cur ? '开' : '关');
-    if(!cur){ try{ syncBuiltinCards(); }catch(e){} }
+    
+    if(!cur){ 
+      try{ syncBuiltinCards(); }catch(e){} 
+    } else {
+      const rid = getCurrentRoleId();
+      const roleGroups = getGroupsByOwner(rid);
+      const gSign = roleGroups.find(function(g){ return g.id === 'g-sign'; });
+      if(gSign && gSign.cats){
+        let changed = false;
+        ['cs-me', 'cs-role', 'cs-refuse'].forEach(function(cid){
+          const cat = gSign.cats.find(function(c){ return c.id === cid; });
+          if(!cat || !Array.isArray(cat.list)) return;
+          const builtinArr = BUILTIN_SIGN_POOL[cid] || [];
+          const before = cat.list.length;
+          cat.list = cat.list.filter(function(item){
+            const txt = String(cardText(item) || '').trim();
+            return builtinArr.indexOf(txt) < 0;
+          });
+          if(cat.list.length !== before) changed = true;
+        });
+        if(changed) saveCardStore();
+      }
+    }
+    
+    renderCdTabs();
     renderCdList();
-    toast(!cur ? '已开启系统内置字卡' : '已关闭：内置字卡将隐藏，不参与抽卡');
+    toast(!cur ? '已开启系统内置字卡' : '已关闭：内置字卡已清理');
     return;
   }
 
@@ -27906,6 +27956,45 @@ function openProfileFor(roleId){
   $('#profileScreen').classList.add('on');
   applyBeautyCfg();
 }
+(function bindProfileNameClick(){
+  if(window.__profileNameClickBound) return;
+  window.__profileNameClickBound = true;
+  document.addEventListener('click', function(e){
+    var t = e.target;
+    if(!t || !t.closest) return;
+    if(!t.closest('#profileName')) return;
+    e.preventDefault();
+    e.stopPropagation();
+    var pid = window.__profileViewId || getCurrentRoleId();
+    var role = getRoleById(pid);
+    if(!role) return;
+    var curShowName = (role.remark && String(role.remark).trim()) ? String(role.remark).trim() : (role.name || '');
+    uniAsk({
+      title: '修改名字',
+      sub: 'NAME · 最多 20 个字',
+      value: curShowName,
+      placeholder: '输入新的名字',
+      maxlength: 20
+    }).then(function(v){
+      if(v === null) return;
+      var txt = String(v).trim();
+      if(!txt){ toast('名字不能为空'); return; }
+      saveRoleField(pid, 'name', txt);
+      saveRoleField(pid, 'remark', '');
+      var pName = document.getElementById('profileName');
+      if(pName) pName.textContent = txt;
+      try{ refreshChatRole(); }catch(err){}
+      if(pid === getCurrentRoleId()){
+        try{ if(typeof window.__forceRenderChat === 'function') window.__forceRenderChat(); }catch(err){}
+        try{ renderChatFull(true); }catch(err){}
+      } else {
+        try{ renderFriends(); }catch(err){}
+      }
+      toast('名字已更新');
+    });
+  }, true);
+})();
+
 on('#profileEdit','click',()=>{
   const targetId = window.__profileViewId || getCurrentRoleId();
   closeProfile();
@@ -28284,6 +28373,26 @@ document.addEventListener('click', function(e){
 }, false);
 
 (function init(){
+  try{
+    var PEEK_VER_KEY = 'mj_peek_ver_v1';
+    var CUR_VER = '2';
+    if(localStorage.getItem(PEEK_VER_KEY) !== CUR_VER){
+      localStorage.setItem(PEEK_VER_KEY, CUR_VER);
+      window.__peekFeatureMounted = false;
+      window.__peekHijacking = false;
+      window.__yandereHijackPatched = false;
+      window.__yandereModuleMounted = false;
+      var keysToRemove = [];
+      for(var i = 0; i < localStorage.length; i++){
+        var k = localStorage.key(i);
+        if(k && (k.indexOf('mj_peek') === 0 && k !== 'mj_peek_v1' && k !== PEEK_VER_KEY)){
+          keysToRemove.push(k);
+        }
+      }
+      keysToRemove.forEach(function(k){ localStorage.removeItem(k); });
+    }
+  }catch(e){}
+
   /* ★ 分步兜底：每一步独立 try/catch，避免某一处爆栈（Maximum call stack）
      导致整个 init 中断、页面卡在"初始化出错"。某步失败只跳过那一步。 */
   function safe(name, fn){ try{ fn(); }catch(e){ console.error('[init:'+name+']', e); } }
@@ -30414,7 +30523,12 @@ function pickSignCardText(catId, roleId){
         }
       }catch(e){ console.error('读角色专属我的个签失败', e); }
     }
-    var pool0 = useBuiltinCards() ? localPool0.concat(getBuiltinSignPool('cs-me')) : localPool0;
+    var pool0 = localPool0;
+    if(useBuiltinCards()){
+      getBuiltinSignPool('cs-me').forEach(function(t){
+        if(localPool0.indexOf(t) < 0) pool0.push(t);
+      });
+    }
     if(!pool0.length) return '';
     return pool0[Math.floor(Math.random() * pool0.length)];
   }
