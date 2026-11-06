@@ -1,3 +1,99 @@
+/* ===== 你可能认识 ===== */
+#youKnowScreen .nf-list{
+  flex:1;
+  overflow-y:auto;
+  padding:6px 22px 40px;
+  scrollbar-width:none;
+}
+#youKnowScreen .nf-list::-webkit-scrollbar{display:none}
+
+#youKnowScreen .nf-item{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  padding:14px 4px;
+  border-bottom:0.6px dashed var(--th-bg0);
+}
+#youKnowScreen .nf-item:last-child{border-bottom:none}
+
+#youKnowScreen .nf-av{
+  width:44px;
+  height:44px;
+  flex:none;
+  border-radius:var(--avatar-radius,12%);
+  background:var(--th-av-bg);
+  overflow:hidden;
+  position:relative;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+#youKnowScreen .nf-av svg{position:absolute;inset:0;width:100%;height:100%}
+#youKnowScreen .nf-av .silhouette{fill:var(--th-av-sil)}
+#youKnowScreen .nf-av img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+
+#youKnowScreen .nf-info{
+  flex:1;
+  min-width:0;
+}
+#youKnowScreen .nf-name{
+  font-size:14px;
+  font-weight:300;
+  letter-spacing:1px;
+  color:var(--th-text);
+  -webkit-text-stroke:0.15px var(--th-text);
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+#youKnowScreen .nf-sub{
+  font-size:11px;
+  color:var(--th-text-mute);
+  letter-spacing:.5px;
+  margin-top:4px;
+  font-weight:300;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+#youKnowScreen .nf-acts{
+  flex:none;
+  display:flex;
+  gap:8px;
+  align-items:center;
+}
+#youKnowScreen .nf-btn{
+  flex:none;
+  padding:7px 16px;
+  border-radius:14px;
+  border:none;
+  background:var(--th-text);
+  color:var(--th-bg1);
+  font-size:12px;
+  font-family:inherit;
+  letter-spacing:1px;
+  font-weight:300;
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+  cursor:pointer;
+  transition:opacity .18s ease;
+}
+#youKnowScreen .nf-btn:active{opacity:.75}
+
+#youKnowScreen .nf-empty{
+  text-align:center;
+  padding:60px 30px;
+  font-size:13px;
+  color:var(--th-text-mute);
+  letter-spacing:1px;
+  font-weight:300;
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+}
+
 /* ===== 拍一拍 ===== */
 .pat-notice{
   width:100%;
