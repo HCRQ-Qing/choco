@@ -17047,32 +17047,21 @@ document.addEventListener('input', function(e){
 
   gchInput.addEventListener('focus', () => {
     gchScreen.classList.add('kb-open');
-    /* 输入框聚焦时，把群聊功能抽屉和表情抽屉都收起 */
     if(typeof gchToggleFunc === 'function') gchToggleFunc(false);
     if(typeof gchToggleDrawer === 'function') gchToggleDrawer(false);
   });
-  gchInput.addEventListener('blur', () => {
-    setTimeout(() => {
-      const active = document.activeElement;
-      if(!active || active.id !== 'gchInput'){
-        gchScreen.classList.remove('kb-open');
-      }
-    }, 100);
-  });
+
   gchInput.addEventListener('input', function(){
     this.style.height = 'auto';
     this.style.height = Math.min(this.scrollHeight, 110) + 'px';
-    /* 没有 [图片] 了就清掉残留 stickerSrc */
     if(this.value.indexOf('[图片]') === -1 && this.dataset.stickerSrc){
       delete this.dataset.stickerSrc;
     }
   });
 
-  /* visualViewport 锁高度：防止键盘把群聊页顶飞
-     抖动修复：rAF 合并 + 高度阈值过滤，去掉 scrollTo */
   if(window.visualViewport){
     let baseH = window.innerHeight;
-    let lastH = -1, raf = null;
+    let raf = null;
     function apply(){
       raf = null;
       if(!gchScreen.classList.contains('on')) return;
@@ -17080,13 +17069,10 @@ document.addEventListener('input', function(e){
       const h = Math.round(vv.height);
       const kh = Math.max(0, baseH - h);
       if(kh > 60){
-        if(lastH >= 0 && Math.abs(h - lastH) < 24) return;
-        lastH = h;
         gchScreen.classList.add('kb-open-real');
         gchScreen.style.height = h + 'px';
         gchScreen.style.top = '0';
       } else {
-        lastH = -1;
         gchScreen.classList.remove('kb-open-real');
         gchScreen.style.height = '';
         gchScreen.style.top = '';
@@ -17097,7 +17083,6 @@ document.addEventListener('input', function(e){
     window.visualViewport.addEventListener('scroll', schedule);
     window.addEventListener('orientationchange', () => {
       baseH = window.innerHeight;
-      lastH = -1;
       schedule();
     });
   }
@@ -28557,36 +28542,14 @@ document.addEventListener('click', function(e){
 }
 	const chatInput = $('#chatInput');
 	if(chatInput){
-	  // 确保输入框完全可编辑，移除任何可能残留的死锁属性
 	  chatInput.removeAttribute('readonly');
 	  chatInput.readOnly = false;
 
-	  /* 点击输入框：主动 focus 一次 + 延时兜底一次 */
 	  chatInput.addEventListener('click', function(){
-		chatInput.focus();
 		setTimeout(function(){ chatInput.scrollIntoView({ block: 'nearest' }); }, 150);
 		if(contentOpen || funcOpen) closeAllThings('drawer');
 	  });
-	  chatInput.addEventListener('touchstart', function(){
-		chatInput.focus();
-		if(contentOpen || funcOpen) closeAllThings('drawer');
-	  }, {passive:true});
 
-	  /* 键盘收起时解除滑动锁定 */
-	  chatInput.addEventListener('blur', function(){
-		setTimeout(function(){
-		  if(window.__kbSwitching) return;
-		  var active = document.activeElement;
-		  if(active && active.tagName === 'TEXTAREA' && active.id === 'chatInput') return;
-		  var vv = window.visualViewport;
-		  if(vv && (window.innerHeight - vv.height - vv.offsetTop) > 80) return;
-		  document.getElementById('app').classList.remove('kb-open');
-		}, 180);
-	  });
-
-	  /* 点表情 / 加号 / 麦克风时，让输入框主动失焦一次，
-	     避免键盘和面板同时出现（这个"失焦"是我们自己触发的，
-	     和用户滑动列表造成的失焦不一样） */
 	  ['#smileBtn','#plusBtn','#micBtn'].forEach(function(sel){
 		var btn = document.querySelector(sel);
 		if(btn){
@@ -28596,8 +28559,8 @@ document.addEventListener('click', function(e){
 		}
 	  });
 
-	  chatInput.addEventListener('keydown',e=>{
-		if(e.key==='Enter' && !e.shiftKey){
+	  chatInput.addEventListener('keydown', e=>{
+		if(e.key === 'Enter' && !e.shiftKey){
 		  var _enterSend = lsGet('mj_enter_send_v1', false);
 		  if(_enterSend || !isMobileKeyboard()){
 			e.preventDefault();
@@ -28605,13 +28568,14 @@ document.addEventListener('click', function(e){
 		  }
 		}
 	  });
-	  chatInput.addEventListener('input',function(){
-      this.style.height='auto'; this.style.height=Math.min(this.scrollHeight,150)+'px';
-      /* ★ 输入框里没有 [图片] 了，清掉残留的 stickerSrc，避免发错图 */
-      if(this.value.indexOf('[图片]') === -1 && this.dataset.stickerSrc){
-        delete this.dataset.stickerSrc;
-      }
-    });
+
+	  chatInput.addEventListener('input', function(){
+		this.style.height = 'auto';
+		this.style.height = Math.min(this.scrollHeight, 150) + 'px';
+		if(this.value.indexOf('[图片]') === -1 && this.dataset.stickerSrc){
+		  delete this.dataset.stickerSrc;
+		}
+	  });
 	}
 
 	/* ★ 键盘弹出适配：用 visualViewport 检测键盘高度，
