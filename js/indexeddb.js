@@ -185,4 +185,20 @@
   window.idbSet = idbSet;
   window.idbDelete = idbDel;
   window.idbDel = idbDel;
+
+  /* 预加载：提前把所有头像图的 URL 生成好，避免切后台回来重绘时空白或闪旧图 */
+  function idbPrefetchImages(){
+    if(window.__idbPrefetchPromise) return window.__idbPrefetchPromise;
+    window.__idbPrefetchPromise = idbKeys().then(function(keys){
+      var need = keys.filter(function(k){
+        return /^(img_|mig_av_|mig_me_)/.test(k);
+      });
+      return Promise.all(need.map(function(k){
+        return idbToURL(k).catch(function(){ return null; });
+      }));
+    }).catch(function(){ return []; });
+    return window.__idbPrefetchPromise;
+  }
+
+  window.__idb.prefetchImages = idbPrefetchImages;
 })();

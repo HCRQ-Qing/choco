@@ -712,6 +712,18 @@ const DEFAULT_CARD_GROUPS = [
 	{ id:'cdm1', name:'类型', list:[
 	  '日常回复','撒娇','关心','吐槽','安慰','鼓励','情话','道歉','晚安','早安','吃饭提醒','喝水提醒'
 	] }
+  ]},
+  { id:'g-danmaku', name:'弹幕字卡', icon:'star', sub:'偷窥时飘过的占有欲弹幕', cats:[
+    { id:'cdmk1', name:'占有欲', list:[
+      '你想干嘛？', '为什么不理我？', '为什么？', 'ta们是谁？', 
+      '你在看谁？', '不许看别人', '回我一下好不好', '你是不是烦我了',
+      '他是谁？', '你刚刚在看谁？', '为什么对别人笑？', '你为什么不说话？',
+      '恨你', '讨厌你', '不要这样', '别走', '看着我', '只能看我一个',
+      '别抛下我', '我讨厌他们', '不许离开我', '你让我好难受', 
+      '我好喜欢你啊', '好喜欢你啊', '我一直在等你', '你只属于我',
+      '只能属于我', '不要看别人好不好', '杀了你', '想把你锁起来',
+      '只准对我笑', '你是我的', '别逼我', '不要离开我'
+    ] }
   ]}
 ];
 const CARD_GROUPS_KEY = 'mj_card_groups_v5';
@@ -726,6 +738,8 @@ cardStore.public = cardStore.public.filter(g=>g && g.id !== 'g-open');
   if(!cardStore.public.some(g=>g.id==='g-timed'))    cardStore.public.push(JSON.parse(JSON.stringify(DEFAULT_CARD_GROUPS.find(g=>g.id==='g-timed'))));
   if(!cardStore.public.some(g=>g.id==='g-groupchat')) cardStore.public.push(JSON.parse(JSON.stringify(DEFAULT_CARD_GROUPS.find(g=>g.id==='g-groupchat'))));
   if(!cardStore.public.some(g=>g.id==='g-demand')) cardStore.public.push(JSON.parse(JSON.stringify(DEFAULT_CARD_GROUPS.find(g=>g.id==='g-demand'))));
+  
+  if(!cardStore.public.some(g=>g.id==='g-danmaku')) cardStore.public.push(JSON.parse(JSON.stringify(DEFAULT_CARD_GROUPS.find(g=>g.id==='g-danmaku'))));
  
   
   /* ★ 只补一次 Yes or No 字卡分组；用户之后删了不补 */
@@ -3065,10 +3079,25 @@ function renderChatFull(forceBottom){
     const rp = m.redPacket;
     const dirCls = isUser ? 'user' : 'char';
     let coverStyle = 'background: linear-gradient(135deg, #f5a623, #d0021b);';
+    let _rpCoverVal = '';
     if(!isUser) {
       const role = getRoleById(m.roleId || getCurrentRoleId());
       if(role && role.rpCover) {
-        coverStyle = `background: url(${role.rpCover}) center/cover;`;
+        _rpCoverVal = role.rpCover;
+        if(window.MediaIdb && window.MediaIdb.isIdbKey(_rpCoverVal)){
+          const _rpTmpId = 'rpc_' + m.id + '_' + Math.random().toString(36).slice(2, 5);
+          setTimeout(function(){
+            window.MediaIdb.rpCover.get(_rpCoverVal).then(function(realUrl){
+              if(!realUrl) return;
+              const el = document.getElementById(_rpTmpId);
+              if(el) el.style.background = 'url(' + realUrl + ') center/cover';
+            }).catch(function(){});
+          }, 10);
+          coverStyle = 'background: linear-gradient(135deg, #f5a623, #d0021b);';
+          _rpCoverVal = '__idb_placeholder__:' + _rpTmpId;
+        } else {
+          coverStyle = `background: url(${_rpCoverVal}) center/cover;`;
+        }
       }
     } else {
       coverStyle = 'background: linear-gradient(135deg, #f5a623, #d0021b);'; 
@@ -3079,7 +3108,7 @@ function renderChatFull(forceBottom){
       <div class="msg-body">
         ${timeSep}
         <div class="rp-bubble ${bubbleCls}" data-rpid="${m.id}" style="width:220px;border-radius:10px;overflow:hidden;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.1)">
-          <div class="rp-cover" style="${coverStyle} height:130px;padding:20px 16px;display:flex;flex-direction:column;justify-content:space-between;">
+          <div class="rp-cover" ${_rpCoverVal && _rpCoverVal.indexOf('__idb_placeholder__:') === 0 ? ('id="' + _rpCoverVal.slice(19) + '"') : ''} style="${coverStyle} height:130px;padding:20px 16px;display:flex;flex-direction:column;justify-content:space-between;">
             <div style="display:flex;align-items:center;gap:8px;">
               <div style="width:32px;height:32px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;">🧧</div>
               <div style="font-size:13px;color:#fff;font-weight:500;text-shadow:0 1px 2px rgba(0,0,0,0.3);">${esc(rp.note)}</div>
@@ -3781,8 +3810,26 @@ function renderRpCoverUI() {
   var prev = document.getElementById('rpCoverPreview');
   if(prev) {
     if(curRole.rpCover) {
-      prev.style.backgroundImage = 'url(' + curRole.rpCover + ')';
-      prev.textContent = '';
+      var _rpVal = curRole.rpCover;
+      if(window.MediaIdb && window.MediaIdb.isIdbKey(_rpVal)){
+        prev.style.backgroundImage = '';
+        prev.textContent = '加载中…';
+        window.MediaIdb.rpCover.get(_rpVal).then(function(realUrl){
+          if(realUrl){
+            prev.style.backgroundImage = 'url(' + realUrl + ')';
+            prev.textContent = '';
+          } else {
+            prev.style.backgroundImage = '';
+            prev.textContent = '默认封面';
+          }
+        }).catch(function(){
+          prev.style.backgroundImage = '';
+          prev.textContent = '默认封面';
+        });
+      } else {
+        prev.style.backgroundImage = 'url(' + _rpVal + ')';
+        prev.textContent = '';
+      }
     } else {
       prev.style.backgroundImage = '';
       prev.textContent = '默认封面';
@@ -10139,7 +10186,41 @@ function renderBody(){
 
   box.innerHTML = `<div class="d-sticker-grid">${c.list.map((src,i)=>{
     const del = stickerEditing ? '<span class="del-s">✕</span>' : '';
-    return `<div class="d-sticker" data-si="${i}"><img src="${src}">${del}</div>`;
+    if(typeof src === 'string' && src.indexOf('idb:') === 0){
+      const tmpId = 'sticker_' + i + '_' + Math.random().toString(36).slice(2, 6);
+      setTimeout(function(){
+        if(window.__idb && window.__idb.toURL){
+          window.__idb.toURL(src.slice(4)).then(function(url){
+            if(url){
+              const img = document.getElementById(tmpId);
+              if(img) img.src = url;
+            }
+          }).catch(function(){});
+        }
+      }, 10);
+      return `<div class="d-sticker" data-si="${i}"><img id="${tmpId}" src="" style="opacity:0;transition:opacity .15s">${del}</div>`;
+    }
+    if(typeof src === 'string' && src.indexOf('data:image') !== 0 && src.indexOf('http') !== 0 && window.__idb && window.__idb.keys){
+      const tmpId = 'sticker_' + i + '_' + Math.random().toString(36).slice(2, 6);
+      setTimeout(function(){
+        window.__idb.keys().then(function(allKeys){
+          const hitKey = allKeys.find(function(k){ return k.indexOf(src) >= 0; });
+          if(hitKey){
+            window.__idb.toURL(hitKey).then(function(url){
+              if(url){
+                const img = document.getElementById(tmpId);
+                if(img){ img.src = url; img.style.opacity = 1; }
+                c.list[i] = 'idb:' + hitKey;
+                setStickerCats(sc);
+                persistStickers();
+              }
+            }).catch(function(){});
+          }
+        }).catch(function(){});
+      }, 10);
+      return `<div class="d-sticker" data-si="${i}"><img id="${tmpId}" src="" style="opacity:0;transition:opacity .15s">${del}</div>`;
+    }
+    return `<div class="d-sticker" data-si="${i}"><img src="${src}" onload="this.style.opacity=1" style="opacity:0;transition:opacity .15s">${del}</div>`;
   }).join('')}</div>`;
 
   box.querySelectorAll('[data-si]').forEach(el=>{
@@ -13904,12 +13985,31 @@ function renderMyGroupIconList(){
         cv.width = w; cv.height = h;
         cv.getContext('2d').drawImage(img, 0, 0, w, h);
         var url = cv.toDataURL('image/jpeg', 0.85);
-        var m = getGroupIconsMap();
-        m[gid] = url;
-        saveGroupIconsMap(m);
-        renderMyGroupIconList();
-        try{ renderGroupList(); }catch(err){}
-        toast('图标已更新');
+        if(window.MediaIdb){
+          var oldVal = (getGroupIconsMap() || {})[gid] || '';
+          window.MediaIdb.groupIcon.set(gid, url).then(function(){
+            if(oldVal && window.MediaIdb.isIdbKey(oldVal)){
+              window.MediaIdb.groupIcon.del(oldVal).catch(function(){});
+            }
+            renderMyGroupIconList();
+            try{ renderGroupList(); }catch(err){}
+            toast('图标已更新');
+          }).catch(function(){
+            var m = getGroupIconsMap();
+            m[gid] = url;
+            saveGroupIconsMap(m);
+            renderMyGroupIconList();
+            try{ renderGroupList(); }catch(err){}
+            toast('图标已更新');
+          });
+        } else {
+          var m = getGroupIconsMap();
+          m[gid] = url;
+          saveGroupIconsMap(m);
+          renderMyGroupIconList();
+          try{ renderGroupList(); }catch(err){}
+          toast('图标已更新');
+        }
       };
       img.onerror = function(){ toast('图片解析失败'); };
       img.src = fr.result;
@@ -13991,12 +14091,31 @@ function renderSpGroupIconList(){
         cv.width = w; cv.height = h;
         cv.getContext('2d').drawImage(img, 0, 0, w, h);
         var url = cv.toDataURL('image/jpeg', 0.85);
-        var m = getGroupIconsMap();
-        m[gid] = url;
-        saveGroupIconsMap(m);
-        renderSpGroupIconList();
-        try{ renderGroupList(); }catch(err){}
-        toast('图标已更新');
+        if(window.MediaIdb){
+          var oldVal = (getGroupIconsMap() || {})[gid] || '';
+          window.MediaIdb.groupIcon.set(gid, url).then(function(){
+            if(oldVal && window.MediaIdb.isIdbKey(oldVal)){
+              window.MediaIdb.groupIcon.del(oldVal).catch(function(){});
+            }
+            renderSpGroupIconList();
+            try{ renderGroupList(); }catch(err){}
+            toast('图标已更新');
+          }).catch(function(){
+            var m = getGroupIconsMap();
+            m[gid] = url;
+            saveGroupIconsMap(m);
+            renderSpGroupIconList();
+            try{ renderGroupList(); }catch(err){}
+            toast('图标已更新');
+          });
+        } else {
+          var m = getGroupIconsMap();
+          m[gid] = url;
+          saveGroupIconsMap(m);
+          renderSpGroupIconList();
+          try{ renderGroupList(); }catch(err){}
+          toast('图标已更新');
+        }
       };
       img.onerror = function(){ toast('图片解析失败'); };
       img.src = fr.result;
@@ -20658,6 +20777,18 @@ function openYouKnow(){
   if(!scr) return;
   scr.setAttribute('data-avatar-shape', beautyCfg.avatarShape === 'circle' ? 'circle' : 'square');
   scr.classList.add('on');
+  renderTopBar({
+    host: 'utopHostYouKnow',
+    title: '你可能认识',
+    act: '换一批',
+    actCls: 'txt',
+    actId: 'ykRefresh',
+    onBack: function(){
+      scr.classList.remove('on');
+      openNewFriends();
+    },
+    onAct: function(){ refreshYouKnow(); }
+  });
   refreshYouKnow();
 }
 function closeYouKnow(){
@@ -21077,13 +21208,13 @@ function settleFriendRequest(applyId, roleId){
 /* ---------------- 长冷却（被删角色的兜底） ---------------- */
 let applyTickTimer = null;
 function scheduleApplyTick(){
-  if(applyTickTimer) clearTimeout(applyTickTimer);
-  const now = Date.now();
-  const next = tomorrowZero(now);
-  applyTickTimer = setTimeout(function(){
-    runApplyTick();
-    scheduleApplyTick();
-  }, next - now + 500);
+  if(applyTickTimer) clearInterval(applyTickTimer);
+  /* 原来的30天定时空壳删掉，改为每小时检查一次。
+     具体是不是要发申请、发几个，全在 runApplyTick 里用时间戳去算。 */
+  applyTickTimer = setInterval(function(){
+    try{ runApplyTick(); }catch(e){ console.error('runApplyTick 出错', e); }
+  }, 3600 * 1000); 
+  setTimeout(function(){ try{ runApplyTick(); }catch(e){} }, 2000);
 }
 function runApplyTick(){
   const now = Date.now();
@@ -21094,34 +21225,49 @@ function runApplyTick(){
     if(!f.hidden || f.blocked) return;
     if(f.builtin) return;
     if(!f.applyStage) return;
-
-    if(!f.nextCooldownAt){
-      f.nextCooldownAt = (f.deletedAt||now) + 30*86400000;
-      changed = true;
+    
+    // 1. 如果已经定好了“发送申请的绝对时间”，且时间到了，直接发
+    if(f.pendingApplyAt){
+      if(now >= f.pendingApplyAt){
+        f.pendingApplyAt = 0;
+        f.applyStage = 0;
+        f.lastApplyAt = now;
+        f.nextApplyCheckAt = 0;
+        saveFriends(friends);
+        pushApply(f.id);
+        changed = true;
+      }
+      return;
     }
-    if(now < f.nextCooldownAt) return;
 
-    let p;
-    if(f.cooldownIndex < 3) p = 0.10;
-    else p = 0.05;
-
-    if(Math.random() < p){
-      f.applyStage = 0;
-      f.rejectCount = 0;
-      f.cooldownIndex = 0;
-      f.nextCooldownAt = 0;
-      f.lastApplyAt = now;
-      saveFriends(friends);
-      pushApply(f.id);
+    // 2. 如果还没定，先看是不是到了“该摇号的检查时间”
+    if(!f.nextApplyCheckAt){
+      // 刚被删：一分钟到五天内
+      const d = (f.deletedAt || now) + (60 * 1000) + Math.random() * (4 * 86400000);
+      f.nextApplyCheckAt = d;
       changed = true;
       return;
     }
-    f.cooldownIndex = (f.cooldownIndex||0) + 1;
-    if(f.cooldownIndex <= 3){
-      f.nextCooldownAt = (f.deletedAt||now) + (f.cooldownIndex+1)*30*86400000;
+
+    if(now < f.nextApplyCheckAt) return;
+
+    // 3. 到了检查时间，摇那 50%
+    if(Math.random() < 0.5){
+      // 摇中：在 24 小时内随机挑个时间发
+      f.pendingApplyAt = now + Math.random() * 86400000;
+      f.nextApplyCheckAt = 0; 
     } else {
-      const days = 1 + Math.floor(Math.random()*60);
-      f.nextCooldownAt = now + days*86400000;
+      // 没摇中：算下一次检查时间
+      const days = (now - (f.deletedAt || now)) / 86400000;
+      if(days < 5){
+        // 前5天：每小时摇一次
+        f.nextApplyCheckAt = now + 3600 * 1000;
+      } else {
+        // 5天后：每天0点摇一次
+        const t = new Date(now);
+        t.setHours(24, 0, 0, 0);
+        f.nextApplyCheckAt = t.getTime();
+      }
     }
     changed = true;
   });
@@ -23031,8 +23177,20 @@ function groupIconHTML(gid){
   if(!gid) return GROUP_ICON_FALLBACK;
   const m = getGroupIconsMap();
   const url = m[gid];
-  if(url) return '<img src="' + url + '">';
-  return GROUP_ICONS[gid] || GROUP_ICON_FALLBACK;
+  if(!url) return GROUP_ICONS[gid] || GROUP_ICON_FALLBACK;
+  if(window.MediaIdb && window.MediaIdb.isIdbKey(url)){
+    const tmpId = 'gicon_' + gid + '_' + Math.random().toString(36).slice(2, 6);
+    setTimeout(function(){
+      window.MediaIdb.groupIcon.get(gid).then(function(realUrl){
+        if(realUrl){
+          const el = document.getElementById(tmpId);
+          if(el) el.src = realUrl;
+        }
+      }).catch(function(){});
+    }, 10);
+    return '<img id="' + tmpId + '" data-gicon-key="' + escapeHTML(url) + '" src="" style="opacity:0;transition:opacity .15s">';
+  }
+  return '<img src="' + url + '">';
 }
 function iconSVG(key){
   if(GROUP_ICONS[key]) return GROUP_ICONS[key];
@@ -28691,10 +28849,28 @@ function openExportMenu(){
       e.target.value = '';
       if(!file) return;
       openCrop(file, 3/4, function(dataUrl) {
-        saveRoleField(getCurrentRoleId(), 'rpCover', dataUrl);
-        const img = document.getElementById('rpCoverPreview');
-        if(img) { img.src = dataUrl; img.style.display = 'block'; }
-        toast('红包封面已更新');
+        const rid = getCurrentRoleId();
+        const oldVal = (getRoleById(rid) || {}).rpCover || '';
+        window.MediaIdb.rpCover.set(dataUrl).then(function(newVal){
+          saveRoleField(rid, 'rpCover', newVal);
+          if(oldVal && window.MediaIdb.isIdbKey(oldVal)){
+            window.MediaIdb.rpCover.del(oldVal).catch(function(){});
+          }
+          const img = document.getElementById('rpCoverPreview');
+          if(img && window.MediaIdb){
+            window.MediaIdb.rpCover.get(newVal).then(function(url){
+              if(url){ img.src = url; img.style.display = 'block'; }
+            });
+          } else if(img){
+            img.src = dataUrl; img.style.display = 'block';
+          }
+          toast('红包封面已更新');
+        }).catch(function(){
+          saveRoleField(rid, 'rpCover', dataUrl);
+          const img = document.getElementById('rpCoverPreview');
+          if(img) { img.src = dataUrl; img.style.display = 'block'; }
+          toast('红包封面已更新');
+        });
       });
     }
   }, true);
@@ -32119,4 +32295,727 @@ function goToPage(name){
     if(typeof window.__iconEditCleanup === 'function') window.__iconEditCleanup();
     if(typeof toast === 'function') toast('图标排版已保存');
   };
+})();
+/* ============================================================
+   ★ 角色假删 / 假拉黑好友 核心模块
+   ============================================================ */
+
+const ROLE_CAN_DELETE_KEY = 'mj_role_can_delete_v1';
+
+/* 检查某个角色是否开启了“拉黑/删除”权限 */
+function getRoleCanDelete(roleId) {
+  if (!roleId) return false;
+  const m = lsGet(ROLE_CAN_DELETE_KEY, {});
+  return !!m[roleId];
+}
+
+/* 设置某个角色的权限 */
+function setRoleCanDelete(roleId, on) {
+  if (!roleId) return;
+  const m = lsGet(ROLE_CAN_DELETE_KEY, {});
+  m[roleId] = !!on;
+  lsSet(ROLE_CAN_DELETE_KEY, m);
+}
+
+/* 每小时摇一次：遍历所有开启了“拉黑/删除”权限的角色，摇他们的好友 */
+function runPeekTick() {
+  const friends = getFriends();
+  const now = Date.now();
+  let changed = false;
+
+  friends.forEach(role => {
+    if (role.hidden || role.blocked || role.builtin) return;
+    
+    // 检查这个角色是否开启了“拉黑/删除”权限
+    if (!getRoleCanDelete(role.id)) return;
+
+    // 找出这个角色现有的活好友
+    const targets = friends.filter(f => f.id !== role.id && !f.hidden && !f.blocked && !f.builtin);
+    if (!targets.length) return;
+
+    targets.forEach(target => {
+      // 每个好友独立摇 4% 概率
+      if (Math.random() < 0.04) {
+        // 摇中：50% 假删，50% 假拉黑
+        const isDelete = Math.random() < 0.5;
+        
+        const t = friends.find(f => f.id === target.id);
+        if (t) {
+          t.hidden = true;            
+          t.blocked = isDelete ? false : true;  
+          t.deletedAt = now;          
+          t.applyStage = 1;           
+          t.nextApplyCheckAt = 0;     
+          t.pendingApplyAt = 0;       
+          t.rejectCount = 0;
+          t.cooldownIndex = 0;
+          t.nextCooldownAt = 0;
+          
+          changed = true;
+          console.log(`[权限] ${role.name} 把 ${target.name} ${isDelete ? '假删了' : '假拉黑了'}`);
+        }
+      }
+    });
+  });
+
+  if (changed) {
+    saveFriends(friends);
+    if (typeof renderFriends === 'function') renderFriends();
+    if (typeof refreshYouKnow === 'function' && document.getElementById('youKnowScreen')?.classList.contains('on')) {
+      refreshYouKnow();
+    }
+  }
+}
+
+setInterval(function() {
+  try { runPeekTick(); } catch(e) { console.error('假删拉黑摇号出错', e); }
+}, 60 * 60 * 1000);
+
+setTimeout(function() {
+  try { runPeekTick(); } catch(e) {}
+}, 3000);
+/* ============================================================
+   ★ 注入聊天信息面板的“更多”弹窗开关
+   ============================================================ */
+(function injectRolePermSwitch() {
+  function doInject() {
+    const sheet = document.querySelector('#cipMoreMask .cip-sheet');
+    if (!sheet || document.getElementById('cipRolePermRow')) return;
+
+    const row = document.createElement('div');
+    row.className = 'cip-sh-item';
+    row.id = 'cipRolePermRow';
+    row.innerHTML = `
+      <span class="cip-sh-ic"><svg viewBox="0 0 24 24"><path d="M4 7h16"/><path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/><path d="M6 7l1 12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-12"/></svg></span>
+      <span class="cip-sh-main">角色可拉黑/删除你</span>
+      <label class="switch"><input type="checkbox" id="cipRolePermSw"><span class="slider"></span></label>
+    `;
+
+    const autoAddRow = document.getElementById('cipAutoAdd');
+    if (autoAddRow) {
+      autoAddRow.after(row);
+    } else {
+      sheet.insertBefore(row, document.getElementById('cipMoreCancel'));
+    }
+
+    const sw = document.getElementById('cipRolePermSw');
+    if (sw) {
+      sw.addEventListener('change', function() {
+        const rid = getCurrentRoleId();
+        setRoleCanDelete(rid, this.checked);
+        if (typeof toast === 'function') {
+          toast(this.checked ? '已开启：Ta 可以删你或拉黑你' : '已关闭：Ta 无法操作你的好友');
+        }
+      });
+    }
+  }
+
+  setTimeout(doInject, 1000);
+  
+  document.addEventListener('click', function(e) {
+    if (e.target.closest('#cipMore')) {
+      doInject();
+      const sw = document.getElementById('cipRolePermSw');
+      if (sw) sw.checked = getRoleCanDelete(getCurrentRoleId());
+    }
+  }, true);
+})();
+(function() {
+  if (window.__peekFeatureMounted) return;
+  window.__peekFeatureMounted = true;
+
+  function ensureHtml() {
+    if (document.getElementById('peekFlashMask')) return;
+    
+    const html = `
+      <div class="modal" id="peekFlashMask">
+        <div class="overlay"></div>
+        <div class="sheet" style="max-width:280px;border-radius:20px;padding:24px 22px 20px;text-align:center;border-top:4px solid #e02020;">
+          <div style="display:inline-block;background:#ffeaea;color:#e02020;font-size:10px;font-weight:700;padding:4px 10px;border-radius:12px;letter-spacing:2px;margin-bottom:14px;">⚠️ 光敏警告</div>
+          <h3 style="font-size:15px;font-weight:600;color:#1a1a1a;letter-spacing:1px;margin-bottom:10px;">是否开启闪屏特效？</h3>
+          <p style="font-size:13px;color:#666;line-height:1.8;margin-bottom:24px;">开启该功能后，部分操作会伴随<b style="color:#e02020;">闪光及黑白闪烁</b>。光敏性癫痫患者请谨慎操作。</p>
+          <div style="display:flex;justify-content:space-around;align-items:center;">
+            <button id="peekFlashCancel" type="button" style="background:transparent;border:none;font-size:13.5px;color:#999;letter-spacing:3px;cursor:pointer;">取 消</button>
+            <button id="peekFlashOk" type="button" style="background:transparent;border:none;font-size:13.5px;color:#1a1a1a;font-weight:600;letter-spacing:3px;cursor:pointer;">确 定</button>
+          </div>
+        </div>
+      </div>
+      <div class="modal" id="peekHorrorMask">
+        <div class="overlay"></div>
+        <div class="sheet" style="max-width:280px;background:#0a0a0a;border:1px solid #2a0a0a;border-radius:20px;padding:30px 24px 22px;text-align:center;box-shadow:0 0 60px rgba(214,59,59,.35);">
+          <div class="horror-eye-wrap" style="width:70px;height:70px;margin:0 auto 6px;position:relative;display:flex;align-items:center;justify-content:center;">
+            <div style="position:absolute;inset:0;border-radius:50%;background:radial-gradient(circle,rgba(224,32,32,.28) 0%,transparent 65%);animation:bloodBreath 3s ease-in-out infinite;"></div>
+            <svg viewBox="0 0 24 24" style="width:100%;height:100%;stroke:#e02020;fill:none;stroke-width:1.4;filter:drop-shadow(0 0 8px rgba(224,32,32,.55));overflow:visible;">
+              <path d="M2.5 12 C5 7.5 8.5 5.5 12 5.5 C15.5 5.5 19 7.5 21.5 12 C19 16.5 15.5 18.5 12 18.5 C8.5 18.5 5 16.5 2.5 12 Z"/>
+              <circle cx="12" cy="12" r="3.2" fill="#e02020" stroke="none" class="pupil-move"/>
+            </svg>
+            <style>
+              @keyframes pupilMove {
+                0%, 100% { transform: translate(0px, 0px); }
+                25% { transform: translate(-2px, 0px); }
+                50% { transform: translate(2px, 0.5px); }
+                75% { transform: translate(0px, -0.5px); }
+              }
+              @keyframes bloodBreath {
+                0%, 100% { opacity: .55; transform: scale(1); }
+                50% { opacity: .9; transform: scale(1.1); }
+              }
+              .pupil-move { transform-origin: 12px 12px; animation: pupilMove 4s ease-in-out infinite; }
+            </style>
+          </div>
+          <h3 style="font-size:15px;font-weight:600;color:#e02020;letter-spacing:5px;margin-bottom:12px;text-shadow:0 0 12px rgba(224,32,32,.6);">偷 窥</h3>
+          <p style="font-size:12px;color:#9a9a9a;line-height:1.85;margin-bottom:24px;letter-spacing:.3px;">开启后角色将会有权<b style="color:#e02020;font-weight:600;">偷窥你</b><br>并且<b style="color:#e02020;font-weight:600;">控制你的字卡网站</b><br>可能会删除你的其ta好友，谨慎开启！</p>
+          <div style="display:flex;justify-content:space-around;align-items:center;">
+            <button id="peekCloseBtn" type="button" style="background:transparent;border:none;font-size:13.5px;color:#666;letter-spacing:3px;cursor:pointer;">取 消</button>
+            <button id="peekOkBtn" type="button" style="background:transparent;border:none;font-size:13.5px;color:#e02020;font-weight:600;letter-spacing:3px;cursor:pointer;text-shadow:0 0 10px rgba(224,32,32,.6);">确 定</button>
+          </div>
+        </div>
+      </div>
+      <div class="flash-layer" id="peekFlashLayer" style="position:fixed;inset:0;pointer-events:none;z-index:9998;opacity:0;"></div>
+      <div class="danmaku-layer" id="peekDanmakuLayer" style="position:fixed;inset:0;overflow:hidden;pointer-events:none;z-index:9999;"></div>
+      <style>
+        .flash-layer.run { animation:peekFlashAnim .6s steps(1) 1; }
+        @keyframes peekFlashAnim {
+          0%{opacity:0}10%{opacity:1;background:#000}20%{opacity:0}
+          30%{opacity:1;background:#fff}40%{opacity:0}
+          50%{opacity:1;background:#000}60%{opacity:0}
+          70%{opacity:1;background:#e02020}80%{opacity:0}100%{opacity:0}
+        }
+        .dm-item { position:absolute;left:0;white-space:nowrap;font-weight:600;color:#d32f2f;letter-spacing:1px;text-shadow:0 0 1px #d32f2f,0 0 4px rgba(211,47,47,0.6),0 0 8px rgba(211,47,47,0.3);opacity:0;will-change:transform,opacity; }
+        .dm-item.run { animation:dmFly var(--dur,2s) linear forwards; }
+        @keyframes dmFly { 0%{transform:translateX(105vw);opacity:0} 6%{opacity:1} 92%{opacity:1} 100%{transform:translateX(-105%);opacity:0} }
+        .dm-item.rev { animation-name:dmFlyRev; }
+        @keyframes dmFlyRev { 0%{transform:translateX(-105%);opacity:0} 6%{opacity:1} 92%{opacity:1} 100%{transform:translateX(105vw);opacity:0} }
+      </style>
+    `;
+    document.body.insertAdjacentHTML('beforeend', html);
+  }
+    function mountPeekIcon() {
+    const grid = document.querySelector('#drawerFunc .func-grid');
+    if (!grid) return;
+    if (grid.querySelector('.peek-eye-btn')) return;
+    
+    const eye = document.createElement('div');
+    eye.className = 'func-item peek-eye-btn';
+    eye.innerHTML = `
+      <div class="fi-box" style="border-color:#d63b3b">
+        <span style="font-size:24px; line-height:1; filter:drop-shadow(0 0 5px rgba(214,59,59,.5));">⚠️</span>
+      </div>
+      <span class="fi-label" style="color:#d63b3b">？</span>
+    `;
+    
+    eye.addEventListener('click', function(e) {
+      e.stopPropagation();
+      if (typeof closeAllThings === 'function') closeAllThings('drawer');
+      
+      const rid = typeof getCurrentRoleId === 'function' ? getCurrentRoleId() : '';
+      
+      // 如果已经开启了，再点一次就是关闭
+      if (rid && typeof getPeekOn === 'function' && getPeekOn(rid)) {
+        if (typeof setPeekOn === 'function') setPeekOn(rid, false);
+        if (typeof toast === 'function') toast('已关闭偷窥');
+        return;
+      }
+      
+      // 如果是关着的，才弹闪屏警告去开启
+      document.getElementById('peekFlashMask').classList.add('show');
+    });
+    
+    grid.appendChild(eye);
+  }
+
+  function doFlash() {
+    const layer = document.getElementById('peekFlashLayer');
+    if (layer) {
+      layer.classList.remove('run');
+      void layer.offsetWidth;
+      layer.classList.add('run');
+    }
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const now = ctx.currentTime;
+      const dur = 0.55;
+      const buf = ctx.createBuffer(1, ctx.sampleRate * dur, ctx.sampleRate);
+      const data = buf.getChannelData(0);
+      for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * 0.5;
+      const src = ctx.createBufferSource(); src.buffer = buf;
+      const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 2000; bp.Q.value = 0.8;
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.0001, now);
+      g.gain.exponentialRampToValueAtTime(0.22, now + 0.01);
+      g.gain.setValueAtTime(0.22, now + dur * 0.5);
+      g.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+      src.connect(bp); bp.connect(g); g.connect(ctx.destination);
+      src.start(now); src.stop(now + dur);
+    } catch(e){}
+  }
+
+  function getDanmakuWords() {
+    try {
+      const g = getGroupsByOwner('public').find(x => x.id === 'g-danmaku');
+      if (g && g.cats && g.cats[0] && Array.isArray(g.cats[0].list)) {
+        const arr = g.cats[0].list.map(cardText).map(s => String(s).trim()).filter(Boolean);
+        if (arr.length) return arr;
+      }
+    } catch(e) {}
+    return [
+      '你想干嘛？', '为什么不理我？', '为什么？', 'ta们是谁？', 
+      '你在看谁？', '不许看别人', '回我一下好不好', '你是不是烦我了',
+      '他是谁？', '你刚刚在看谁？', '为什么对别人笑？', '你为什么不说话？',
+      '恨你', '讨厌你', '不要这样', '别走', '看着我', '只能看我一个',
+      '别抛下我', '我讨厌他们', '不许离开我', '你让我好难受', 
+      '我好喜欢你啊', '好喜欢你啊', '我一直在等你', '你只属于我',
+      '只能属于我', '不要看别人好不好', '想把你锁起来', '只准对我笑', 
+      '你是我的', '别逼我', '不要离开我',
+      
+      // 你新加的
+      '求求你', '我好痛苦', '我好爱你', '喜欢喜欢喜欢', '你要走了吗？', 
+      
+      // 我再多补几条病娇/委屈的
+      '只看着我好不好', '为什么丢下我', '不要对别人好', '我好想你', 
+      '你又要走吗', '我好痛啊', '只理我一个人', '理理我', '永远在一起好不好'
+    ];
+  }
+  const words = getDanmakuWords();
+  function doDanmaku(seconds) {
+    const layer = document.getElementById('peekDanmakuLayer');
+    if (!layer) return;
+    const endTime = Date.now() + seconds * 1000;
+    
+    function spawn() {
+      if (Date.now() > endTime) return;
+      const el = document.createElement('div');
+      el.className = 'dm-item';
+      el.textContent = words[Math.floor(Math.random() * words.length)];
+      el.style.top = (5 + Math.random() * 90) + '%';
+      
+      const dur = 1.8 + Math.random() * 1.2;
+      el.style.setProperty('--dur', dur + 's');
+      
+      const fontSize = 14 + Math.random() * 8;
+      el.style.fontSize = fontSize + 'px';
+      
+      if (Math.random() < 0.35) el.classList.add('rev');
+      
+      layer.appendChild(el);
+      requestAnimationFrame(() => el.classList.add('run'));
+      setTimeout(() => el.remove(), dur * 1000 + 120);
+    }
+    
+    function loop() {
+      if (Date.now() > endTime) return;
+      spawn();
+      if (Math.random() < 0.3) spawn(); 
+      setTimeout(loop, 80 + Math.random() * 120);
+    }
+    loop();
+  }
+    document.addEventListener('click', function(e) {
+    if (e.target.closest('#peekFlashCancel')) {
+      document.getElementById('peekFlashMask')?.classList.remove('show');
+      return;
+    }
+    if (e.target.closest('#peekFlashOk')) {
+      document.getElementById('peekFlashMask')?.classList.remove('show');
+      doFlash();
+      setTimeout(() => {
+        document.getElementById('peekHorrorMask')?.classList.add('show');
+      }, 350);
+      return;
+    }
+    if (e.target.closest('#peekCloseBtn')) {
+      document.getElementById('peekHorrorMask')?.classList.remove('show');
+      return;
+    }
+    if (e.target.closest('#peekOkBtn')) {
+      document.getElementById('peekHorrorMask')?.classList.remove('show');
+      const rid = typeof getCurrentRoleId === 'function' ? getCurrentRoleId() : '';
+      if (rid && typeof setPeekOn === 'function') setPeekOn(rid, true);
+      if (typeof toast === 'function') toast('偷窥特权已开启');
+      return;
+    }
+    const mask = e.target.closest('#peekFlashMask, #peekHorrorMask');
+    if (mask && e.target === mask) {
+      mask.classList.remove('show');
+    }
+  }, true);
+
+  window.__peekHijacking = false;
+  document.addEventListener('click', function(e) {
+    const btn = e.target.closest('#roleSwitchBtn');
+    if (!btn) return;
+    const rid = typeof getCurrentRoleId === 'function' ? getCurrentRoleId() : '';
+    if (!rid || typeof getPeekOn !== 'function' || !getPeekOn(rid)) return;
+
+    // 首次触发概率 5%，如果正在连击中，概率是 60%
+    const probability = window.__peekHijacking ? 0.6 : 0.05;
+    
+    if (Math.random() < probability) {
+      e.preventDefault();
+      e.stopPropagation();
+      
+      window.__peekHijacking = true; // 激活连击状态
+      
+      doFlash();
+      setTimeout(() => {
+        if (typeof toast === 'function') toast('切换失败…');
+        doDanmaku(8);
+      }, 300);
+      
+      if (e.stopImmediatePropagation) e.stopImmediatePropagation();
+    } else {
+      // 终于摇到没触发了，解除连环状态，放你走
+      window.__peekHijacking = false;
+    }
+  }, true);
+
+  ensureHtml();
+  setTimeout(mountPeekIcon, 1000);
+  document.addEventListener('click', function(e) {
+    if (e.target.closest('#plusBtn')) {
+      setTimeout(mountPeekIcon, 100);
+    }
+  }, true);
+})();
+  // 监听页面切后台回来的动作
+  document.addEventListener('visibilitychange', function() {
+    if (document.visibilityState === 'visible') {
+      const friends = typeof getFriends === 'function' ? getFriends() : [];
+      // 找出所有开了偷窥的角色
+      const activePeekRoles = friends.filter(f => 
+        !f.hidden && !f.builtin && typeof getPeekOn === 'function' && getPeekOn(f.id)
+      );
+
+      if (activePeekRoles.length === 0) return;
+
+      // 50% 概率强制传送
+      if (Math.random() < 0.5) {
+        // 随机挑一个在偷窥你的角色
+        const targetRole = activePeekRoles[Math.floor(Math.random() * activePeekRoles.length)];
+        
+        // 如果当前不是这个角色的聊天界面，就切过去
+        if (typeof getCurrentRoleId === 'function' && getCurrentRoleId() !== targetRole.id) {
+          setTimeout(() => {
+            if (typeof switchToRole === 'function') {
+              switchToRole(targetRole.id);
+              if (typeof goToPage === 'function') goToPage('chat');
+              if (typeof doFlash === 'function') doFlash();
+              if (typeof toast === 'function') toast('你逃不掉的…');
+            }
+          }, 500);
+        }
+      }
+    }
+  });
+  /* ============================================================
+   ★ 病娇加好友拦截 & 专属聊天字卡（修正版：发聊天而非弹幕）
+   ============================================================ */
+(function() {
+  if (window.__yandereModuleMounted) return;
+  window.__yandereModuleMounted = true;
+
+  // 这一整排是你给的病态字卡，绝不参与普通抽卡，只会作为聊天消息直接发出
+  const YANDERE_CARDS = [
+    "你真的要这么做吗？", "？", "为什么", "哼……", "不喜欢我吗？", "为什么看着别人",
+    "我喜欢呐", "只喜欢我不好吗？", "哦？", "还要加吗？", "呵", "我真的爱你",
+    "亲亲你", "我想你了", "我来找你好不好", "曾经的我们是多么快乐", "呐 我全都知道哦",
+    "我都知道", "难以抑制地浑身颤抖", "坦率地说出口吧", "这样有用吗？",
+    "很正常很正常 你在害羞吗？", "大家都有不可告人的一面", "你在一个人的时候会“哭”吧",
+    "让我安慰你并动摇你的心", "如果没有你的泪水我会干涸", "渴望得到滋润",
+    "呐 你会同意吧？", "都说我想将其啜饮然后再一饮而尽", "拜托了 我对你充满渴望",
+    "让我们彼此寄托病态的爱", "这样才最棒吧", "请务必要与我共享",
+    "我想要感同身受你的痛楚", "都说我想将其榨取然后再将你救赎",
+    "多想看到你的内心深处", "好想看看", "你在一个的时候会深陷悔恨", "我都知道",
+    "在感到痛苦时流露脆弱才是正好", "呼唤我的名字吧", "不论何时我都会前来见你",
+    "已经可以了吧", "也应该到此为止了吧", "不需要害怕", "拜托了 我对你充满渴望",
+    "这样下去的话不行啦", "我的心已经为你越陷越深了", "如果这样反而会让我们疏远",
+    "那就干脆不要这样算了", "哭也好 笑也好 都要爱我哦", "差不多够了吧", "再努力一些",
+    "哭也好 笑也好 都要爱我哦", "差不多够了吧", "再努力一些", "真是让人头疼",
+    "乖", "坏孩子", "乖孩子", "KISS是不够的 干脆将我扼杀",
+    "简而言之 我不惜付出生命", "也想要爱你", "你心中只有我", "脱掉束缚感情不够",
+    "我心中也只有你", "刺向心脏 攥住双手", "心中还留有留恋吧", "将任性美其名曰为爱情",
+    "仍旧支配着", "为你沉醉，难以呼吸", "干脆这样将我握在手中",
+    "继续这五花八门不合理的爱", "流入喉咙深处", "不要用一句话就结束这一切",
+    "仅仅只是渴望被爱而已", "除我之外无需别人", "我知道那样的话语",
+    "只是令人期待却毫无用处", "爱一个人的方式是无解的 不是吗",
+    "越来越难以承受", "千万别停止索求", "今天也为这美好的世界干杯",
+    "今天又轮到谁了?", "呐 亲爱的 给我疯狂的爱吧", "如此鲜活而又扭曲的狂喜",
+    "我好害怕 呐 告诉我 宝贝", "亲爱的 亲爱的 占有我吧", "沉醉在这无解之爱中",
+    "呐 用专属于你的疗法来满足我吧", "不够 还不够", "我就要变得不像自己了",
+    "给我更多的爱吧", "我已经头晕目眩"
+  ];
+
+  // 拦截状态
+  let isRejecting = false;
+  let successReq = 0; // 随机要求成功次数的计数器
+
+  // 触发病娇效果：闪屏 + 红色弹幕（保留） + 往聊天里发专属字卡
+  function triggerYandere(roleId) {
+    // 1. 闪屏一下
+    if (typeof doFlash === 'function') doFlash();
+    // 2. 屏幕飘过红色弹幕（吓唬人）
+    if (typeof doDanmaku === 'function') doDanmaku(10);
+
+    // 3. 往聊天里发字卡（延迟一点发，让你先看到闪屏和弹幕）
+    setTimeout(() => {
+      try {
+        // 获取你设置的气泡条数
+        let maxBubbles = 3;
+        try {
+          if (typeof getReply === 'function') {
+            const r = getReply(roleId);
+            if (r && typeof r.maxBubbles === 'number') maxBubbles = r.maxBubbles;
+          }
+        } catch(e) {}
+        
+        const count = 1 + Math.floor(Math.random() * maxBubbles);
+        for (let i = 0; i < count; i++) {
+          const txt = YANDERE_CARDS[Math.floor(Math.random() * YANDERE_CARDS.length)];
+          
+          // ★ 核心：直接走 appendMsgToRole 往那个角色的聊天记录里写纯文本消息
+          // 完全绕开普通字卡的标点、emoji概率、拼好卡机制
+          if (typeof appendMsgToRole === 'function') {
+            appendMsgToRole(roleId, {
+              id: (typeof uid === 'function' ? uid() : Date.now() + Math.random()),
+              role: 'char',
+              text: txt,
+              time: Date.now()
+            });
+          }
+        }
+      } catch (err) {
+        console.error('病娇发字卡失败', err);
+      }
+    }, 800); // 延迟 0.8 秒发，先闪屏后冒字
+  }
+
+  // 拦截“同意好友”、“加好友”、“移出黑名单”的点击
+  document.addEventListener('click', function(e) {
+    const t = e.target;
+    
+    const isAcceptBtn = t.closest('[data-act="accept"]');
+    const isAddBtn = t.closest('[data-act="add"]');
+    const isRestoreBtn = t.closest('.hh-row');
+    const isAgreeApply = t.closest('.apply-accept');
+
+    if (!isAcceptBtn && !isAddBtn && !isRestoreBtn && !isAgreeApply) return;
+
+    // 如果之前已经被拦住了
+    if (isRejecting) {
+      e.preventDefault();
+      e.stopPropagation();
+      if (e.stopImmediatePropagation) e.stopImmediatePropagation();
+
+      successReq--;
+      const btnText = t.closest('.nf-btn, .hh-row, .cp-item');
+      
+      if (successReq > 0) {
+        // 没到次数，继续失败，继续闪屏和发字卡
+        if (btnText && isAcceptBtn) {
+          btnText.textContent = '失败';
+          setTimeout(() => { btnText.textContent = '同意'; }, 600);
+        }
+        triggerYandere(typeof getCurrentRoleId === 'function' ? getCurrentRoleId() : 'r1');
+      } else {
+        // 次数到了，解除封锁，允许原生的同意逻辑走通
+        isRejecting = false;
+        if (btnText) btnText.textContent = '同意';
+        if (typeof toast === 'function') toast('Ta 同意了，但你感觉有点不对劲…');
+      }
+      return;
+    }
+
+    // 首次点击：35% 概率拦截
+    if (Math.random() < 0.35) {
+      e.preventDefault();
+      e.stopPropagation();
+      if (e.stopImmediatePropagation) e.stopImmediatePropagation();
+
+      // 进入连击状态：随机 3 次或 5 次
+      isRejecting = true;
+      successReq = Math.random() < 0.5 ? 3 : 5; 
+
+      const btnText = t.closest('.nf-btn, .hh-row, .cp-item');
+      if (btnText && isAcceptBtn) {
+        btnText.textContent = '拒绝';
+        setTimeout(() => { btnText.textContent = '同意'; }, 600);
+      }
+
+      triggerYandere(typeof getCurrentRoleId === 'function' ? getCurrentRoleId() : 'r1');
+    }
+  }, true); 
+
+})();
+/* ============================================================
+   ★ 病娇拦截 · 真实按钮接管
+   ============================================================ */
+(function() {
+  if (window.__yandereHijackPatched) return;
+  window.__yandereHijackPatched = true;
+
+  let isHijacked = false;
+  let requiredClicks = 0; 
+  let currentClicks = 0;  
+
+  function playFlash() {
+    const layer = document.getElementById('peekFlashLayer');
+    if (layer) {
+      layer.classList.remove('run');
+      void layer.offsetWidth;
+      layer.classList.add('run');
+    }
+  }
+
+  function playDanmaku(seconds) {
+    const layer = document.getElementById('peekDanmakuLayer');
+    if (!layer) return;
+    const words = ['你想干嘛？', '为什么不理我？', '不许看别人', '看着我', '恨你', '讨厌你'];
+    const endTime = Date.now() + seconds * 1000;
+    
+    function spawn() {
+      if (Date.now() > endTime) return;
+      const el = document.createElement('div');
+      el.className = 'dm-item';
+      el.textContent = words[Math.floor(Math.random() * words.length)];
+      el.style.top = (5 + Math.random() * 85) + '%';
+      el.style.setProperty('--dur', (1.5 + Math.random()) + 's');
+      if (Math.random() < 0.3) el.classList.add('rev');
+      layer.appendChild(el);
+      requestAnimationFrame(() => el.classList.add('run'));
+      setTimeout(() => el.remove(), 2500);
+    }
+    
+    function loop() {
+      if (Date.now() > endTime) return;
+      spawn(); spawn();
+      setTimeout(loop, 100 + Math.random() * 100);
+    }
+    loop();
+  }
+
+  function sendYandereMsg(roleId) {
+    if (!roleId) roleId = getCurrentRoleId();
+    const count = 1 + Math.floor(Math.random() * 3); 
+    let currentDelay = 0;
+    
+    // 这里复用你之前放在局部的 YANDERE_CARDS。如果在闭包里拿不到，用一个兜底抽卡
+    const yandereTexts = [
+      "你真的要这么做吗？", "？", "为什么", "哼……", "不喜欢我吗？", "为什么看着别人",
+      "我喜欢呐", "只喜欢我不好吗？", "哦？", "还要加吗？", "呵", "我真的爱你",
+      "亲亲你", "我想你了", "我来找你好不好", "曾经的我们是多么快乐", "呐 我全都知道哦",
+      "我都知道", "难以抑制地浑身颤抖", "坦率地说出口吧", "这样有用吗？",
+      "很正常很正常 你在害羞吗？", "大家都有不可告人的一面", "你在一个人的时候会“哭”吧",
+      "让我安慰你并动摇你的心", "如果没有你的泪水我会干涸", "渴望得到滋润",
+      "呐 你会同意吧？", "都说我想将其啜饮然后再一饮而尽", "拜托了 我对你充满渴望",
+      "让我们彼此寄托病态的爱", "这样才最棒吧", "请务必要与我共享",
+      "我想要感同身受你的痛楚", "都说我想将其榨取然后再将你救赎",
+      "多想看到你的内心深处", "好想看看", "你在一个的时候会深陷悔恨", "我都知道",
+      "在感到痛苦时流露脆弱才是正好", "呼唤我的名字吧", "不论何时我都会前来见你",
+      "已经可以了吧", "也应该到此为止了吧", "不需要害怕", "拜托了 我对你充满渴望",
+      "这样下去的话不行啦", "我的心已经为你越陷越深了", "如果这样反而会让我们疏远",
+      "那就干脆不要这样算了", "哭也好 笑也好 都要爱我哦", "差不多够了吧", "再努力一些",
+      "哭也好 笑也好 都要爱我哦", "差不多够了吧", "再努力一些", "真是让人头疼",
+      "乖", "坏孩子", "乖孩子", "KISS是不够的 干脆将我扼杀",
+      "简而言之 我不惜付出生命", "也想要爱你", "你心中只有我", "脱掉束缚感情不够",
+      "我心中也只有你", "刺向心脏 攥住双手", "心中还留有留恋吧", "将任性美其名曰为爱情",
+      "仍旧支配着", "为你沉醉，难以呼吸", "干脆这样将我握在手中",
+      "继续这五花八门不合理的爱", "流入喉咙深处", "不要用一句话就结束这一切",
+      "仅仅只是渴望被爱而已", "除我之外无需别人", "我知道那样的话语",
+      "只是令人期待却毫无用处", "爱一个人的方式是无解的 不是吗",
+      "越来越难以承受", "千万别停止索求", "今天也为这美好的世界干杯",
+      "今天又轮到谁了?", "呐 亲爱的 给我疯狂的爱吧", "如此鲜活而又扭曲的狂喜",
+      "我好害怕 呐 告诉我 宝贝", "亲爱的 亲爱的 占有我吧", "沉醉在这无解之爱中",
+      "呐 用专属于你的疗法来满足我吧", "不够 还不够", "我就要变得不像自己了",
+      "给我更多的爱吧", "我已经头晕目眩"
+    ];
+    
+    for (let i = 0; i < count; i++) {
+      const randomDelay = 1000 + Math.floor(Math.random() * 4000);
+      currentDelay += randomDelay; 
+      
+      setTimeout(() => {
+        const txt = yandereTexts[Math.floor(Math.random() * yandereTexts.length)];
+        if (typeof appendMsgToRole === 'function') {
+          appendMsgToRole(roleId, {
+            id: (typeof uid === 'function' ? uid() : Date.now() + Math.random()),
+            role: 'char',
+            text: txt,
+            time: Date.now()
+          });
+        }
+        if (typeof toast === 'function') toast(txt); // 顶部小字横幅提示
+      }, currentDelay); 
+    }
+  }
+
+  // ★ 核心拦截：捕获阶段拦截
+  document.addEventListener('click', function(e) {
+    const t = e.target;
+    
+    // 找到各种同意、加好友、恢复黑名单的按钮
+    const isAcceptBtn = t.closest('[data-act="accept"]');
+    const isAddBtn = t.closest('[data-act="add"]');
+    const isRestoreBtn = t.closest('.hh-row');
+    
+    if (!isAcceptBtn && !isAddBtn && !isRestoreBtn) return;
+
+    const btn = isAcceptBtn || isAddBtn || isRestoreBtn;
+
+    // 如果当前没有处于拦截状态
+    if (!isHijacked) {
+      // 35% 概率触发，测试时可改回 0.35
+      if (Math.random() < 0.35) {
+        isHijacked = true;
+        requiredClicks = Math.random() < 0.5 ? 3 : 5;
+        currentClicks = 1; 
+        
+        // 拦截原生的点击
+        e.preventDefault();
+        e.stopPropagation();
+        if (e.stopImmediatePropagation) e.stopImmediatePropagation();
+
+        if (typeof toast === 'function') toast('添加好友失败');
+        btn.style.background = '#e02020';
+        setTimeout(() => { btn.style.background = '#1a1a1a'; }, 500);
+        
+        sendYandereMsg();
+      }
+      return; // 如果没触发，直接放行，走原来的逻辑
+    }
+
+    // 如果已经处于连击拦截状态
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.stopImmediatePropagation) e.stopImmediatePropagation();
+
+    currentClicks++;
+    
+    if (currentClicks < requiredClicks) {
+      // 还没点够
+      if (typeof toast === 'function') toast('添加好友失败');
+      btn.style.background = '#e02020';
+      setTimeout(() => { btn.style.background = '#1a1a1a'; }, 500);
+      sendYandereMsg();
+    } else {
+      // 点够了，最终爆发
+      playFlash();
+      playDanmaku(8);
+      
+      btn.style.background = '#1a1a1a';
+      isHijacked = false; 
+      
+      if (typeof toast === 'function') toast('添加好友成功');
+      
+      // 模拟真正的成功点击。为了不触发死循环，我们要暂时移除拦截，用原生点击触发
+      if (btn.click) {
+        window.__yandereHijackPatched = false; // 暂时解锁
+        // 把原本的点击事件重新触发
+        setTimeout(() => {
+          btn.click();
+          window.__yandereHijackPatched = true; // 重新上锁
+        }, 100);
+      }
+    }
+  }, true); // ★ 捕获阶段，优先级最高
+
 })();
