@@ -32490,7 +32490,7 @@ setTimeout(function() {
     `;
     document.body.insertAdjacentHTML('beforeend', html);
   }
-    function mountPeekIcon() {
+  function mountPeekIcon() {
     const grid = document.querySelector('#drawerFunc .func-grid');
     if (!grid) return;
     if (grid.querySelector('.peek-eye-btn')) return;
@@ -32506,18 +32506,21 @@ setTimeout(function() {
     
     eye.addEventListener('click', function(e) {
       e.stopPropagation();
+      e.stopImmediatePropagation();
       if (typeof closeAllThings === 'function') closeAllThings('drawer');
       
-      const rid = typeof getCurrentRoleId === 'function' ? getCurrentRoleId() : '';
+      var KEY = 'mj_peek_v1';
+      var peek = null;
+      try{ peek = JSON.parse(localStorage.getItem(KEY) || 'null'); }catch(err){ peek = null; }
+      if (!peek || typeof peek !== 'object') peek = { on:false, rate:0.05, danmaku:15 };
       
-      // 如果已经开启了，再点一次就是关闭
-      if (rid && typeof getPeekOn === 'function' && getPeekOn(rid)) {
-        if (typeof setPeekOn === 'function') setPeekOn(rid, false);
+      if (peek.on) {
+        peek.on = false;
+        try{ localStorage.setItem(KEY, JSON.stringify(peek)); }catch(err){}
         if (typeof toast === 'function') toast('已关闭偷窥');
         return;
       }
       
-      // 如果是关着的，才弹闪屏警告去开启
       document.getElementById('peekFlashMask').classList.add('show');
     });
     
@@ -32611,6 +32614,11 @@ setTimeout(function() {
     loop();
   }
     document.addEventListener('click', function(e) {
+    var _peekEye = e.target.closest && e.target.closest('.peek-eye-btn');
+    if (_peekEye) {
+      var _rid0 = typeof getCurrentRoleId === 'function' ? getCurrentRoleId() : '';
+      if (_rid0 && typeof getPeekOn === 'function' && getPeekOn(_rid0)) return;
+    }
     if (e.target.closest('#peekFlashCancel')) {
       document.getElementById('peekFlashMask')?.classList.remove('show');
       return;
