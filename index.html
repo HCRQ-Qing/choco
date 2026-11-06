@@ -3211,11 +3211,7 @@
 </div>
 <!-- ============ 你可能认识 ============ -->
 <div class="screen" id="youKnowScreen">
-  <div class="a-top">
-    <button class="a-back" id="ykBack" type="button">‹</button>
-    <div class="a-title">你可能认识</div>
-    <button class="a-act" id="ykRefresh" type="button" style="font-size:11px;width:auto;padding:0 4px;letter-spacing:1px;">换一批</button>
-  </div>
+  <div id="utopHostYouKnow"></div>
   <div class="nf-list" id="ykList"></div>
 </div>
 
@@ -5088,6 +5084,10 @@
 <script src="js/avatar-upload.js"></script>
 <!-- ===== 气泡通用别名补丁 ===== -->
  
+<!-- ===== 图片三合一：红包封面 / 群图标 / 老表情图 → IndexedDB ===== -->
+<script src="js/media-idb.js"></script>
+<!-- ===== 备份导出/导入 → 自动剥离图片到 IndexedDB ===== -->
+<script src="js/media-idb-backup.js"></script>
 <!-- ===== 主应用逻辑（聊天/字卡/朋友/我的等） ===== -->
 <script src="js/app.js"></script>
 
@@ -5145,5 +5145,230 @@
 <script src="js/swipe-back.js"></script>
 <!-- ===== 截图库（用于真实截屏） ===== -->
 <script src="https://unpkg.com/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<!-- ============ 偷窥功能 · HTML 骨架 ============ -->
+<!-- 左侧抽屉的眼睛按钮（默认隐藏，等 JS 渲染进去） -->
+<div id="peekEyeTpl" style="display:none;">
+  <div class="ss-ico peek-eye-btn" title="偷窥">
+    <svg viewBox="0 0 24 24" style="stroke:#d63b3b;fill:none;stroke-width:1.6;">
+      <path d="M2.5 12 C5 7.5 8.5 5.5 12 5.5 C15.5 5.5 19 7.5 21.5 12 C19 16.5 15.5 18.5 12 18.5 C8.5 18.5 5 16.5 2.5 12 Z"/>
+      <circle cx="12" cy="12" r="3.2"/>
+    </svg>
+  </div>
+</div>
+
+<!-- 闪屏提醒弹窗（普通白底） -->
+<div class="modal" id="peekFlashMask">
+  <div class="overlay" data-close></div>
+  <div class="sheet" style="max-width:280px;border-radius:20px;padding:24px 22px 20px;text-align:center;border-top:4px solid #e02020;">
+    <div style="display:inline-block;background:#ffeaea;color:#e02020;font-size:10px;font-weight:700;padding:4px 10px;border-radius:12px;letter-spacing:2px;margin-bottom:14px;">⚠️ 光敏警告</div>
+    <h3 style="font-size:15px;font-weight:600;color:#1a1a1a;letter-spacing:1px;margin-bottom:10px;">是否开启闪屏特效？</h3>
+    <p style="font-size:13px;color:#666;line-height:1.8;margin-bottom:24px;">开启该功能后，部分操作会伴随<b style="color:#e02020;">闪光及黑白闪烁</b>。光敏性癫痫患者请谨慎操作。</p>
+    <div style="display:flex;justify-content:space-around;align-items:center;">
+      <button class="btn cancel" id="peekFlashCancel" type="button" style="background:transparent;border:none;font-size:13.5px;color:#999;letter-spacing:3px;cursor:pointer;">取 消</button>
+      <button class="btn ok-dark" id="peekFlashOk" type="button" style="background:transparent;border:none;font-size:13.5px;color:#1a1a1a;font-weight:600;letter-spacing:3px;cursor:pointer;">确 定</button>
+    </div>
+  </div>
+</div>
+
+<!-- 微恐大弹窗（黑底红边） -->
+<div class="modal" id="peekHorrorMask">
+  <div class="overlay" data-close></div>
+  <div class="sheet" style="max-width:280px;background:#0a0a0a;border:1px solid #2a0a0a;border-radius:20px;padding:30px 24px 22px;text-align:center;box-shadow:0 0 60px rgba(214,59,59,.35);">
+    <div style="width:70px;height:70px;margin:0 auto 6px;position:relative;display:flex;align-items:center;justify-content:center;">
+      <div style="position:absolute;inset:0;border-radius:50%;background:radial-gradient(circle,rgba(224,32,32,.28) 0%,transparent 65%);animation:pulseRing 3s ease-in-out infinite;"></div>
+      <svg viewBox="0 0 24 24" style="width:100%;height:100%;stroke:#e02020;fill:none;stroke-width:1.4;filter:drop-shadow(0 0 8px rgba(224,32,32,.55));">
+        <path d="M2.5 12 C5 7.5 8.5 5.5 12 5.5 C15.5 5.5 19 7.5 21.5 12 C19 16.5 15.5 18.5 12 18.5 C8.5 18.5 5 16.5 2.5 12 Z"/>
+        <circle cx="12" cy="12" r="3.2" fill="#e02020" stroke="none"/>
+      </svg>
+    </div>
+    <h3 style="font-size:15px;font-weight:600;color:#e02020;letter-spacing:5px;margin-bottom:12px;text-shadow:0 0 12px rgba(224,32,32,.6);">偷 窥</h3>
+    <p style="font-size:12px;color:#9a9a9a;line-height:1.85;margin-bottom:24px;letter-spacing:.3px;">开启后角色将会有权<b style="color:#e02020;font-weight:600;">偷窥你</b><br>并且<b style="color:#e02020;font-weight:600;">控制你的字卡网站</b><br>可能会删除你的其ta好友，谨慎开启！</p>
+    <div style="display:flex;justify-content:space-around;align-items:center;">
+      <button class="btn cancel" id="peekCloseBtn" type="button" style="background:transparent;border:none;font-size:13.5px;color:#666;letter-spacing:3px;cursor:pointer;">取 消</button>
+      <button class="btn ok-red" id="peekOkBtn" type="button" style="background:transparent;border:none;font-size:13.5px;color:#e02020;font-weight:600;letter-spacing:3px;cursor:pointer;text-shadow:0 0 10px rgba(224,32,32,.6);">确 定</button>
+    </div>
+  </div>
+</div>
+
+<!-- 闪屏 + 弹幕层 -->
+<div class="flash-layer" id="peekFlashLayer"></div>
+<div class="danmaku-layer" id="peekDanmakuLayer"></div>
+
+<style>
+/* 眼睛按钮激活态 */
+.ss-ico.peek-eye-btn.active { background: rgba(214,59,59,.1); border-radius: 50%; }
+/* 闪屏动画（黑/白/红快切） */
+.flash-layer { position:fixed; inset:0; pointer-events:none; z-index:9998; opacity:0; }
+.flash-layer.run { animation:peekFlashAnim .6s steps(1) 1; }
+@keyframes peekFlashAnim {
+  0%{opacity:0}10%{opacity:1;background:#000}20%{opacity:0}
+  30%{opacity:1;background:#fff}40%{opacity:0}
+  50%{opacity:1;background:#000}60%{opacity:0}
+  70%{opacity:1;background:#e02020}80%{opacity:0}100%{opacity:0}
+}
+/* 整屏弹幕层（最顶层） */
+.danmaku-layer { position:fixed; inset:0; overflow:hidden; pointer-events:none; z-index:9999; }
+.dm-item { position:absolute; left:0; white-space:nowrap; font-size:20px; font-weight:900; color:#c1121f; letter-spacing:3px; text-shadow:0 0 6px rgba(193,18,31,.9),0 0 14px rgba(193,18,31,.55),0 0 24px rgba(193,18,31,.35),0 1px 0 rgba(80,0,0,.6); filter:contrast(1.1); opacity:0; will-change:transform,opacity; }
+.dm-item.run { animation:dmFly var(--dur,2s) linear forwards; }
+@keyframes dmFly { 0%{transform:translateX(105vw);opacity:0} 6%{opacity:1} 92%{opacity:1} 100%{transform:translateX(-105%);opacity:0} }
+.dm-item.rev { animation-name:dmFlyRev; }
+@keyframes dmFlyRev { 0%{transform:translateX(-105%);opacity:0} 6%{opacity:1} 92%{opacity:1} 100%{transform:translateX(105vw);opacity:0} }
+</style>
 </body>
 </html>
+/* ============================================================
+   ★ 偷窥功能 · 前端逻辑接入
+   ============================================================ */
+
+// 1. 把红眼睛塞进左侧抽屉
+function initPeekEyeBtn() {
+  const sideBar = document.getElementById('splitSide');
+  const tpl = document.getElementById('peekEyeTpl');
+  if (!sideBar || !tpl) return;
+
+  // 避免重复注入
+  if (sideBar.querySelector('.peek-eye-btn')) return;
+
+  const eye = tpl.firstElementChild.cloneNode(true);
+  eye.style.display = 'flex'; // 显示出来
+  
+  // 点击眼睛：先弹光敏警告
+  eye.addEventListener('click', function() {
+    // 如果已经开启了，直接提示
+    const rid = getCurrentRoleId();
+    if (getPeekOn(rid)) {
+      toast('这个角色已经在偷窥你了…');
+      return;
+    }
+    document.getElementById('peekFlashMask').classList.add('show');
+  });
+
+  // 插到最前面（或者插在表情后面）
+  sideBar.insertBefore(eye, sideBar.firstChild);
+  updatePeekEyeActiveState();
+}
+
+// 2. 更新眼睛按钮的激活态
+function updatePeekEyeActiveState() {
+  const eye = document.querySelector('.peek-eye-btn');
+  if (eye) {
+    const rid = getCurrentRoleId();
+    eye.classList.toggle('active', getPeekOn(rid));
+  }
+}
+
+// 3. 闪屏播放 + 音效
+function playPeekFlash() {
+  const layer = document.getElementById('peekFlashLayer');
+  if (!layer) return;
+  
+  layer.classList.remove('run');
+  void layer.offsetWidth;
+  layer.classList.add('run');
+
+  try {
+    // 白噪音雪花 + 闷响
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const now = ctx.currentTime;
+    const dur = 0.55;
+    const buf = ctx.createBuffer(1, ctx.sampleRate * dur, ctx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * 0.5;
+    const src = ctx.createBufferSource(); src.buffer = buf;
+    const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 2000; bp.Q.value = 0.8;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, now);
+    g.gain.exponentialRampToValueAtTime(0.22, now + 0.01);
+    g.gain.setValueAtTime(0.22, now + dur * 0.5);
+    g.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+    src.connect(bp); bp.connect(g); g.connect(ctx.destination);
+    src.start(now); src.stop(now + dur);
+    
+    const o = ctx.createOscillator(), og = ctx.createGain();
+    o.type = 'sine'; o.frequency.setValueAtTime(80, now);
+    o.frequency.exponentialRampToValueAtTime(30, now + 0.4);
+    og.gain.setValueAtTime(0.0001, now);
+    og.gain.exponentialRampToValueAtTime(0.28, now + 0.01);
+    og.gain.exponentialRampToValueAtTime(0.0001, now + 0.45);
+    o.connect(og); og.connect(ctx.destination);
+    o.start(now); o.stop(now + 0.5);
+  } catch(e) {}
+}
+
+// 4. 整屏弹幕
+const PEEK_WORDS = ['你想干嘛？','为什么不理我？','为什么？','恨你','讨厌你','我好喜欢你啊','好喜欢你啊','不要这样','ta们是谁','你在看谁','不许看别人','回我一下好不好','你是不是烦我了','我一直在等你','你只属于我','别走','看着我','只能看我一个'];
+function playPeekDanmaku(seconds) {
+  const layer = document.getElementById('peekDanmakuLayer');
+  if (!layer) return;
+  
+  const startTime = Date.now();
+  const endTime = startTime + seconds * 1000;
+  
+  function spawn() {
+    if (Date.now() > endTime) return;
+    const el = document.createElement('div');
+    el.className = 'dm-item';
+    el.textContent = PEEK_WORDS[Math.floor(Math.random() * PEEK_WORDS.length)];
+    el.style.top = (8 + Math.random() * 84) + '%';
+    const dur = 1.3 + Math.random() * 1.2;
+    el.style.setProperty('--dur', dur + 's');
+    if (Math.random() < 0.3) el.classList.add('rev');
+    layer.appendChild(el);
+    requestAnimationFrame(() => el.classList.add('run'));
+    setTimeout(() => el.remove(), dur * 1000 + 120);
+  }
+  
+  function loop() {
+    if (Date.now() > endTime) return;
+    spawn();
+    setTimeout(loop, 150 + Math.random() * 200);
+  }
+  loop();
+}
+
+// 5. 按钮事件绑定
+document.addEventListener('click', function(e) {
+  const t = e.target;
+  
+  // 光敏弹窗 -> 取消
+  if (t.closest('#peekFlashCancel')) {
+    document.getElementById('peekFlashMask').classList.remove('show');
+    return;
+  }
+  
+  // 光敏弹窗 -> 确定
+  if (t.closest('#peekFlashOk')) {
+    document.getElementById('peekFlashMask').classList.remove('show');
+    playPeekFlash();
+    setTimeout(() => {
+      document.getElementById('peekHorrorMask').classList.add('show');
+    }, 350); // 闪到一半再弹窗
+    return;
+  }
+  
+  // 微恐弹窗 -> 取消
+  if (t.closest('#peekCloseBtn')) {
+    document.getElementById('peekHorrorMask').classList.remove('show');
+    return;
+  }
+  
+  // 微恐弹窗 -> 确定
+  if (t.closest('#peekOkBtn')) {
+    document.getElementById('peekHorrorMask').classList.remove('show');
+    const rid = getCurrentRoleId();
+    setPeekOn(rid, true);
+    updatePeekEyeActiveState();
+    toast('偷窥已开启…');
+    // 触发一次弹幕吓吓用户
+    playPeekDanmaku(8);
+    return;
+  }
+  
+  // 点遮罩关闭
+  if (t.id === 'peekFlashMask' || t.id === 'peekHorrorMask') {
+    t.classList.remove('show');
+  }
+}, true);
+
+// 初始化
+setTimeout(initPeekEyeBtn, 1000);
