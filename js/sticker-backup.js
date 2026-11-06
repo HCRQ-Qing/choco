@@ -118,95 +118,122 @@
     var store = loadStore();
     var keys = Array.isArray(bucketKeys) && bucketKeys.length ? bucketKeys : Object.keys(store);
     var out = { __type: 'choco-sticker', __version: 1, exportedAt: Date.now(), buckets: {} };
-    var pending = 0;
-    var done = false;
-    function flush(){
-      if(done) return;
-      done = true;
-      var json = JSON.stringify(out);
-      var blob = new Blob([json], { type: 'application/json' });
-      var url = URL.createObjectURL(blob);
-      var a = document.createElement('a');
-      var d = new Date();
-      function p(n){ return String(n).padStart(2, '0'); }
-      a.download = 'choco-sticker-' + d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()) + '-' + p(d.getHours()) + p(d.getMinutes()) + '.json';
-      a.href = url;
-      a.style.display = 'none';
-      document.body.appendChild(a);
-      a.click();
-      setTimeout(function(){
-        URL.revokeObjectURL(url);
-        if(a.parentNode) a.parentNode.removeChild(a);
-      }, 1500);
-      return json.length;
-    }
+
+    if(typeof toast === 'function') toast('正在打包表情，图片多时请稍候…');
+
+    var allTasks = [];
     keys.forEach(function(k){
       var bucket = store[k];
       if(!bucket || !Array.isArray(bucket.cats)) return;
-      pending++;
-      var cats = bucket.cats;
-      var newCats = [];
-      var i = 0;
-      function nextCat(){
-        if(i >= cats.length){
-          out.buckets[k] = { cats: newCats };
-          pending--;
-          if(pending <= 0) flush();
-          return;
-        }
-        var c = cats[i++];
-        var cat = { name: c.name, list: [] };
-        var j = 0;
-        function nextItem(){
-          if(j >= (c.list || []).length){
-            newCats.push(cat);
-            nextCat();
-            return;
-          }
-          var src = c.list[j++];
-          resolveSticker(src).then(function(url){
-            if(url){ cat.list.push(url); }
-            else if(src && src.indexOf('idb:') !== 0 && src.indexOf(IDB_PREFIX) !== 0){ cat.list.push(src); }
-            nextItem();
-          }).catch(function(){ nextItem(); });
-        }
-        nextItem();
-      }
-      nextCat();
+      bucket.cats.forEach(function(c){
+        (c.list || []).forEach(function(src){
+          allTasks.push({ bucketKey: k, catName: c.name, src: src });
+        });
+      });
     });
-    if(pending === 0) flush();
+
+    var idx = 0;
+    function nextTask(){
+      if(idx >= allTasks.length){
+        var json = JSON.stringify(out);
+        var blob = new Blob([json], { type: 'application/json' });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        var d = new Date();
+        function p(n){ return String(n).padStart(2, '0'); }
+        a.download = 'choco-sticker-' + d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()) + '-' + p(d.getHours()) + p(d.getMinutes()) + '.json';
+        a.href = url;
+        a.style.display = 'none';
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(function(){
+          URL.revokeObjectURL(url);
+          if(a.parentNode) a.parentNode.removeChild(a);
+        }, 1500);
+        if(typeof toast === 'function') toast('表情备份已导出');
+        return;
+      }
+
+      var task = allTasks[idx++];
+      if(!out.buckets[task.bucketKey]) out.buckets[task.bucketKey] = { cats: [] };
+      var b = out.buckets[task.bucketKey];
+      var cat = b.cats.find(function(x){ return x.name === task.catName; });
+      if(!cat){ cat = { name: task.catName, list: [] }; b.cats.push(cat); }
+
+      resolveSticker(task.src).then(function(url){
+        if(url){ cat.list.push(url); }
+        else if(task.src && task.src.indexOf('idb:') !== 0 && task.src.indexOf(IDB_PREFIX) !== 0){ cat.list.push(task.src); }
+        setTimeout(nextTask, 0);
+      }).catch(function(){
+        setTimeout(nextTask, 0);
+      });
+    }
+    if(allTasks.length === 0){
+      nextTask();
+    } else {
+      nextTask();
+    }
   }
 
   function importStickersFromJson(json){
     var data = null;
     try{ data = (typeof json === 'string') ? JSON.parse(json) : json; }catch(e){ return Promise.reject(e); }
     if(!data || data.__type !== 'choco-sticker') return Promise.reject(new Error('不是表情包文件'));
+    
     var buckets = data.buckets || {};
-    var store = loadStore();
-    var tasks = [];
+    var allTasks = [];
+    
     Object.keys(buckets).forEach(function(bkey){
       var incoming = buckets[bkey];
       if(!incoming || !Array.isArray(incoming.cats)) return;
-      if(!store[bkey] || !Array.isArray(store[bkey].cats) || !store[bkey].cats.length){
-        store[bkey] = { cats: [] };
-      }
-      var dst = store[bkey].cats;
       incoming.cats.forEach(function(ic){
         if(!ic || !Array.isArray(ic.list)) return;
-        var tcat = dst.find(function(x){ return x.name === ic.name; });
-        if(!tcat){ tcat = { name: ic.name || '默认', list: [] }; dst.push(tcat); }
         ic.list.forEach(function(src){
-          if(!src) return;
-          tasks.push(putStickerToIdb(src).then(function(idbKey){
-            if(idbKey){ tcat.list.push(idbKey); }
-            else { tcat.list.push(src); }
-          }).catch(function(){}));
+          if(src) allTasks.push({ bkey: bkey, catName: ic.name || '默认', src: src });
         });
       });
     });
-    return Promise.all(tasks).then(function(){
-      saveStore(store);
-      return true;
+
+    var store = loadStore();
+    Object.keys(buckets).forEach(function(bkey){
+      if(!store[bkey] || !Array.isArray(store[bkey].cats) || !store[bkey].cats.length){
+        store[bkey] = { cats: [] };
+      }
+      buckets[bkey].cats.forEach(function(ic){
+        if(!store[bkey].cats.find(function(x){ return x.name === ic.name; })){
+          store[bkey].cats.push({ name: ic.name || '默认', list: [] });
+        }
+      });
+    });
+
+    if(typeof toast === 'function') toast('正在恢复表情包，请稍候…');
+    
+    return new Promise(function(resolve){
+      var idx = 0;
+      var total = allTasks.length;
+      if(total === 0){ saveStore(store); resolve(true); return; }
+      
+      function nextTask(){
+        if(idx >= total){
+          saveStore(store);
+          resolve(true);
+          return;
+        }
+        var task = allTasks[idx++];
+        putStickerToIdb(task.src).then(function(idbKey){
+          var dstCats = store[task.bkey].cats;
+          var tcat = dstCats.find(function(x){ return x.name === task.catName; });
+          if(tcat){
+            if(idbKey) tcat.list.push(idbKey);
+            else tcat.list.push(task.src);
+          }
+          if(idx % 20 === 0 || idx === total) saveStore(store);
+          setTimeout(nextTask, 0);
+        }).catch(function(){
+          setTimeout(nextTask, 0);
+        });
+      }
+      nextTask();
     });
   }
 
