@@ -743,6 +743,29 @@
 .flip-card-back {
   transform: rotateY(180deg);
 }
+.flip-card-wrapper.flipped .flip-card-back,
+.flip-card-wrapper.settled .flip-card-back {
+  opacity: 1 !important;
+  -webkit-backface-visibility: visible !important;
+  backface-visibility: visible !important;
+}
+.flip-card-wrapper.settled .flip-card-inner {
+  transition: none !important;
+}
+.flip-card-wrapper.flipped .flip-card-front {
+  opacity: 0 !important;
+}
+html.no-preserve3d .flip-card-wrapper.flipped .flip-card-inner {
+  transform: none !important;
+}
+html.no-preserve3d .flip-card-wrapper.flipped .flip-card-front {
+  opacity: 0 !important;
+  transform: none !important;
+}
+html.no-preserve3d .flip-card-wrapper.flipped .flip-card-back {
+  opacity: 1 !important;
+  transform: none !important;
+}
 
 /* 不支持 preserve-3d 的内核：直接切 DOM，不做 3D 旋转 */
 html.no-preserve3d .flip-card-inner{
