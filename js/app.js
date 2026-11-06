@@ -2129,21 +2129,11 @@ function isTimedCatDisabled(catId){
 function pickRoleSticker(roleId){
   try{
     const rid = roleId || getCurrentRoleId();
-    /* 开关打开 + 15% 概率 → 从「我的表情图」抽 */
-    if(getStickerAllowMine(rid) && Math.random() < 0.15){
-      const mineCats = getStickerBucket('mine');
-      const minePool = [];
-      mineCats.forEach(c=>{ (c.list||[]).forEach(src=>{ if(src && String(src).trim()) minePool.push(String(src)); }); });
-      /* 图片不参与随机组合：抽 1 张就返回 1 张 */
-      if(minePool.length) return minePool[Math.floor(Math.random()*minePool.length)];
-      /* 我的表情图为空 → 回退到角色自己的 */
-    }
     const cats = getRoleStickerCats(rid);
     if(!cats.length) return '';
     const pool = [];
     cats.forEach(c=>{ (c.list||[]).forEach(src=>{ if(src && String(src).trim()) pool.push(String(src)); }); });
     if(!pool.length) return '';
-    /* 图片不参与随机组合：抽 1 张就返回 1 张 */
     return pool[Math.floor(Math.random()*pool.length)];
   }catch(e){ return ''; }
 }
@@ -9549,19 +9539,7 @@ function setCardStrategy(roleId, v){
   lsSet(CARD_STRATEGY_KEY, m);
 }
 
-/* 允许角色用我的表情图：每个角色独立开关 */
-const STICKER_ALLOW_MINE_KEY = 'mj_sticker_allow_mine_v1';
-function getStickerAllowMine(roleId){
-  if(!roleId) return false;
-  const m = lsGet(STICKER_ALLOW_MINE_KEY, {});
-  return !!m[roleId];
-}
-function setStickerAllowMine(roleId, v){
-  if(!roleId) return;
-  const m = lsGet(STICKER_ALLOW_MINE_KEY, {});
-  m[roleId] = !!v;
-  lsSet(STICKER_ALLOW_MINE_KEY, m);
-}
+ 
 
 /* 角色专用：取某个角色的所有分类（给 genReply 抽图用） */
 function getRoleStickerCats(roleId){
@@ -10192,25 +10170,14 @@ function renderFoot(){
   if(!editing){
     /* sticker tab 特殊：多一个「允许角色用我的表情图」开关 */
     if(currentTab === 'sticker'){
-      const allowMine = getStickerAllowMine(getCurrentRoleId());
       footViewHintHTML.marginLeft = true;
       footViewHintHTML.prefix = '';
       box.innerHTML =
         '<button class="df-btn" id="btnStartEdit">编辑</button>' +
         footViewHintHTML() +
-        '<button class="df-btn" id="btnStickerAllowMine" style="margin-left:auto">' +
-          (allowMine ? '已允许角色用我的表情图' : '允许角色用我的表情图') +
-        '</button>';
+        '<div style="flex:1"></div>';
 
       bindFootStartEditBtn();
-
-      const bAllow = $('#btnStickerAllowMine');
-      if(bAllow) bAllow.addEventListener('click', ()=>{
-        const cur = getStickerAllowMine(getCurrentRoleId());
-        setStickerAllowMine(getCurrentRoleId(), !cur);
-        renderFoot();
-        toast(!cur ? '已允许角色用我的表情图' : '已关闭');
-      });
 
       bindFootViewSideBtn();
       return;
@@ -14072,6 +14039,34 @@ function applyTopbarBg2(){
     _setTopbarImage('url(' + url + ')', _op, c.blur || 0);
   });
 }
+
+/* ===== 一起看背景（单独一套，不跟聊天页共用） ===== */
+const WATCH_BG_KEY = 'mj_watch_bg_v1';
+function getWatchBgCfg(){
+  let c = lsGet(WATCH_BG_KEY, null);
+  if(!c || typeof c !== 'object') c = { key:'', opacity:100, blur:0 };
+  if(typeof c.opacity !== 'number') c.opacity = 100;
+  if(typeof c.blur !== 'number') c.blur = 0;
+  return c;
+}
+function saveWatchBgCfg(c){ lsSet(WATCH_BG_KEY, c); }
+function applyWatchBg(){
+  const c = getWatchBgCfg();
+  const scr = document.getElementById('watchScreen');
+  if(!scr) return;
+  if(!c.key){
+    scr.style.setProperty('--watch-bg-img', 'none');
+    scr.style.setProperty('--watch-bg-opacity', '1');
+    scr.style.setProperty('--watch-bg-blur', '0px');
+    return;
+  }
+  __idb.toURL(c.key).then(function(url){
+    if(!url) return;
+    scr.style.setProperty('--watch-bg-img', 'url(' + url + ')');
+    scr.style.setProperty('--watch-bg-opacity', String(c.opacity / 100));
+    scr.style.setProperty('--watch-bg-blur', (c.blur || 0) + 'px');
+  });
+}
 function renderBgImgPanel(){
   const cc = getChatBgCfg(), tc = getTopbarBgCfg();
   const cp = document.getElementById('chatBgPreview');
@@ -14129,6 +14124,93 @@ function renderBgImgPanel(){
   inp.type='file'; inp.accept='image/*'; inp.id='bgImgPicker'; inp.style.display='none';
   document.body.appendChild(inp);
 })();
+(function ensureWatchBgInput(){
+  if(document.getElementById('watchBgPicker')) return;
+  var inp = document.createElement('input');
+  inp.type='file'; inp.accept='image/*'; inp.id='watchBgPicker'; inp.style.display='none';
+  document.body.appendChild(inp);
+  inp.addEventListener('change', function(){
+    var f = inp.files && inp.files[0];
+    inp.value = '';
+    if(!f) return;
+    openCrop(f, window.innerWidth / window.innerHeight, '调整一起看背景', function(dataUrl){
+      function toBlob(u){
+        var parts = String(u).split(',');
+        var mime = (parts[0].match(/:(.*?);/) || [])[1] || 'image/png';
+        var bin = atob(parts[1]);
+        var len = bin.length;
+        var arr = new Uint8Array(len);
+        for(var i = 0; i < len; i++) arr[i] = bin.charCodeAt(i);
+        return new Blob([arr], { type: mime });
+      }
+      var blob = toBlob(dataUrl);
+      var key = 'watchbg_' + Date.now().toString(36);
+      __idb.set(key, blob).then(function(){
+        var c = getWatchBgCfg();
+        if(c.key) __idb.del(c.key).catch(function(){});
+        c.key = key;
+        saveWatchBgCfg(c);
+        applyWatchBg();
+        renderMyWatchBgSub();
+        toast('一起看背景已上传');
+      }).catch(function(err){
+        console.error(err);
+        toast('上传失败');
+      });
+    });
+  });
+})();
+function renderMyWatchBgSub(){
+  var c = getWatchBgCfg();
+  var prev = document.getElementById('myWatchBgPrev');
+  if(prev){
+    prev.style.aspectRatio = '16/9';
+    prev.style.background = '#f7f7f7';
+    prev.style.border = '0.7px solid rgba(0,0,0,.08)';
+    prev.style.borderRadius = '12px';
+    prev.style.display = 'flex';
+    prev.style.alignItems = 'center';
+    prev.style.justifyContent = 'center';
+    prev.style.overflow = 'hidden';
+    prev.style.marginBottom = '14px';
+    if(c.key){
+      __idb.toURL(c.key).then(function(u){
+        if(u) prev.innerHTML = '<img src="' + u + '" style="width:100%;height:100%;object-fit:cover;display:block">';
+        else prev.innerHTML = '<span class="ph" style="font-size:12px;color:#c8c8c8;letter-spacing:1px;font-weight:300">还没上传</span>';
+      }).catch(function(){
+        prev.innerHTML = '<span class="ph" style="font-size:12px;color:#c8c8c8;letter-spacing:1px;font-weight:300">还没上传</span>';
+      });
+    } else {
+      prev.innerHTML = '<span class="ph" style="font-size:12px;color:#c8c8c8;letter-spacing:1px;font-weight:300">还没上传</span>';
+    }
+  }
+  var op = document.getElementById('myWatchBgOpacity'); if(op) op.value = c.opacity;
+  var opv = document.getElementById('myWatchBgOpacityVal'); if(opv) opv.textContent = c.opacity + '%';
+  var bl = document.getElementById('myWatchBgBlur'); if(bl) bl.value = c.blur;
+  var blv = document.getElementById('myWatchBgBlurVal'); if(blv) blv.textContent = c.blur + 'px';
+}
+document.addEventListener('click', function(e){
+  var t = e.target;
+  if(!t || !t.closest) return;
+  if(t.closest('#myWatchBgUpload')){
+    e.preventDefault(); e.stopPropagation();
+    var f = document.getElementById('watchBgPicker');
+    if(f){ f.value = ''; f.click(); }
+    return;
+  }
+  if(t.closest('#myWatchBgReset')){
+    e.preventDefault(); e.stopPropagation();
+    var c = getWatchBgCfg();
+    if(c.key) __idb.del(c.key).catch(function(){});
+    c.key = '';
+    saveWatchBgCfg(c);
+    applyWatchBg();
+    renderMyWatchBgSub();
+    toast('已恢复默认');
+    return;
+  }
+}, true);
+setTimeout(function(){ try{ applyWatchBg(); }catch(e){} }, 800);
 var _bgUploadTarget = '';
 document.addEventListener('click', function(e){
   var t = e.target;
@@ -14186,6 +14268,24 @@ document.addEventListener('change', function(e){
 document.addEventListener('input', function(e){
   var t = e.target;
   if(!t || !t.id) return;
+  if(t.id==='myWatchBgOpacity'){
+    var wc1 = getWatchBgCfg();
+    wc1.opacity = parseInt(t.value, 10) || 0;
+    saveWatchBgCfg(wc1);
+    var wv1 = document.getElementById('myWatchBgOpacityVal');
+    if(wv1) wv1.textContent = wc1.opacity + '%';
+    applyWatchBg();
+    return;
+  }
+  if(t.id==='myWatchBgBlur'){
+    var wc2 = getWatchBgCfg();
+    wc2.blur = parseInt(t.value, 10) || 0;
+    saveWatchBgCfg(wc2);
+    var wv2 = document.getElementById('myWatchBgBlurVal');
+    if(wv2) wv2.textContent = wc2.blur + 'px';
+    applyWatchBg();
+    return;
+  }
   if(t.id==='chatBgOpacity'){ 
     var c=getChatBgCfg(); 
     c.opacity=parseInt(t.value,10); 
@@ -21944,32 +22044,40 @@ const WATCH_CHATPOS_KEY = 'mj_watch_chat_pos_v1';
 
 /* 解析视频链接 → {type, id, label, embed} */
 function parseVideoUrl(input){
-  const s = String(input || '').trim();
+  let s = String(input || '').trim();
   if(!s) return null;
-  /* B站 BV号 */
-  const bv = s.match(/BV[0-9A-Za-z]{10}/);
-  if(bv){
+
+  /* 1. 提取链接（应对类似“【标题】 https://b23.tv/xxx”这种带字的情况） */
+  const urlMatch = s.match(/https?:\/\/[^\s]+/);
+  if (urlMatch) s = urlMatch[0];
+
+  /* 2. 解析 B站 */
+  const bvMatch = s.match(/BV[0-9A-Za-z]{10}/);
+  if (bvMatch) {
     return {
-      type:'bilibili', id:bv[0], label:bv[0],
-      embed:'https://player.bilibili.com/player.html?bvid=' + bv[0] + '&page=1&high_quality=1&danmaku=1&as_wide=1'
+      type:'bilibili', id:bvMatch[0], label:bvMatch[0],
+      embed:'https://player.bilibili.com/player.html?bvid=' + bvMatch[0] + '&page=1&high_quality=1&danmaku=1&as_wide=1&autoplay=0'
     };
   }
-  /* YouTube */
-  let yt = s.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([0-9A-Za-z_-]{11})/);
-  if(yt){
+
+  /* 3. 解析 YouTube */
+  let yt = s.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/shorts\/)([0-9A-Za-z_-]{11})/);
+  if (yt) {
     return {
       type:'youtube', id:yt[1], label:'YT:' + yt[1],
-      embed:'https://www.youtube.com/embed/' + yt[1] + '?autoplay=1&rel=0&enablejsapi=1&origin=' + encodeURIComponent(location.origin)
+      embed:'https://www.youtube.com/embed/' + yt[1] + '?autoplay=0&rel=0&enablejsapi=1&origin=' + encodeURIComponent(location.origin)
     };
   }
-  /* 抖音：无可靠内嵌，返回外链（走新标签打开） */
+
+  /* 4. 解析 抖音 */
   let dy = s.match(/douyin\.com\/(?:video\/)?(\d+)/);
-  if(dy){
+  if (dy) {
     return {
       type:'douyin', id:dy[1], label:'抖音' + dy[1].slice(-6),
       embed:''
     };
   }
+  
   return null;
 }
 
@@ -22196,66 +22304,29 @@ function stopWatchRoleActions(){
   hideWatchOverlay();
 }
 
-/* 聊天框拖拽 */
+/* 悬浮聊天框 · 样式 A 版：不再拖拽，只保留收起/展开 */
 function bindWatchChatDrag(){
   const chat = document.getElementById('watchChat');
   const head = document.getElementById('wcHead');
   if(!chat || !head) return;
-  /* 恢复上次位置 */
-  const pos = lsGet(WATCH_CHATPOS_KEY, null);
-  if(pos && typeof pos.left === 'number'){
-    chat.style.left = pos.left + 'px';
-    chat.style.top = pos.top + 'px';
-    chat.style.bottom = 'auto';
-  }
-  let sx=0, sy=0, ox=0, oy=0, dragging=false;
-  head.addEventListener('pointerdown', function(e){
+  /* 样式 A 下聊天框固定在底部，清掉上次遗留的 left/top */
+  chat.style.left = '';
+  chat.style.top = '';
+  chat.style.bottom = '';
+  try{ lsSet(WATCH_CHATPOS_KEY, null); }catch(e){}
+  /* 头部只负责收起/展开，不拖拽 */
+  head.style.cursor = 'pointer';
+  head.addEventListener('click', function(e){
     if(e.target.closest('#wcCollapse')) return;
-    dragging = true;
-    sx = e.clientX; sy = e.clientY;
-    const r = chat.getBoundingClientRect();
-    ox = r.left; oy = r.top;
-    chat.classList.add('dragging');
-    try{ head.setPointerCapture(e.pointerId); }catch(_){}
-    e.preventDefault();
+    chat.classList.toggle('collapsed');
+    const colBtn = document.getElementById('wcCollapse');
+    if(colBtn) colBtn.textContent = chat.classList.contains('collapsed') ? '▴' : '▾';
   });
-  head.addEventListener('pointermove', function(e){
-    if(!dragging) return;
-    let nx = ox + (e.clientX - sx);
-    let ny = oy + (e.clientY - sy);
-    nx = Math.max(0, Math.min(window.innerWidth - 40, nx));
-    ny = Math.max(0, Math.min(window.innerHeight - 40, ny));
-    chat.style.left = nx + 'px';
-    chat.style.top = ny + 'px';
-    chat.style.bottom = 'auto';
-  });
-  function end(e){
-    if(!dragging) return;
-    dragging = false;
-    chat.classList.remove('dragging');
-    try{ head.releasePointerCapture(e.pointerId); }catch(_){}
-    const r = chat.getBoundingClientRect();
-    lsSet(WATCH_CHATPOS_KEY, {left:r.left, top:r.top});
-  }
-  head.addEventListener('pointerup', end);
-  head.addEventListener('pointercancel', end);
 }
 
 /* 多人放映厅：渲染参与者头像条 */
 function renderWatchAvatars(){
-  const box = document.getElementById('wcAvatars');
-  if(!box) return;
-  let html = __watchRoleIds.map(rid => {
-    const r = getRoleById(rid);
-    const name = (r && r.name) || '?';
-    const av = r && r.avatar;
-    if(av) return '<span class="wc-av"><img src="' + escapeHTML(av) + '"></span>';
-    return '<span class="wc-av">' + escapeHTML(name.charAt(0)) + '</span>';
-  }).join('');
-  html += '<span class="wc-av wc-av-add" id="wcAvAdd" title="邀请角色">+</span>';
-  box.innerHTML = html;
-  const add = document.getElementById('wcAvAdd');
-  if(add) add.onclick = addWatchRole;
+  /* 样式A已移除头像条，这里留空 */
 }
 /* 邀请一个新角色加入放映厅 */
 function addWatchRole(){
@@ -22310,6 +22381,7 @@ function openWatchScreen(roleIds){
   if(body) body.innerHTML = '';
   if(chat) chat.classList.remove('collapsed');
   renderWatchAvatars();
+  applyWatchBg();
 
   /* 最近看过 */
   renderWatchRecent();
@@ -22357,7 +22429,10 @@ function openWatchScreen(roleIds){
   /* 加载视频 */
   function loadVideo(forcedItem){
     const item = forcedItem || parseVideoUrl(input.value);
-    if(!item){ toast('请输入有效的 B站 / 油管 / 抖音链接'); return; }
+    if(!item){ 
+      toast('没认出链接，请粘贴完整的网页链接，或 B站的 BV 号'); 
+      return; 
+    }
     if(item.type === 'douyin'){
       /* 抖音不支持内嵌，新标签打开 */
       window.open('https://www.douyin.com/video/' + item.id, '_blank');
@@ -22382,15 +22457,42 @@ function openWatchScreen(roleIds){
   const fsBtn = document.getElementById('wcFullscreen');
   const smBtn = document.getElementById('wcSmall');
   if(fsBtn) fsBtn.onclick = function(){
+    if(!screen.classList.contains('fullscreen')){
+      /* ★ 新增：如果还没输入视频链接，不让全屏 */
+      const curUrl = input.value.trim() || frame.src;
+      if(!curUrl || frame.src === 'about:blank'){
+        toast('请先输入视频链接，和 TA 开始看');
+        return;
+      }
+    }
     screen.classList.toggle('fullscreen');
     screen.classList.remove('small');
+    
+    const modeBtn = document.getElementById('wcScreenMode');
+    if(modeBtn) modeBtn.style.display = screen.classList.contains('fullscreen') ? 'block' : 'none';
+    
     toast(screen.classList.contains('fullscreen') ? '全屏模式' : '退出全屏');
+  };
+
+  /* ★ 新增：全屏时的横屏 / 竖屏切换 */
+  const modeBtn = document.getElementById('wcScreenMode');
+  if(modeBtn) modeBtn.onclick = function(){
+    screen.classList.toggle('watch-portrait');
+    const isPortrait = screen.classList.contains('watch-portrait');
+    modeBtn.textContent = isPortrait ? '↔ 竖屏' : '↔ 横屏';
   };
   if(smBtn) smBtn.onclick = function(){
     screen.classList.toggle('small');
     screen.classList.remove('fullscreen');
     toast(screen.classList.contains('small') ? '小屏模式（右下角）' : '退出小屏');
   };
+  if(chat){
+    if(screen.classList.contains('fullscreen')){
+      chat.style.display = 'none';
+    } else {
+      chat.style.display = 'flex';
+    }
+  }
 
   /* 画中画 PiP */
   const pipBtn = document.getElementById('wcPip');
@@ -25746,6 +25848,13 @@ function renderReplyPanel(tab){
 		</div>
 		<div class="desc">你打给 Ta 时直接小窗不占全屏</div>
 	  </div>
+	  <div class="section">
+		<div class="title title-sw">
+		  <span>防挂断</span>
+		  <label class="switch"><input type="checkbox" id="rsCallNoAutoHangup" ${(callCfg.noAutoHangup)?'checked':''}><span class="slider"></span></label>
+		</div>
+		<div class="desc">开启后，Ta 不会主动挂断你的电话</div>
+	  </div>
 	  ` : ''}`;
   }else if(tab === 'sound'){
 	content = `
@@ -26211,13 +26320,14 @@ function renderReplyPanel(tab){
       });
     });
 
-    ['rsCallStartMiniIn','rsCallStartMiniOut'].forEach(function(id){
+    ['rsCallStartMiniIn','rsCallStartMiniOut','rsCallNoAutoHangup'].forEach(function(id){
       const el = $('#' + id);
       if(!el) return;
       el.addEventListener('change', function(){
         const cur = getCallCfg(rid);
         if(id === 'rsCallStartMiniIn')  cur.startMiniIncoming = this.checked;
         if(id === 'rsCallStartMiniOut') cur.startMiniOutgoing = this.checked;
+        if(id === 'rsCallNoAutoHangup') cur.noAutoHangup = this.checked;
         saveCallCfg(cur, rid);
       });
     });
@@ -30347,7 +30457,8 @@ function defaultCallRoleCfg(){
     maxVoice:6,
     talkOn:true,
     startMiniIncoming: false,
-    startMiniOutgoing: false
+    startMiniOutgoing: false,
+    noAutoHangup: false
   };
 }
 
@@ -30526,6 +30637,25 @@ function startCallTick(){
 }
 
 function callTick(){
+  if(callState.active && !callState.pendingKind){
+    const now = Date.now();
+    const curCfg = getCallCfg(callState.roleId);
+    if(!curCfg.noAutoHangup){
+      if(window.__pendingHangupAt && now >= window.__pendingHangupAt){
+        window.__pendingHangupAt = 0;
+        roleHangup();
+        return;
+      }
+      if(!window.__nextHangupRollAt) window.__nextHangupRollAt = now + 3600000;
+      if(now >= window.__nextHangupRollAt){
+        if(Math.random() < 0.05){
+          window.__pendingHangupAt = now + (30000 + Math.random() * 3570000);
+        }
+        window.__nextHangupRollAt = now + 3600000;
+      }
+    }
+  }
+
   if(!callState.active){
     /* ★ 全局免打扰：直接跳过所有来电判定 */
     if(window.__globalDnd) return;
@@ -30995,12 +31125,10 @@ function userCall(mode){
         sys: '通话已接通'
       });
 
-      if(Math.random() < 0.55){
-        const hangDelay = 30000 + Math.random() * 270000;
-        clearTimeout(window.__roleAutoHangup);
-        window.__roleAutoHangup = setTimeout(function(){
-          if(callState.active) roleHangup();
-        }, hangDelay);
+      const curCallCfg = getCallCfg(roleId);
+      if(!curCallCfg.noAutoHangup){
+        window.__nextHangupRollAt = Date.now() + 3600000; 
+        window.__pendingHangupAt = 0;
       }
 
     } else if(r < 0.90){
@@ -31161,7 +31289,13 @@ document.addEventListener('change', function(e){
 
 /* ============ 启动 ============ */
 function startCallModule(){
-  if(callState.active || callState.pendingKind){
+  if(callState.active && callState.startAt > 0){
+    /* ★ 修复：刷新回来如果正在通话中，不强行挂断，接着算时间 */
+    var _mini = document.getElementById('callMini');
+    if(_mini) _mini.classList.add('show');
+    startMiniTimeTick();
+    startCallTick();
+  } else if(callState.pendingKind){
     callState.active = false;
     callState.pendingKind = '';
     callState.queue = [];
@@ -31181,7 +31315,8 @@ function startCallModule(){
     if(_mv){ try{ _mv.pause(); _mv.src = ''; }catch(e){} }
     clearTimeout(window.__callIncomingTimeout);
     clearTimeout(window.__callOutgoingTimeout);
-    clearTimeout(window.__roleAutoHangup);
+    window.__nextHangupRollAt = 0;
+    window.__pendingHangupAt = 0;
   }
   /* 给每个"允许主动打来"的角色排一份初始掷骰时间 */
   if(!callState.perRole) callState.perRole = {};
