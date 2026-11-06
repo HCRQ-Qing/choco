@@ -10338,15 +10338,29 @@ function renderFoot(){
     };
   } else {
     rightBtnsHTML =
-      '<button class="df-btn" id="btnStickerMode">' + (stickerMode==='send'?'直接发送':'插入输入框') + '</button>' +
+      '<button class="df-btn" id="btnStickerClear">一键清空</button>' +
       '<button class="df-btn" id="btnStickerAdd">导入图片</button>';
     bindRightBtns = ()=>{
-      const b2 = $('#btnStickerMode');
-      if(b2) b2.addEventListener('click', ()=>{
-        stickerMode = stickerMode==='send' ? 'insert' : 'send';
-        persistStickers();
-        renderFoot();
-        toast(stickerMode==='send'?'已切换：直接发送':'已切换：插入输入框');
+      const bClear = $('#btnStickerClear');
+      if(bClear) bClear.addEventListener('click', ()=>{
+        const sc = getStickerCats();
+        const c = sc.find(x => x.name === curStickerCat);
+        if(!c){ toast('没有选中的分类'); return; }
+        const n = (c.list || []).length;
+        if(!n){ toast('这个分类已经是空的'); return; }
+        uniConfirm({
+          title: '清空「' + curStickerCat + '」？',
+          body: '这个分类里有 ' + n + ' 张表情图，清空后无法恢复。',
+          cancelText: '取 消',
+          okText: '确 定'
+        }).then(function(ok){
+          if(!ok) return;
+          c.list = [];
+          setStickerCats(sc);
+          persistStickers();
+          renderDrawer();
+          toast('已清空「' + curStickerCat + '」');
+        });
       });
       const b3 = $('#btnStickerAdd');
       if(b3) b3.addEventListener('click', ()=>$('#stickerFile').click());
@@ -22221,16 +22235,29 @@ const WATCH_TALK_KEY = 'mj_watch_talk_v1';
 const WATCH_CHATPOS_KEY = 'mj_watch_chat_pos_v1';
 
 /* 解析视频链接 → {type, id, label, embed} */
-function parseVideoUrl(input){
+async function parseVideoUrl(input){
   let s = String(input || '').trim();
   if(!s) return null;
 
-  /* 1. 提取链接（应对类似“【标题】 https://b23.tv/xxx”这种带字的情况） */
   const urlMatch = s.match(/https?:\/\/[^\s]+/);
   if (urlMatch) s = urlMatch[0];
 
-  /* 2. 解析 B站 */
-  const bvMatch = s.match(/BV[0-9A-Za-z]{10}/);
+  let bvMatch = s.match(/BV[0-9A-Za-z]{10}/);
+  if (!bvMatch && s.indexOf('http') < 0 && s.indexOf('douyin') < 0) {
+    try {
+      const kw = s.replace(/【|】|\[|\]/g, ' ').replace(/[^\u4e00-\u9fa5a-zA-Z0-9]/g, ' ').trim();
+      const url = 'https://api.bilibili.com/x/web-interface/search/type?search_type=video&keyword=' + encodeURIComponent(kw);
+      const res = await fetch(url);
+      const json = await res.json();
+      if (json && json.data && json.data.result && json.data.result.length > 0) {
+        const first = json.data.result[0];
+        bvMatch = [first.bvid];
+      }
+    } catch(e) {
+      console.log('B站搜索API被跨域拦截或失败', e);
+    }
+  }
+
   if (bvMatch) {
     return {
       type:'bilibili', id:bvMatch[0], label:bvMatch[0],
@@ -22238,7 +22265,6 @@ function parseVideoUrl(input){
     };
   }
 
-  /* 3. 解析 YouTube */
   let yt = s.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/shorts\/)([0-9A-Za-z_-]{11})/);
   if (yt) {
     return {
@@ -22247,7 +22273,6 @@ function parseVideoUrl(input){
     };
   }
 
-  /* 4. 解析 抖音 */
   let dy = s.match(/douyin\.com\/(?:video\/)?(\d+)/);
   if (dy) {
     return {
@@ -22605,8 +22630,12 @@ function openWatchScreen(roleIds){
   }
 
   /* 加载视频 */
-  function loadVideo(forcedItem){
-    const item = forcedItem || parseVideoUrl(input.value);
+  async function loadVideo(forcedItem){
+    let item = forcedItem;
+    if(!item) {
+      toast('正在识别链接…');
+      item = await parseVideoUrl(input.value);
+    }
     if(!item){ 
       toast('没认出链接，请粘贴完整的网页链接，或 B站的 BV 号'); 
       return; 
@@ -32956,42 +32985,40 @@ setTimeout(function() {
     }
   }
 
-  // ★ 核心拦截：捕获阶段拦截
   document.addEventListener('click', function(e) {
     const t = e.target;
     
-    // 找到各种同意、加好友、恢复黑名单的按钮
-    const isAcceptBtn = t.closest('[data-act="accept"]');
-    const isAddBtn = t.closest('[data-act="add"]');
-    const isRestoreBtn = t.closest('.hh-row');
+    const isSwitchBtn = t.closest('#roleSwitchBtn');
+    const isAcceptBtn = t.closest('#nfList [data-act="accept"]');
+    const isAddBtn = t.closest('#ykList [data-act="add"]');
     
-    if (!isAcceptBtn && !isAddBtn && !isRestoreBtn) return;
+    if (!isSwitchBtn && !isAcceptBtn && !isAddBtn) return;
 
-    const btn = isAcceptBtn || isAddBtn || isRestoreBtn;
+    const btn = isSwitchBtn || isAcceptBtn || isAddBtn;
 
-    // 如果当前没有处于拦截状态
     if (!isHijacked) {
-      // 35% 概率触发，测试时可改回 0.35
       if (Math.random() < 0.35) {
         isHijacked = true;
         requiredClicks = Math.random() < 0.5 ? 3 : 5;
         currentClicks = 1; 
         
-        // 拦截原生的点击
         e.preventDefault();
         e.stopPropagation();
         if (e.stopImmediatePropagation) e.stopImmediatePropagation();
 
-        if (typeof toast === 'function') toast('添加好友失败');
-        btn.style.background = '#e02020';
-        setTimeout(() => { btn.style.background = '#1a1a1a'; }, 500);
+        if (isSwitchBtn) {
+          if (typeof toast === 'function') toast('切换失败…');
+        } else {
+          if (typeof toast === 'function') toast('添加好友失败');
+          btn.style.background = '#e02020';
+          setTimeout(() => { btn.style.background = '#1a1a1a'; }, 500);
+        }
         
         sendYandereMsg();
       }
-      return; // 如果没触发，直接放行，走原来的逻辑
+      return;
     }
 
-    // 如果已经处于连击拦截状态
     e.preventDefault();
     e.stopPropagation();
     if (e.stopImmediatePropagation) e.stopImmediatePropagation();
@@ -32999,31 +33026,33 @@ setTimeout(function() {
     currentClicks++;
     
     if (currentClicks < requiredClicks) {
-      // 还没点够
-      if (typeof toast === 'function') toast('添加好友失败');
-      btn.style.background = '#e02020';
-      setTimeout(() => { btn.style.background = '#1a1a1a'; }, 500);
+      if (isSwitchBtn) {
+        if (typeof toast === 'function') toast('切换失败…');
+      } else {
+        if (typeof toast === 'function') toast('添加好友失败');
+        btn.style.background = '#e02020';
+        setTimeout(() => { btn.style.background = '#1a1a1a'; }, 500);
+      }
       sendYandereMsg();
     } else {
-      // 点够了，最终爆发
       playFlash();
       playDanmaku(8);
       
       btn.style.background = '#1a1a1a';
       isHijacked = false; 
       
-      if (typeof toast === 'function') toast('添加好友成功');
+      if (typeof toast === 'function') {
+        toast(isSwitchBtn ? '切换成功' : '添加好友成功');
+      }
       
-      // 模拟真正的成功点击。为了不触发死循环，我们要暂时移除拦截，用原生点击触发
       if (btn.click) {
-        window.__yandereHijackPatched = false; // 暂时解锁
-        // 把原本的点击事件重新触发
+        window.__yandereHijackPatched = false;
         setTimeout(() => {
           btn.click();
-          window.__yandereHijackPatched = true; // 重新上锁
+          window.__yandereHijackPatched = true;
         }, 100);
       }
     }
-  }, true); // ★ 捕获阶段，优先级最高
+  }, true);
 
 })();
