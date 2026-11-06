@@ -1913,22 +1913,11 @@ function pickWeatherCard(){
     const h = new Date().getHours();
     if(h < 9 || h >= 18) return '';
   }
-  /* 天气类型 → 分类 id */
+  /* 天气类型 → 分类 id 统一交给 weather-cats.js */
   let catId = 'cw-cloudy';
-  const code = Number(w.code);
-  if(code === 0) catId = 'cw-sunny';
-  else if(code >= 1 && code <= 3) catId = 'cw-cloudy';
-  else if(code === 45 || code === 48) catId = 'cw-fog';
-  else if(code >= 51 && code <= 67) catId = 'cw-rain';
-  else if(code >= 71 && code <= 77) catId = 'cw-snow';
-  else if(code >= 80 && code <= 82) catId = 'cw-rain';
-  else if(code >= 85 && code <= 86) catId = 'cw-snow';
-  else if(code >= 95 && code <= 99) catId = 'cw-storm';
-
-  /* 高温预警单独处理：温度 ≥ 35 也归高温 */
-  if(w.temp >= 35) catId = 'cw-hot';
-  /* 台风暴雨：代码 95-99 或风力 ≥ 10 */
-  if(code >= 95 && code <= 99) catId = 'cw-storm';
+  if(window.WeatherCats && typeof window.WeatherCats.weatherCodeToCatId === 'function'){
+    catId = window.WeatherCats.weatherCodeToCatId(w.code, w.temp, w.wind) || 'cw-cloudy';
+  }
 
   const g = getGroupsByOwner('public').find(x => x.id === 'g-weather');
   if(!g || !g.cats) return '';
@@ -1990,18 +1979,11 @@ function _getWeatherPool(){
       if(h < 9 || h >= 18) return [];
     }
 
+    /* 天气代码 → 分类 id 统一交给 weather-cats.js */
     let catId = 'cw-cloudy';
-    const code = Number(w.code);
-    if(code === 0) catId = 'cw-sunny';
-    else if(code >= 1 && code <= 3) catId = 'cw-cloudy';
-    else if(code === 45 || code === 48) catId = 'cw-fog';
-    else if(code >= 51 && code <= 67) catId = 'cw-rain';
-    else if(code >= 71 && code <= 77) catId = 'cw-snow';
-    else if(code >= 80 && code <= 82) catId = 'cw-rain';
-    else if(code >= 85 && code <= 86) catId = 'cw-snow';
-    else if(code >= 95 && code <= 99) catId = 'cw-storm';
-    if(w.temp >= 35) catId = 'cw-hot';
-    if(code >= 95 && code <= 99) catId = 'cw-storm';
+    if(window.WeatherCats && typeof window.WeatherCats.weatherCodeToCatId === 'function'){
+      catId = window.WeatherCats.weatherCodeToCatId(w.code, w.temp, w.wind) || 'cw-cloudy';
+    }
 
     const g = getGroupsByOwner('public').find(function(x){ return x.id === 'g-weather'; });
     if(!g || !g.cats || !g.cats.length) return [];
@@ -32527,3 +32509,4 @@ setTimeout(function() {
     }
   }, true);
 })();
+ 

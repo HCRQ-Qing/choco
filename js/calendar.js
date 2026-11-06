@@ -186,38 +186,37 @@ function getWeatherCfg(){
 }
 function saveWeatherCfg(c){ lsSet(CAL_WEATHER_KEY, c); }
 
-/* 天气代码 → 中文 + 图标 key（更精细） */
+/* 天气代码 → 中文 + 图标 key（严格对齐气象台的 16 类词汇） */
 function weatherCodeToText(code){
   const c = Number(code);
+  
+  // 晴、多云、阴
   if(c === 0) return { text: '晴', icon: 'sunny' };
-  if(c === 1) return { text: '大部晴朗', icon: 'sunny' };
-  if(c === 2) return { text: '局部多云', icon: 'cloudy' };
+  if(c === 1 || c === 2) return { text: '多云', icon: 'cloudy' };
   if(c === 3) return { text: '阴', icon: 'cloudy' };
-  if(c === 45) return { text: '雾', icon: 'fog' };
-  if(c === 48) return { text: '冻雾', icon: 'fog' };
-  if(c === 51) return { text: '小毛毛雨', icon: 'rain' };
-  if(c === 53) return { text: '毛毛雨', icon: 'rain' };
-  if(c === 55) return { text: '大毛毛雨', icon: 'rain' };
-  if(c === 56) return { text: '冻毛毛雨', icon: 'rain' };
-  if(c === 57) return { text: '强冻毛毛雨', icon: 'rain' };
-  if(c === 61) return { text: '小雨', icon: 'rain' };
-  if(c === 63) return { text: '中雨', icon: 'rain' };
-  if(c === 65) return { text: '大雨', icon: 'rain' };
-  if(c === 66) return { text: '冻雨', icon: 'rain' };
-  if(c === 67) return { text: '强冻雨', icon: 'rain' };
-  if(c === 71) return { text: '小雪', icon: 'snow' };
-  if(c === 73) return { text: '中雪', icon: 'snow' };
-  if(c === 75) return { text: '大雪', icon: 'snow' };
-  if(c === 77) return { text: '雪粒', icon: 'snow' };
-  if(c === 80) return { text: '小阵雨', icon: 'rain' };
-  if(c === 81) return { text: '阵雨', icon: 'rain' };
-  if(c === 82) return { text: '强阵雨', icon: 'rain' };
-  if(c === 85) return { text: '小阵雪', icon: 'snow' };
-  if(c === 86) return { text: '强阵雪', icon: 'snow' };
-  if(c === 95) return { text: '雷暴', icon: 'storm' };
-  if(c === 96) return { text: '雷暴伴小冰雹', icon: 'storm' };
-  if(c === 99) return { text: '雷暴伴大冰雹', icon: 'storm' };
-  return { text: '未知', icon: 'cloudy' };
+  
+  // 雾
+  if(c === 45 || c === 48) return { text: '雾', icon: 'fog' };
+  
+  // 雷阵雨
+  if(c === 95 || c === 96 || c === 99) return { text: '雷阵雨', icon: 'storm' };
+  
+  // 雨（毛毛雨和小雨默认算阴天，防止国内数据源瞎报）
+  if(c === 51 || c === 53 || c === 55 || c === 56 || c === 57) return { text: '阴', icon: 'cloudy' };
+  if(c === 61) return { text: '阴', icon: 'cloudy' };
+  if(c === 63) return { text: '小雨', icon: 'rain' }; // 中雨降级算小雨
+  if(c === 65) return { text: '中雨', icon: 'rain' }; // 大雨降级算中雨
+  if(c === 66 || c === 67) return { text: '大雨', icon: 'rain' };
+  if(c === 80) return { text: '小雨', icon: 'rain' };
+  if(c === 81) return { text: '中雨', icon: 'rain' };
+  if(c === 82) return { text: '大雨', icon: 'rain' };
+  
+  // 雪
+  if(c === 71 || c === 77) return { text: '小雪', icon: 'snow' };
+  if(c === 73 || c === 85) return { text: '中雪', icon: 'snow' };
+  if(c === 75 || c === 86) return { text: '大雪', icon: 'snow' };
+  
+  return { text: '阴', icon: 'cloudy' }; // 兜底
 }
 
 /* 天气图标 SVG */
@@ -313,7 +312,15 @@ function reverseGeocode(lat, lon){
   return fetch(url).then(r => r.json()).then(data => {
     if(data && data.results && data.results.length){
       const r = data.results[0];
-      return r.name || r.admin1 || r.country || '当前位置';
+      // 优先拿具体名字（市/县），没有就拿一级行政区
+      let cityName = r.name || r.admin1 || r.country || '当前位置';
+      
+      // ★ 修复：如果拿到的只是省份（比如“广东”），拼上“省”字，看起来正常点
+      // 如果拿到的是“广东”并且 admin1 也是“广东”，说明没精确到市，加上“省”
+      if (cityName === '广东' || cityName === '广西' || cityName === '福建' || cityName === '浙江' || cityName === '江苏' || cityName === '山东') {
+        cityName += '省';
+      }
+      return cityName;
     }
     return '当前位置';
   }).catch(() => '当前位置');
@@ -432,10 +439,20 @@ function renderBigCardWeather(w, errText){
     const dayNames = ['今天','明天','后天'];
     fc.innerHTML = w.daily.slice(0,3).map((d, i) => {
       const wi = weatherCodeToText(d.code);
+      
+      // ★ 修复：只有在明显下雨/下雪/雷暴（代码 >= 51）且概率极高（>= 80%）时，才显示概率
+      // 平时多云/阴天（51 以下），一律不显示降雨百分比，免得吓人
+      let popHTML = '';
+      if (d.code >= 51 && d.pop >= 80) {
+        popHTML = '<div class="bc-fc-pop" style="color:#1a1a1a;font-weight:600">' + d.pop + '%</div>';
+      } else {
+        popHTML = '<div class="bc-fc-pop" style="visibility:hidden">0%</div>'; // 占位，保持高度一致
+      }
+
       return '<div class="bc-fc-item">' +
         '<div class="bc-fc-day">' + (dayNames[i] || d.date.slice(5)) + '</div>' +
         '<div class="bc-fc-ico">' + weatherIconSVG(wi.icon) + '</div>' +
-        '<div class="bc-fc-pop">' + (d.pop || 0) + '%</div>' +
+        popHTML +
         '<div class="bc-fc-temp">' + d.tmin + '°~' + d.tmax + '°</div>' +
       '</div>';
     }).join('');

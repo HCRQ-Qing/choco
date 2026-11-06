@@ -958,53 +958,49 @@ document.addEventListener('click', (e) => {
   const FLAG = 'mj_link_groups_v1';
   if(lsGet(FLAG, false)) return;
 
-  /* ---- 天气字卡（按天气类型分 9 类）---- */
-  if(!cardStore.public.some(g => g.id === 'g-weather')){
-    cardStore.public.push({
-      id: 'g-weather',
-      name: '天气字卡',
-      icon: 'star',
-      sub: '角色根据今日天气说话',
-      cats: [
-        { id:'cw-sunny',   name:'晴',      list:[
-          '今天天气真好，晒晒太阳','阳光不错，出去走走吧','晴天心情也跟着好',
-          '这么晴朗，适合和你一起出去','太阳好大，记得涂防晒'
-        ]},
-        { id:'cw-cloudy',  name:'多云',    list:[
-          '今天多云，还挺舒服的','云有点厚，不过不闷','天不算晴也不算阴，刚刚好',
-          '多云的日子适合发呆'
-        ]},
-        { id:'cw-overcast',name:'阴',      list:[
-          '今天阴沉沉的，别影响心情','天色有点闷，记得开窗通风',
-          '阴天让人想赖床','阴天也别忘了笑一下'
-        ]},
-        { id:'cw-rain',    name:'雨',      list:[
-          '今天下雨了，记得带伞','外面在下雨，别淋湿了','下雨天路滑，小心点',
-          '听着雨声想你了','雨很大，出门穿双防水的鞋'
-        ]},
-        { id:'cw-snow',    name:'雪',      list:[
-          '下雪了，注意保暖','雪天路滑，慢一点走','外面白茫茫的，好美',
-          '下雪了，想和你一起看','雪天记得多穿点'
-        ]},
-        { id:'cw-fog',     name:'雾',      list:[
-          '今天有雾，出门小心','雾气很重，开车慢一点','雾天视线不好，注意安全',
-          '雾里的城市像一幅水墨画'
-        ]},
-        { id:'cw-wind',    name:'风',      list:[
-          '今天风大，穿厚一点','风好大，帽子差点吹跑','刮风了，注意别着凉',
-          '风把云都吹散了'
-        ]},
-        { id:'cw-hot',     name:'高温预警',list:[
-          '今天高温，多喝水','外面太热了，别在外面待太久','高温天气，注意防暑',
-          '这么热，来杯冰饮吧','热到融化，你也注意身体'
-        ]},
-        { id:'cw-storm',   name:'台风暴雨',list:[
-          '台风预警，注意安全','暴雨天尽量别出门','风大雨大，待在家里最好',
-          '台风来了，把窗户关好','暴雨天气，注意排水和用电安全'
-        ]}
-      ]
+  /* ---- 天气字卡（从 WeatherCats 读分类，老数据只补不删）---- */
+  (function rebuildWeatherGroup(){
+    if(!window.WeatherCats || typeof window.WeatherCats.getCats !== 'function') return;
+    var newCats = window.WeatherCats.getCats();
+    var g = cardStore.public.find(function(x){ return x && x.id === 'g-weather'; });
+    if(!g){
+      /* 老用户/新用户都没有这个分组 → 按 16 类新建 */
+      cardStore.public.push({
+        id: 'g-weather',
+        name: '天气字卡',
+        icon: 'star',
+        sub: '角色根据今日天气说话',
+        cats: newCats.map(function(c){
+          return {
+            id: c.id,
+            name: c.name,
+            list: c.legacy ? [] : c.list.map(function(t){ return { text: t, t: Date.now() }; })
+          };
+        })
+      });
+      return;
+    }
+    /* 已有分组：只补不删
+       - 分类 id 已在 → 名字不动，字卡一条不动，只在空时补默认字卡
+       - 分类 id 不在 → 新建 + 填默认字卡
+       - 老的 cw-rain / 用户自建分类 → 原样保留，不碰 */
+    if(!Array.isArray(g.cats)) g.cats = [];
+    newCats.forEach(function(c){
+      var exist = g.cats.find(function(x){ return x && x.id === c.id; });
+      if(exist){
+        if(!Array.isArray(exist.list)) exist.list = [];
+        if(!exist.list.length && !c.legacy){
+          exist.list = c.list.map(function(t){ return { text: t, t: Date.now() }; });
+        }
+        return;
+      }
+      g.cats.push({
+        id: c.id,
+        name: c.name,
+        list: c.legacy ? [] : c.list.map(function(t){ return { text: t, t: Date.now() }; })
+      });
     });
-  }
+  })();
 
   /* ---- 节日字卡 ---- */
   if(!cardStore.public.some(g => g.id === 'g-festival')){
@@ -1331,7 +1327,7 @@ function openRoleSwitchMenu(){
       : '';
     return '<div class="rsm-item' + on + '" data-rid="' + f.id + '">' +
       '<div class="rsm-av" style="border-radius:' + avShape + '">' + avatarHTML(f.avatar) + '</div>' +
-      '<div class="rsm-nm">' + esc(f.name) + '</div>' +
+      '<div class="rsm-nm">' + esc(displayName(f)) + '</div>' +
       badge +
     '</div>';
   }).join('');
@@ -1415,3 +1411,129 @@ window.__memoDebug = function(){
     console.log('getCurrentMemo():', window.__memo.getCurrentMemo());
   }
 };
+/* ============================================================
+   一次性迁移：把老用户的 g-weather 升级到 16 类
+   - 用新 key mj_weather_cats_v2 做闸门，只跑一次
+   - 只补不删：老分类名字不动、字卡不动，只补缺失的分类
+   - 老的 cw-rain / cw-snow 大类保留，只是不再参与抽卡
+   ============================================================ */
+(function migrateWeatherCatsV2(){
+  var _tried = 0;
+  function _start(){
+    if(lsGet('mj_weather_cats_v2', false)) return;
+    if(typeof cardStore === 'undefined' || !cardStore || !Array.isArray(cardStore.public)){
+      if(++_tried < 25){ setTimeout(_start, 200); }
+      return;
+    }
+    if(!window.WeatherCats || typeof window.WeatherCats.getCats !== 'function'){
+      if(++_tried < 25){ setTimeout(_start, 200); }
+      return;
+    }
+    _run();
+  }
+  function _run(){
+  try{
+    var FLAG = 'mj_weather_cats_v2';
+    if(lsGet(FLAG, false)) return;
+    if(typeof cardStore === 'undefined' || !cardStore || !Array.isArray(cardStore.public)) return;
+    if(!window.WeatherCats || typeof window.WeatherCats.getCats !== 'function'){
+      /* weather-cats.js 还没加载好，下次再试 */
+      return;
+    }
+
+    var newCats = window.WeatherCats.getCats();
+    var g = cardStore.public.find(function(x){ return x && x.id === 'g-weather'; });
+
+    /* 分组不存在：建一个空的，交给正常初始化流程填 */
+    if(!g){
+      lsSet(FLAG, true);
+      return;
+    }
+
+    if(!Array.isArray(g.cats)) g.cats = [];
+
+    /* 老 9 类：字卡全部挪进「旧天气字卡」，分类本身删掉 */
+    var OLD_IDS = ['cw-sunny','cw-cloudy','cw-overcast','cw-rain','cw-snow','cw-fog','cw-wind','cw-hot','cw-storm'];
+    var migrated = [];
+
+    /* ① 捞老分类里的字卡 */
+    g.cats.forEach(function(c){
+      if(!c || OLD_IDS.indexOf(c.id) < 0) return;
+      if(!Array.isArray(c.list)) return;
+      c.list.forEach(function(item){
+        var t = (typeof item === 'string') ? item : ((item && (item.text || item.mood || item.kaomoji)) || '');
+        t = String(t || '').trim();
+        if(t) migrated.push({ text: t, t: Date.now() });
+      });
+    });
+
+    /* ② 删老分类 */
+    var removedNames = [];
+    g.cats = g.cats.filter(function(c){
+      if(!c || OLD_IDS.indexOf(c.id) < 0) return true;
+      removedNames.push(c.name);
+      return false;
+    });
+
+    /* ③ 补新的 16 类 */
+    var added = 0, filled = 0;
+    newCats.forEach(function(c){
+      var exist = g.cats.find(function(x){ return x && x.id === c.id; });
+      if(exist){
+        if(!Array.isArray(exist.list)) exist.list = [];
+        if(!exist.list.length && !c.legacy){
+          exist.list = c.list.map(function(t){ return { text: t, t: Date.now() }; });
+          filled++;
+        }
+        return;
+      }
+      g.cats.push({
+        id: c.id,
+        name: c.name,
+        list: c.legacy ? [] : c.list.map(function(t){ return { text: t, t: Date.now() }; })
+      });
+      added++;
+    });
+
+    /* ③.5 删掉 cw-rain 空壳（不参与抽卡，留着只会让用户困惑）
+       老数据里可能没有 legacy 字段，所以只按 id 判，不看 legacy */
+    g.cats = g.cats.filter(function(c){
+      return !(c && c.id === 'cw-rain');
+    });
+
+    /* ④ 老字卡塞进「旧天气字卡」，并强制挪到最后
+       - 只要 cw-migrated 存在，就无条件摘出来再 push 到最后
+         （不管这次有没有字卡要搬，位置每次都对齐）
+       - 有字卡要搬，再往里塞（去重） */
+    var mig = g.cats.find(function(c){ return c && c.id === 'cw-migrated'; });
+    if(mig){
+      g.cats = g.cats.filter(function(c){ return c && c.id !== 'cw-migrated'; });
+    } else {
+      mig = { id:'cw-migrated', name:'旧天气字卡', list:[] };
+    }
+    if(migrated.length){
+      var existPool = {};
+      mig.list.forEach(function(it){
+        var t = (typeof it === 'string') ? it : ((it && it.text) || '');
+        if(t) existPool[String(t).trim()] = 1;
+      });
+      migrated.forEach(function(it){
+        if(existPool[it.text]) return;
+        existPool[it.text] = 1;
+        mig.list.push(it);
+      });
+    }
+    g.cats.push(mig);
+
+    if(added || filled || migrated.length){
+      if(typeof saveCardStore === 'function') saveCardStore();
+      console.log('[天气字卡迁移] 新增 ' + added + ' 类，补默认 ' + filled + ' 类，旧字卡 ' +
+        migrated.length + ' 条（从 ' + removedNames.join(' / ') + ' 搬到「旧天气字卡」）');
+    }
+    lsSet(FLAG, true);
+  }catch(e){
+    console.error('[天气字卡迁移] 出错', e);
+  }
+  }   /* ← _run 结束 */
+  _start();
+})();
