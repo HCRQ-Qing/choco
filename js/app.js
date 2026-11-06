@@ -2904,6 +2904,19 @@ function updateScrollBottomBtn(scrolling){
    ============================================================ */
 function hydrateAllImages(container){
   if(!container) return;
+  /* ★ 新增：处理老聊天图迁移后、新表情包转为 idb: 的图片显示 */
+  container.querySelectorAll('img[src^="idb:"]').forEach(function(img){
+    if(img.dataset.idbHydrated === '1') return;
+    img.dataset.idbHydrated = '1';
+    var key = img.getAttribute('src').replace('idb:', '');
+    window.__idb.toURL(key).then(function(url){
+      if(url) img.src = url;
+      else img.style.display = 'none';
+    }).catch(function(){
+      img.style.display = 'none';
+    });
+  });
+
   container.querySelectorAll('.msg-image-bubble[data-idbkey]').forEach(function(bubble){
     const key = bubble.dataset.idbkey;
     if(!key) return;
@@ -9442,6 +9455,22 @@ function importStickerFile(file, cb){
   fr.onload = function(ev){
     var src = ev.target && ev.target.result;
     if(!src){ cb(''); return; }
+    /* ★ 新增：新导入的表情图不塞 localStorage，直接进 IndexedDB，
+       存成 'idb:新钥匙' 形式，避免几张图就把 5MB 撑爆 */
+    try{
+      if(file && file.type && file.type.indexOf('image/') === 0 && window.__idb && window.__idb.dataURLToBlob){
+        var blob = window.__idb.dataURLToBlob(src);
+        if(blob){
+          var idbKey = 'sticker_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 5);
+          window.__idb.set(idbKey, blob).then(function(){
+            cb('idb:' + idbKey);
+          }).catch(function(){
+            cb(src);
+          });
+          return;
+        }
+      }
+    }catch(e){}
     /* GIF 保留原图，避免丢动画 */
     if(file && file.type === 'image/gif'){ cb(src); return; }
     var img = new Image();
@@ -11021,6 +11050,9 @@ function showDrawAnimation(q,picked){
             if(done) return;
             done = true;
             try{ w.classList.add('flipped'); }catch(e){}
+            setTimeout(function(){
+              try{ w.classList.add('settled'); }catch(e){}
+            }, 650);
           }
           var img = b ? b.querySelector('img') : null;
           if(img){
