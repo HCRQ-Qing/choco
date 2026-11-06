@@ -340,12 +340,37 @@
     reader.onload = function(){
       var data = null;
       try{ data = JSON.parse(String(reader.result || '')); }catch(e){}
-      if(!data || data.__type !== 'choco-backup'){
+      
+      if(!data){
+        say('文件格式不对，无法解析');
+        return;
+      }
+
+      if(data.__type === 'choco-sticker'){
+        say('正在恢复表情包…');
+        if(window.__stickerBackup && window.__stickerBackup.importStickersFromJson){
+          window.__stickerBackup.importStickersFromJson(data).then(function(){
+            say('表情包恢复成功，正在刷新…');
+            setTimeout(function(){ location.reload(); }, 600);
+          }).catch(function(err){
+            say('表情包恢复失败：' + (err.message || '未知错误'));
+          });
+        } else {
+          say('表情恢复模块未加载');
+        }
+        return;
+      }
+
+      if(data.__type !== 'choco-backup'){
         say('这不是 choco 的备份文件');
         return;
       }
       var nLS = Object.keys(data.localStorage || {}).length;
       var nIDB = Object.keys(data.idb || {}).length;
+      if(nLS === 0 && nIDB === 0){
+        say('这个备份文件是空的，没有可恢复的数据');
+        return;
+      }
       var sub = '备份时间：' + (data.exportedAt || '未知') + '\n包含 ' + nLS + ' 项设置与 ' + nIDB + ' 个文件。\n恢复会覆盖当前全部数据，输入「恢复」确认';
 
       function go(){
