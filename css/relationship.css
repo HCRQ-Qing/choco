@@ -363,7 +363,7 @@ body.bl-compact .bl-text{font-size:12.5px}
 
 /* 签名：更细更淡 */
 .profile-hero .quote{
-  flex:1;font-size:12px;color:var(--th-text-mute);
+  flex:1;font-size:12px;color:#666666;
   line-height:1.8;letter-spacing:.6px;
   font-weight:300;
   -webkit-font-smoothing:antialiased;
