@@ -23317,7 +23317,7 @@ function renderGroupList(){
 	  return n + (c.list||[]).filter(function(it){
 	    if(_useB) return true;
 	    if(it && typeof it === 'object' && it.src === 'builtin') return false;
-	    if(g.id === 'g-weather' && window.WeatherCats && isBuiltinDefaultItem(g.id, c.id, it)) return false;
+	    if(isBuiltinDefaultItem(g.id, c.id, it)) return false;
 	    return true;
 	  }).length;
 	},0);
@@ -23390,7 +23390,7 @@ function renderCdTabs(){
     const _cnt = (c.list||[]).filter(function(it){
       if(_useB) return true;
       if(it && typeof it === 'object' && it.src === 'builtin') return false;
-      if(g.id === 'g-weather' && window.WeatherCats && isBuiltinDefaultItem(g.id, c.id, it)) return false;
+      if(isBuiltinDefaultItem(g.id, c.id, it)) return false;
       return true;
     }).length;
     return `<div class="cd-tab ${c.id===curCatId?'on':''}" data-cid="${c.id}"><span class="cd-tab-name">${escapeHTML(c.name)}</span><span style="opacity:.6;font-size:11px">${_cnt}</span>${delHTML}</div>`;

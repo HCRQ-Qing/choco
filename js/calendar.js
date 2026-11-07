@@ -348,8 +348,11 @@ function refreshWeather(force){
     });
   }
 
-  /* 1. 有城市名 + 有坐标 → 直接用 */
-  if(cfg.city && cfg.lat && cfg.lon){
+  const _isDefaultPos = (Math.abs(cfg.lat - DEFAULT_WEATHER.lat) < 0.001 &&
+                         Math.abs(cfg.lon - DEFAULT_WEATHER.lon) < 0.001);
+  const _isDefaultCity = (cfg.city === DEFAULT_WEATHER.city);
+  /* 1. 有城市名 + 有坐标 → 直接用（但如果还是兜底广州，就跳过，重新定位） */
+  if(cfg.city && cfg.lat && cfg.lon && !_isDefaultCity && !_isDefaultPos){
     return doFetch(cfg.lat, cfg.lon, cfg.city);
   }
 
@@ -389,7 +392,9 @@ function refreshWeather(force){
       });
     }).catch(e => {
       console.warn('定位失败，用默认城市', e);
-      /* 定位失败 → 用默认城市兜底 */
+      if(cfg.lat && cfg.lon && cfg.city && cfg.city !== DEFAULT_WEATHER.city){
+        return doFetch(cfg.lat, cfg.lon, cfg.city);
+      }
       cfg.lat = DEFAULT_WEATHER.lat;
       cfg.lon = DEFAULT_WEATHER.lon;
       cfg.city = DEFAULT_WEATHER.city;
