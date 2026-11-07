@@ -1887,6 +1887,11 @@ function getAllNormalCards(owner){
       (c.list||[]).forEach(line=>{
         if(!useBuiltin && isBuiltinDefaultItem(g.id, c.id, line)) return;
         if(!useBuiltin && line && typeof line === 'object' && line.src === 'builtin') return;
+        // ★ 修复：如果是天气组，且没开内置，过滤掉本来就有的默认字卡（老数据没 src 字段）
+        if(!useBuiltin && g.id === 'g-weather' && window.WeatherCats){
+          var catDef = window.WeatherCats.getCats().find(function(x){ return x.id === c.id; });
+          if(catDef && catDef.list.indexOf(String(cardText(line)).trim()) >= 0) return;
+        }
         const text = String(cardText(line)).trim();
         if(text) arr.push(text);
       });
@@ -23307,7 +23312,15 @@ function renderGroupList(){
   var usedVoice = false;
 
   var html = orderedGroups.map(g=>{
-	const total = (g.cats||[]).reduce((n,c)=>n+(c.list||[]).length,0);
+	const _useB = useBuiltinCards();
+	const total = (g.cats||[]).reduce((n,c)=>{
+	  return n + (c.list||[]).filter(function(it){
+	    if(_useB) return true;
+	    if(it && typeof it === 'object' && it.src === 'builtin') return false;
+	    if(g.id === 'g-weather' && window.WeatherCats && isBuiltinDefaultItem(g.id, c.id, it)) return false;
+	    return true;
+	  }).length;
+	},0);
 	const gid = (g && g.id) ? g.id : '';
 	const gname = (g && g.name) ? g.name : '未命名';
 	var card = `<div class="group-card" data-open="${escapeHTML(gid)}"><div class="g-ic">${groupIconHTML(gid)}</div><div class="g-name">${escapeHTML(gname)}</div><div class="g-count">${total}</div><div class="g-arrow">›</div></div>`;
@@ -23367,12 +23380,20 @@ function renderCdTabs(){
   if(!g){ box.innerHTML=''; return; }
   const isTimedGroup = (g.id === 'g-timed');
   const isYesNoGroup = (g.id === 'g-yesno');
+  const isWeatherGroup = (g.id === 'g-weather'); /* ★ 新增：天气分类锁定 */
   const cats = g.cats || [];
   box.innerHTML = cats.map(c=>{
     /* ★ 「修改后的字卡」分类不可删 */
     const noDel = (c.id === 'ce-edited');
     const delHTML = noDel ? '' : `<span class="cd-tab-del" data-del-cid="${c.id}">✕</span>`;
-    return `<div class="cd-tab ${c.id===curCatId?'on':''}" data-cid="${c.id}"><span class="cd-tab-name">${escapeHTML(c.name)}</span><span style="opacity:.6;font-size:11px">${(c.list||[]).length}</span>${delHTML}</div>`;
+    const _useB = useBuiltinCards();
+    const _cnt = (c.list||[]).filter(function(it){
+      if(_useB) return true;
+      if(it && typeof it === 'object' && it.src === 'builtin') return false;
+      if(g.id === 'g-weather' && window.WeatherCats && isBuiltinDefaultItem(g.id, c.id, it)) return false;
+      return true;
+    }).length;
+    return `<div class="cd-tab ${c.id===curCatId?'on':''}" data-cid="${c.id}"><span class="cd-tab-name">${escapeHTML(c.name)}</span><span style="opacity:.6;font-size:11px">${_cnt}</span>${delHTML}</div>`;
   }).join('')+`<div class="cd-tab" id="addCatBtn">＋ 分类</div>`;
   box.querySelectorAll('[data-cid]').forEach(el=>{
     el.addEventListener('click',(e)=>{
@@ -23402,7 +23423,7 @@ function renderCdTabs(){
       setTimeout(refreshScrollbar, 30);
     });
   });
-  if(!isTimedGroup && !isYesNoGroup){
+  if(!isTimedGroup && !isYesNoGroup && !isWeatherGroup){
   box.querySelectorAll('[data-cid]').forEach(el=>{
     let timer = null;
     el.addEventListener('touchstart', ()=>{
@@ -23427,6 +23448,11 @@ function renderCdTabs(){
   /* ★ Yes or No 字卡分组：也隐藏「＋ 分类」和删除叉，分类固定不可增删 */
   if(isYesNoGroup && addBtnEl) addBtnEl.style.display = 'none';
   if(isYesNoGroup){
+    box.querySelectorAll('[data-del-cid]').forEach(el=>el.style.display='none');
+  }
+  /* ★ 新增：天气字卡分组，分类同样固定不可增删 */
+  if(isWeatherGroup && addBtnEl) addBtnEl.style.display = 'none';
+  if(isWeatherGroup){
     box.querySelectorAll('[data-del-cid]').forEach(el=>el.style.display='none');
   }
 

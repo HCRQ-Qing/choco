@@ -989,8 +989,8 @@ document.addEventListener('click', (e) => {
       var exist = g.cats.find(function(x){ return x && x.id === c.id; });
       if(exist){
         if(!Array.isArray(exist.list)) exist.list = [];
-        if(!exist.list.length && !c.legacy){
-          exist.list = c.list.map(function(t){ return { text: t, t: Date.now() }; });
+        if(!exist.list.length && !c.legacy && useBuiltinCards()){
+          exist.list = c.list.map(function(t){ return { text: t, t: Date.now(), src:'builtin' }; });
         }
         return;
       }
@@ -1419,6 +1419,30 @@ window.__memoDebug = function(){
    ============================================================ */
 (function migrateWeatherCatsV2(){
   var _tried = 0;
+  (function tagOldWeatherCards(){
+    if(lsGet('mj_weather_tag_v1', false)) return;
+    if(typeof cardStore === 'undefined' || !cardStore || !Array.isArray(cardStore.public)) return;
+    if(!window.WeatherCats || typeof window.WeatherCats.getCats !== 'function') return;
+    var dftMap = {};
+    window.WeatherCats.getCats().forEach(function(c){
+      (c.list || []).forEach(function(t){ dftMap[String(t).trim()] = 1; });
+    });
+    var g = cardStore.public.find(function(x){ return x && x.id === 'g-weather'; });
+    if(!g || !Array.isArray(g.cats)){ lsSet('mj_weather_tag_v1', true); return; }
+    var tagged = 0;
+    g.cats.forEach(function(c){
+      if(!c || !Array.isArray(c.list)) return;
+      c.list.forEach(function(it){
+        if(!it || typeof it !== 'object') return;
+        if(it.src === 'builtin') return;
+        var txt = String(it.text || it.mood || it.kaomoji || '').trim();
+        if(txt && dftMap[txt]){ it.src = 'builtin'; tagged++; }
+      });
+    });
+    if(tagged) saveCardStore();
+    lsSet('mj_weather_tag_v1', true);
+    console.log('[天气字卡] 已给 ' + tagged + ' 条老天气卡打上内置标记');
+  })();
   function _start(){
     if(lsGet('mj_weather_cats_v2', false)) return;
     if(typeof cardStore === 'undefined' || !cardStore || !Array.isArray(cardStore.public)){
@@ -1481,8 +1505,8 @@ window.__memoDebug = function(){
       var exist = g.cats.find(function(x){ return x && x.id === c.id; });
       if(exist){
         if(!Array.isArray(exist.list)) exist.list = [];
-        if(!exist.list.length && !c.legacy){
-          exist.list = c.list.map(function(t){ return { text: t, t: Date.now() }; });
+        if(!exist.list.length && !c.legacy && useBuiltinCards()){
+          exist.list = c.list.map(function(t){ return { text: t, t: Date.now(), src:'builtin' }; });
           filled++;
         }
         return;
