@@ -572,23 +572,6 @@ const SIGN_PLACEHOLDER = '这个人很懒，什么都没有留下。';
 const OLD_SIGN_PLACEHOLDERS = ['你的专属角色','这个人很懒，还没有留下介绍'];
 
 const DEFAULT_CARD_GROUPS = [
-  { id:'g-normal', name:'普通字卡', icon:'doc', sub:'日常回复用', cats:[
-	{ id:'cl3', name:'短句', list:[
-	  '在呢','我在','嗯嗯','好呀','好哦','可以呀','没问题','知道啦','收到','来啦',
-	  '我看看','等一下下','马上来','这就去','好，听你的',
-	  '抱抱','要抱','想你了','有点想你','黏你一下','陪我会儿','别走嘛','理理我','看你一眼','就想找你',
-	  '你在干嘛呀','想和你说话','今天也想你','不许不理我',
-	  '吃饭了吗','记得吃饭','多喝热水','早点休息','累不累','注意身体','好好照顾自己',
-	  '有事跟我说','我在听','慢慢来','不着急','辛苦了','今天也辛苦啦',
-	  '开心','有点开心','超级开心','嘿嘿','嘻嘻','好耶','呜','呜呜','委屈','有点难过',
-	  '不开心','生气了','哄我','我没事','才没有',
-	  '哼','哼唧','略略略','不理你','才不','就不','你猜','不告诉你','秘密','好吧好吧',
-	  '勉强答应','看心情','再说吧','等我想想','你最好啦',
-	  '我在呢','一直都在','陪你','陪着你','不走','不离开','会一直在','有我在','别怕','我陪你',
-	  '一起吧','和你一起','站你这边','向着你','只对你好',
-	  '好','嗯','哦','欸','咦','呀','哇','啊','嘿','哈','唔','诶嘿','好嘛','行吧','可以'
-	] }
-  ]},
   { id:'g-mood', name:'心情字卡', icon:'heart', sub:'角色当前心情（带颜文字）', cats:[
 	{ id:'cm1', name:'心情', list:[
 	  {mood:'开心',kaomoji:'(◍＞◡＜◍)',anim:'1'},
@@ -733,26 +716,33 @@ if(!Array.isArray(cardStore.public)) cardStore.public = [];
 if(!cardStore.roles) cardStore.roles = {};
 cardStore.public = cardStore.public.filter(g=>g && g.id !== 'g-open');
 (function ensureGroups(){
+  var gNormal = cardStore.public.find(function(g){ return g && g.id === 'g-normal'; });
+  if(!gNormal){
+    cardStore.public.unshift({
+      id: 'g-normal', name: '普通字卡', icon: 'doc', sub: '日常回复用',
+      cats: [{ id: 'cl3', name: '未分类', list: [] }]
+    });
+  } else {
+    if(!Array.isArray(gNormal.cats)) gNormal.cats = [];
+    if(!gNormal.cats.some(function(c){ return c && c.id === 'cl3'; })){
+      gNormal.cats.unshift({ id: 'cl3', name: '未分类', list: [] });
+    }
+  }
+
   if(!cardStore.public.some(g=>g.id==='g-namecard')) cardStore.public.push(JSON.parse(JSON.stringify(DEFAULT_CARD_GROUPS.find(g=>g.id==='g-namecard'))));
   if(!cardStore.public.some(g=>g.id==='g-divine'))   cardStore.public.push(JSON.parse(JSON.stringify(DEFAULT_CARD_GROUPS.find(g=>g.id==='g-divine'))));
   if(!cardStore.public.some(g=>g.id==='g-timed'))    cardStore.public.push(JSON.parse(JSON.stringify(DEFAULT_CARD_GROUPS.find(g=>g.id==='g-timed'))));
   if(!cardStore.public.some(g=>g.id==='g-groupchat')) cardStore.public.push(JSON.parse(JSON.stringify(DEFAULT_CARD_GROUPS.find(g=>g.id==='g-groupchat'))));
   if(!cardStore.public.some(g=>g.id==='g-demand')) cardStore.public.push(JSON.parse(JSON.stringify(DEFAULT_CARD_GROUPS.find(g=>g.id==='g-demand'))));
-  
   if(!cardStore.public.some(g=>g.id==='g-danmaku')) cardStore.public.push(JSON.parse(JSON.stringify(DEFAULT_CARD_GROUPS.find(g=>g.id==='g-danmaku'))));
- 
-  
-  /* ★ 只补一次 Yes or No 字卡分组；用户之后删了不补 */
   if(!lsGet('mj_yesno_group_added_v1', false)){
     if(!cardStore.public.some(g=>g.id==='g-yesno')){
       cardStore.public.push(JSON.parse(JSON.stringify(DEFAULT_CARD_GROUPS.find(g=>g.id==='g-yesno'))));
     }
     lsSet('mj_yesno_group_added_v1', true);
   }
-  /* 角色专属：把公用新增的分组补过去；同时保证每个角色都有 g-sign */
   Object.keys(cardStore.roles||{}).forEach(function(rid){
     if(typeof syncRoleCardGroups === 'function') syncRoleCardGroups(rid);
-    /* ★ 确保 g-sign 已就位（getGroupsByOwner 会自动补，这里主动调一次） */
     try{ getGroupsByOwner(rid); }catch(e){}
   });
 })();
@@ -782,7 +772,7 @@ function markBuiltinCardDeleted(gid, cid, item){
   }catch(e){}
 }
 /* ★ 是否使用系统内置字卡（可在字卡页 ⋯ 菜单里关） */
-function useBuiltinCards(){ return lsGet('mj_use_builtin_cards_v1', true); }
+function useBuiltinCards(){ return false; }
 /* ★ 判断某条字卡是否属于系统内置（老用户库里是未标记的纯字符串，需和默认题库比对） */
 function isBuiltinDefaultItem(gid, cid, item){
   try{
@@ -796,63 +786,36 @@ function isBuiltinDefaultItem(gid, cid, item){
 }
 function syncBuiltinCards(){
   try{
-    /* 用户关掉了内置字卡 → 不同步、不新增（已有的仅隐藏，不删用户数据） */
-    if(!useBuiltinCards()) return;
-    function isBuiltinItem(it){
-      return it && typeof it === 'object' && it.src === 'builtin';
-    }
-    var delSet = getBuiltinDelSet();
-    function syncGroups(storeGroups){
+    var FLAG = 'mj_builtin_stripped_v1';
+    if(lsGet(FLAG, false)) return;
+    function stripGroups(storeGroups){
       if(!Array.isArray(storeGroups)) return false;
       var changed = false;
       storeGroups.forEach(function(g){
-        if(!g || !g.id) return;
-        var dft = DEFAULT_CARD_GROUPS.find(function(dg){ return dg.id === g.id; });
-        if(!dft || !Array.isArray(dft.cats) || !Array.isArray(g.cats)) return;
-        dft.cats.forEach(function(dc){
-          var sc = g.cats.find(function(c){ return c && c.id === dc.id; });
-          if(!sc) return;
-          if(!Array.isArray(sc.list)){ sc.list = []; changed = true; }
-          var existKeys = {};
-          sc.list.forEach(function(it){ existKeys[builtinItemKey(it)] = 1; });
-          (dc.list || []).forEach(function(dit){
-            var k = builtinItemKey(dit);
-            if(existKeys[k]) return;
-            /* ★ 用户删过的内置卡不再复活 */
-            if(delSet[g.id + '|' + dc.id + '|' + k]) return;
-            var obj;
-            if(typeof dit === 'string'){
-              obj = { text: dit, t: Date.now(), src: 'builtin' };
-            } else if(dit && typeof dit === 'object'){
-              obj = JSON.parse(JSON.stringify(dit));
-              obj.src = 'builtin';
-              if(obj.t === undefined) obj.t = Date.now();
-            } else return;
-            sc.list.push(obj);
-            existKeys[k] = 1;
-            changed = true;
-          });
-          var dftKeys = {};
-          (dc.list || []).forEach(function(dit){ dftKeys[builtinItemKey(dit)] = 1; });
-          var before = sc.list.length;
-          sc.list = sc.list.filter(function(it){
-            if(!isBuiltinItem(it)) return true;
-            return !!dftKeys[builtinItemKey(it)];
-          });
-          if(sc.list.length !== before) changed = true;
+        if(!g || !Array.isArray(g.cats)) return;
+        g.cats.forEach(function(c){
+          if(!c || !Array.isArray(c.list)) return;
+          for(var i = 0; i < c.list.length; i++){
+            var it = c.list[i];
+            if(it && typeof it === 'object' && it.src === 'builtin'){
+              delete it.src;
+              changed = true;
+            }
+          }
         });
       });
       return changed;
     }
-    var c1 = syncGroups(cardStore.public);
+    var c1 = stripGroups(cardStore.public);
     var c2 = false;
     if(cardStore.roles){
       Object.keys(cardStore.roles).forEach(function(rid){
-        if(syncGroups(cardStore.roles[rid])) c2 = true;
+        if(stripGroups(cardStore.roles[rid])) c2 = true;
       });
     }
     if(c1 || c2) saveCardStore();
-  }catch(e){ console.error('[内置字卡同步] 出错', e); }
+    lsSet(FLAG, true);
+  }catch(e){ console.error('[内置字卡清理] 出错', e); }
 }
 syncBuiltinCards();
 
@@ -2025,8 +1988,7 @@ function pickCard(roleId){
     return getCardsFromGroup('public', 'g-groupchat');
   }
 
-  /* ★ 群聊里：普通字卡和群聊字卡混合，等权抽
-     （由 groupChatTrigger* 在调用 genReply 期间打开 __gchReplyMode） */
+  /* ★ 群聊里：普通字卡和群聊字卡混合，等权抽 */
   if(window.__gchReplyMode){
     const gc = groupchatOf(rid);
     const pub = getAllNormalCards('public');
@@ -2041,21 +2003,19 @@ function pickCard(roleId){
     let mix;
     if(gc.length && normalBase.length) mix = gc.concat(normalBase);
     else mix = gc.length ? gc : normalBase;
-    const timedPool = _getTimedSegPool();
-    const weatherPool = _getWeatherPool();
+    
     const wordPool = (typeof _getWordPool === 'function') ? _getWordPool() : [];
-    const merged = mix.concat(timedPool, weatherPool, wordPool);
-    return _pickOrFallback(merged);
+    const merged = mix.concat(wordPool);
+    const _finalCard = _pickOrFallback(merged);
+    return replaceNickname(_finalCard);
   }
 
-
-  const timedPool = _getTimedSegPool();
-  const weatherPool = _getWeatherPool();
   const wordPool = (typeof _getWordPool === 'function') ? _getWordPool() : [];
 
   if(strategy === 'A'){
     const gc = groupchatOf(rid);
-    return _pickOrFallback(gc.concat(timedPool, weatherPool, wordPool));
+    const _finalCard = _pickOrFallback(gc.concat(wordPool));
+    return replaceNickname(_finalCard);
   }
 
   if(strategy === 'B'){
@@ -2067,7 +2027,8 @@ function pickCard(roleId){
     } else {
       base = gc.length ? gc : own;
     }
-    return _pickOrFallback(base.concat(timedPool, weatherPool, wordPool));
+    const _finalCard = _pickOrFallback(base.concat(wordPool));
+    return replaceNickname(_finalCard);
   }
 
   const pub = getAllNormalCards('public');
@@ -2079,7 +2040,8 @@ function pickCard(roleId){
   } else {
     base = pub.length ? pub : role;
   }
-  return _pickOrFallback(base.concat(timedPool, weatherPool, wordPool));
+  const _finalCard = _pickOrFallback(base.concat(wordPool));
+  return replaceNickname(_finalCard);
 }
 
 /* ===== 时间字卡 ===== */
@@ -23238,9 +23200,13 @@ function openCardLib(){
   renderTopBar({
     host: 'utopHost',
     title: '字 卡',
+    act: '⋯',
     onBack: function(){
       closeScreen();
       cdHisClose();
+    },
+    onAct: function(){
+      openNicknameSetting();
     }
   });
   curOwner='public'; curGroupId=''; curCatId=''; cardKeyword='';
@@ -24230,7 +24196,7 @@ function toggleCdMenu(){
     cdMenu.classList.remove('show');
     return;
   }
-  /* 时间字卡分组：菜单里多一项「时段开关」，其余项照旧 */
+  /* 时间字卡分组：菜单里多一项「时段开关」 */
   const g = currentGroupObj();
   let timedBtn = cdMenu.querySelector('[data-act="timed"]');
   if(g && g.id === 'g-timed'){
@@ -24239,25 +24205,15 @@ function toggleCdMenu(){
       timedBtn.className = 'it';
       timedBtn.dataset.act = 'timed';
       timedBtn.innerHTML = '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>时段开关';
-      const _sp = cdMenu.querySelector('#cdSpecialGrp');
-      if(_sp) _sp.appendChild(timedBtn);
-      else cdMenu.appendChild(timedBtn);
+      cdMenu.appendChild(timedBtn);
       timedBtn.addEventListener('click', function(){
         cdMenu.classList.remove('show');
         openTimedRate();
       });
     }
     timedBtn.style.display = '';
-    const _spg = document.getElementById('cdSpecialGrp');
-    const _spd = document.getElementById('cdSpecialDivider');
-    if(_spg) _spg.style.display = '';
-    if(_spd) _spd.style.display = '';
   } else {
     if(timedBtn) timedBtn.style.display = 'none';
-    const _spg = document.getElementById('cdSpecialGrp');
-    const _spd = document.getElementById('cdSpecialDivider');
-    if(_spg) _spg.style.display = 'none';
-    if(_spd) _spd.style.display = 'none';
   }
   const _signIt = cdMenu.querySelector('[data-act="sign-switch"]');
   if(_signIt){
@@ -24269,11 +24225,7 @@ function toggleCdMenu(){
     const _mvOn = lsGet('mj_move_only_same', true);
     _mvLabel.textContent = '只移动到该分组 · ' + (_mvOn ? '开' : '关');
   }
-  /* ★ 同步「使用系统内置字卡」开关文字 */
-  const _biLabel = document.getElementById('cdBuiltinLabel');
-  if(_biLabel){
-    _biLabel.textContent = '使用系统内置字卡 · ' + (useBuiltinCards() ? '开' : '关');
-  }
+ 
 
   const r=cdMore.getBoundingClientRect();
   cdMenu.style.left=Math.max(10,r.right-170)+'px';
@@ -24497,45 +24449,13 @@ if(cdMenu) cdMenu.addEventListener('click',e=>{
     return;
   }
 
-  if(act === 'builtin-toggle'){
-    const cur = useBuiltinCards();
-    lsSet('mj_use_builtin_cards_v1', !cur);
-    const label = document.getElementById('cdBuiltinLabel');
-    if(label) label.textContent = '使用系统内置字卡 · ' + (!cur ? '开' : '关');
-    
-    if(!cur){ 
-      try{ syncBuiltinCards(); }catch(e){} 
-    } else {
-      const rid = getCurrentRoleId();
-      const roleGroups = getGroupsByOwner(rid);
-      const gSign = roleGroups.find(function(g){ return g.id === 'g-sign'; });
-      if(gSign && gSign.cats){
-        let changed = false;
-        ['cs-me', 'cs-role', 'cs-refuse'].forEach(function(cid){
-          const cat = gSign.cats.find(function(c){ return c.id === cid; });
-          if(!cat || !Array.isArray(cat.list)) return;
-          const builtinArr = BUILTIN_SIGN_POOL[cid] || [];
-          const before = cat.list.length;
-          cat.list = cat.list.filter(function(item){
-            const txt = String(cardText(item) || '').trim();
-            return builtinArr.indexOf(txt) < 0;
-          });
-          if(cat.list.length !== before) changed = true;
-        });
-        if(changed) saveCardStore();
-      }
-    }
-    
-    renderCdTabs();
-    renderCdList();
-    toast(!cur ? '已开启系统内置字卡' : '已关闭：内置字卡已清理');
-    return;
-  }
+ 
 
   cdMenu.classList.remove('show');
   if(act==='add') openAddCardsModal();
   else if(act==='import') doImportCards();
   else if(act==='export') doExportCards();
+  else if(act==='nickname') openNicknameSetting();
   else if(act==='sort') openSortPicker();
   else if(act==='trim') openTrimPicker();
   else if(act==='trash') openCardTrash();
@@ -32549,3 +32469,38 @@ setTimeout(function() {
   }, true);
 })();
  
+/* ===== 动态称呼 (n) 功能 ===== */
+const NICKNAME_KEY = 'mj_nicknames_v1';
+function getNicknames() {
+  let a = lsGet(NICKNAME_KEY, null);
+  if (!Array.isArray(a) || !a.length) a = ['宝宝', '亲爱的', '老婆', '乖乖'];
+  return a;
+}
+
+function replaceNickname(text) {
+  if (!text || typeof text !== 'string') return text;
+  if (text.indexOf('（n）') >= 0 || text.indexOf('(n)') >= 0) {
+    const nicks = getNicknames();
+    if (nicks.length) {
+      const randomNick = nicks[Math.floor(Math.random() * nicks.length)];
+      return text.replace(/（n）|\(n\)/g, randomNick);
+    }
+  }
+  return text;
+}
+
+function openNicknameSetting() {
+  let current = getNicknames().join('，');
+  uniAsk({
+    title: '动态称呼 (n)',
+    sub: '用逗号隔开，字卡里写（n）会自动随机替换',
+    value: current,
+    placeholder: '例如：宝宝，乖乖，老婆'
+  }).then(function(v){
+    if(v === null) return;
+    let arr = String(v).split(/[,，]/).map(function(s){ return s.trim(); }).filter(Boolean);
+    if(!arr.length) arr = ['宝宝'];
+    lsSet('mj_nicknames_v1', arr);
+    if(typeof toast === 'function') toast('动态称呼已保存');
+  });
+}

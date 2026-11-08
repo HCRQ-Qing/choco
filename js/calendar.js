@@ -1589,105 +1589,112 @@ function closeDeskCalendar(){
   st.id = 'musicScreenStyle';
   st.textContent = [
     '#musicScreen{position:fixed;inset:0;z-index:1200;max-width:520px;margin:0 auto;',
-      'background:linear-gradient(160deg,#f7f5f0 0%,#eae6dc 100%);',
+      'background:#fafafa;',
       'display:none;flex-direction:column;overflow:hidden;',
-      'font-family:"Songti SC","STSong","SimSun","宋体",serif;color:#1a1a1a;',
+      'font-family:-apple-system,"PingFang SC",sans-serif;color:#1a1a1a;',
       '-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;}',
     '#musicScreen.on{display:flex}',
     '#musicScreen.in-desk{position:absolute;max-width:none;z-index:1}',
 
     /* 顶栏 */
-    '#musicScreen .ms-top{flex:none;display:flex;align-items:center;gap:12px;padding:22px 24px 12px}',
-    '#musicScreen .ms-back{width:36px;height:36px;flex:none;border:none;background:transparent;',
-      'color:#1a1a1a;font-size:24px;line-height:1;display:flex;align-items:center;justify-content:center;',
+    '#musicScreen .ms-top{flex:none;display:flex;align-items:center;gap:12px;padding:54px 24px 16px;background:#fafafa;z-index:10}',
+    '#musicScreen .ms-back{width:32px;height:32px;flex:none;border:none;background:transparent;',
+      'color:#1a1a1a;font-size:20px;display:flex;align-items:center;justify-content:center;',
       'padding:0 0 4px;font-family:inherit;cursor:pointer;opacity:.5;transition:opacity .18s ease}',
     '#musicScreen .ms-back:active{opacity:1}',
-    '#musicScreen .ms-title{flex:1;font-size:14px;font-weight:300;letter-spacing:8px;text-align:center;color:#1a1a1a;padding-left:8px}',
+    '#musicScreen .ms-title{flex:1;font-size:15px;font-weight:300;letter-spacing:8px;text-align:center;color:#1a1a1a;font-family:Georgia,serif;text-indent:8px}',
     '#musicScreen .ms-add{width:36px;height:36px;flex:none;border:none;background:transparent;',
       'color:#1a1a1a;font-size:22px;line-height:1;display:flex;align-items:center;justify-content:center;',
       'padding:0;cursor:pointer;font-family:inherit;opacity:.5;transition:opacity .18s ease}',
     '#musicScreen .ms-add:active{opacity:1}',
-    '#musicScreen .ms-lyric-btn{width:36px;height:36px;flex:none;border:none;background:transparent;',
+    '#musicScreen .ms-lyric-btn{width:32px;height:32px;flex:none;border:none;background:transparent;',
       'color:#1a1a1a;cursor:pointer;padding:0;display:flex;align-items:center;justify-content:center;opacity:.5}',
     '#musicScreen .ms-lyric-btn svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.5}',
     '#musicScreen .ms-lyric-btn:active{opacity:1}',
 
-    /* 封面区 */
-    '#musicScreen .ms-cover-wrap{flex:none;padding:24px 0 10px;display:flex;flex-direction:column;align-items:center}',
-    '#musicScreen .ms-cover{width:180px;height:180px;border-radius:50%;',
-      'background:radial-gradient(circle at 35% 30%,#4a4a4a 0%,#2a2a2a 40%,#1a1a1a 70%);',
-      'display:flex;align-items:center;justify-content:center;position:relative;',
-      'box-shadow:0 14px 40px rgba(0,0,0,.25),inset 0 0 0 2px rgba(255,255,255,.06);',
-      'transition:transform .3s ease}',
-    '#musicScreen .ms-cover.spinning{animation:msSpin 12s linear infinite}',
-    '@keyframes msSpin{from{transform:rotate(0)}to{transform:rotate(360deg)}}',
-    '#musicScreen .ms-cover::before{content:"";position:absolute;width:48px;height:48px;border-radius:50%;',
-      'background:radial-gradient(circle,#e8e0d0 0%,#d4ccba 100%);box-shadow:0 0 0 3px rgba(255,255,255,.15)}',
-    '#musicScreen .ms-cover::after{content:"";position:absolute;width:10px;height:10px;border-radius:50%;background:#1a1a1a;z-index:1}',
-    '#musicScreen .ms-now-name{font-size:17px;letter-spacing:1.5px;color:#1a1a1a;font-weight:400;',
-      'margin-top:22px;max-width:80%;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
-    '#musicScreen .ms-now-sub{font-size:10px;letter-spacing:4px;color:#999;font-family:Georgia,serif;font-weight:300;margin-top:6px}',
+    /* 头部区域（歌名 + 悬浮双卡） */
+    '#musicScreen .ms-player-header{flex:none;padding:8px 24px 0;display:flex;justify-content:space-between;align-items:flex-start;position:relative}',
+    '#musicScreen .ms-title-area{flex:1;padding-top:10px}',
+    '#musicScreen .ms-p-title{font-family:"Songti SC","STSong","SimSun","宋体",serif;font-size:34px;line-height:1.15;letter-spacing:2px;color:#1a1a1a;font-weight:300;margin-top:10px;max-width:200px;white-space:normal;word-break:break-all;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}',
+    '#musicScreen .ms-p-title small{display:block;font-family:Georgia,serif;font-size:9px;letter-spacing:6px;color:#bbb;margin-bottom:8px;font-weight:normal}',
+    '#musicScreen .ms-p-meta{font-size:10px;color:#bbb;letter-spacing:1.5px;font-family:Georgia,serif;margin-top:16px;padding-bottom:16px;border-bottom:0.5px solid #e0e0e0;width:80%}',
 
-    /* 歌词区 */
-    '#musicScreen .ms-lyrics{flex:1;overflow:hidden;position:relative;margin:8px 30px 0;min-height:60px;',
-      '-webkit-mask-image:linear-gradient(to bottom,transparent 0%,#000 30%,#000 70%,transparent 100%);',
-      'mask-image:linear-gradient(to bottom,transparent 0%,#000 30%,#000 70%,transparent 100%)}',
-    '#musicScreen .ms-lyrics-inner{position:absolute;left:0;right:0;top:50%;transition:transform .5s cubic-bezier(.4,0,.2,1);text-align:center}',
-    '#musicScreen .ms-lyric-line{padding:7px 0;font-size:13px;color:#b0aca0;line-height:1.6;letter-spacing:.5px;transition:all .3s ease}',
-    '#musicScreen .ms-lyric-line.active{color:#1a1a1a;font-size:15px;font-weight:500;transform:scale(1.02)}',
+    /* ★ 悬浮倾斜双卡（参数已用你调好的：20,30,-20 | 20,10,15） */
+    '#musicScreen .together-wrapper{width:100px;height:100px;display:flex;align-items:center;justify-content:center;position:relative;margin-top:10px;margin-right:-10px;flex:none}',
+    '#musicScreen .together-stack{position:relative;width:90px;height:75px}',
+    '#musicScreen .t-card{position:absolute;width:54px;height:54px;background:var(--th-av-bg, #f2f2f2);border:1px solid #f5f5f5;box-shadow:0 4px 12px rgba(0,0,0,0.06);display:flex;align-items:center;justify-content:center;overflow:hidden;border-radius:12px;transition:all 0.3s}',
+    '#musicScreen .t-card svg{width:100%;height:100%;fill:var(--th-av-sil, #c8c8c8)}',
+    '#musicScreen .t-card:nth-child(1){left:20px;top:30px;z-index:1;-webkit-transform:rotate(-20deg);transform:rotate(-20deg)}',
+    '#musicScreen .t-card:nth-child(2){right:20px;bottom:10px;z-index:2;-webkit-transform:rotate(15deg);transform:rotate(15deg)}',
+
+    /* 歌词区（全屏大字） */
+    '#musicScreen .ms-lyrics{flex:1;overflow:hidden;position:relative;display:flex;flex-direction:column;justify-content:center;margin-top:10px;',
+      '-webkit-mask-image:linear-gradient(to bottom,transparent 0%,#000 15%,#000 85%,transparent 100%);',
+      'mask-image:linear-gradient(to bottom,transparent 0%,#000 15%,#000 85%,transparent 100%)}',
+    '#musicScreen .ms-lyrics-inner{transition:transform .4s cubic-bezier(.2,.8,.2,1);text-align:center;padding:0 24px}',
+    '#musicScreen .ms-lyric-line{font-family:"Songti SC","STSong","SimSun","宋体",serif;padding:16px 0;font-size:20px;color:#dcdcdc;line-height:1.5;letter-spacing:1px;transition:all .3s ease}',
+    '#musicScreen .ms-lyric-line.active{color:#1a1a1a;font-size:34px;font-weight:500}',
     '#musicScreen .ms-lyric-empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;',
-      'color:#c8c4ba;font-size:12px;letter-spacing:2px;line-height:1.8;text-align:center;padding:0 20px}',
+      'color:#dcdcdc;font-size:13px;letter-spacing:2px;line-height:1.8;text-align:center;padding:0 20px}',
 
     /* 进度条 */
-    '#musicScreen .ms-progress{flex:none;padding:14px 30px 6px;display:flex;align-items:center;gap:12px}',
-    '#musicScreen .ms-time{font-size:10px;color:#999;font-family:Georgia,serif;flex:none;min-width:38px;letter-spacing:.5px}',
+    '#musicScreen .ms-progress{flex:none;padding:10px 30px 6px;display:flex;align-items:center;gap:10px}',
+    '#musicScreen .ms-time{font-size:10px;color:#999;font-family:Georgia,serif;flex:none;min-width:32px;letter-spacing:.5px}',
     '#musicScreen .ms-time.r{text-align:right}',
-    '#musicScreen .ms-pbar{flex:1;height:3px;background:rgba(0,0,0,.1);border-radius:3px;position:relative;cursor:pointer}',
-    '#musicScreen .ms-pfill{position:absolute;left:0;top:0;bottom:0;width:0%;background:#1a1a1a;border-radius:3px}',
-    '#musicScreen .ms-pbar::after{content:"";position:absolute;width:10px;height:10px;border-radius:50%;',
-      'background:#1a1a1a;top:50%;transform:translate(-50%,-50%);left:var(--ms-pos,0%);pointer-events:none;transition:left .1s linear;box-shadow:0 1px 4px rgba(0,0,0,.2)}',
+    '#musicScreen .ms-pbar{flex:1;height:2px;background:#e0e0e0;position:relative;cursor:pointer}',
+    '#musicScreen .ms-pfill{position:absolute;left:0;top:0;bottom:0;width:0%;background:#1a1a1a}',
+    '#musicScreen .ms-pbar::after{content:"";position:absolute;width:8px;height:8px;border-radius:50%;',
+      'background:#1a1a1a;top:50%;transform:translate(-50%,-50%);left:var(--ms-pos,0%);pointer-events:none;transition:left .1s linear}',
 
     /* 控制栏 */
-    '#musicScreen .ms-controls{flex:none;display:flex;align-items:center;justify-content:center;gap:22px;padding:10px 0 6px}',
-    '#musicScreen .ms-ctl{width:42px;height:42px;border:none;background:transparent;color:#1a1a1a;cursor:pointer;',
-      'padding:0;display:flex;align-items:center;justify-content:center;opacity:.7;transition:opacity .15s}',
-    '#musicScreen .ms-ctl:active{opacity:1}',
+    '#musicScreen .ms-controls{flex:none;display:flex;align-items:center;justify-content:space-between;padding:10px 30px 20px}',
+    '#musicScreen .ms-ctl{width:44px;height:44px;border:none;background:transparent;color:#1a1a1a;cursor:pointer;',
+      'padding:0;display:flex;align-items:center;justify-content:center;opacity:.8;transition:opacity .15s}',
+    '#musicScreen .ms-ctl:active{opacity:.4}',
     '#musicScreen .ms-ctl svg{width:20px;height:20px;fill:currentColor}',
-    '#musicScreen .ms-ctl.play{width:60px;height:60px;border-radius:50%;background:#1a1a1a;color:#fff;',
-      'box-shadow:0 4px 16px rgba(0,0,0,.2);opacity:1}',
-    '#musicScreen .ms-ctl.play svg{width:24px;height:24px}',
+    '#musicScreen .ms-ctl.play{width:60px;height:60px;border-radius:50%;background:#1a1a1a;color:#fafafa;',
+      'opacity:1;transition:transform .1s}',
+    '#musicScreen .ms-ctl.play:active{transform:scale(0.95)}',
+    '#musicScreen .ms-ctl.play svg{width:22px;height:22px;margin-left:4px}',
     '#musicScreen .ms-ctl.mode-on{color:#1a1a1a;opacity:1;position:relative}',
     '#musicScreen .ms-ctl.mode-on::after{content:"";position:absolute;bottom:2px;left:50%;transform:translateX(-50%);width:4px;height:4px;border-radius:50%;background:#1a1a1a}',
 
-    /* 音量 */
-    '#musicScreen .ms-vol-row{flex:none;display:flex;align-items:center;gap:10px;padding:4px 40px 14px}',
-    '#musicScreen .ms-vol-ico{width:16px;height:16px;flex:none;opacity:.5}',
-    '#musicScreen .ms-vol-bar{flex:1;height:2px;background:rgba(0,0,0,.1);border-radius:2px;position:relative;cursor:pointer}',
-    '#musicScreen .ms-vol-fill{position:absolute;left:0;top:0;bottom:0;background:#1a1a1a;border-radius:2px;width:70%}',
-
-    /* 歌单切换 */
-    '#musicScreen .ms-tabs{flex:none;display:flex;justify-content:center;gap:28px;padding:4px 0 8px;border-top:0.6px solid rgba(0,0,0,.06)}',
-    '#musicScreen .ms-tab{padding:6px 2px;font-size:11px;color:#bbb;letter-spacing:3px;background:none;border:none;',
+    /* 歌单列表 */
+    '#musicScreen .ms-tabs{flex:none;display:flex;justify-content:center;padding:0 24px 10px;border-top:0.6px solid #f0f0f0}',
+    '#musicScreen .ms-tab{padding:10px 0;font-size:11px;color:#bbb;letter-spacing:3px;background:none;border:none;',
       'cursor:pointer;font-family:inherit;font-weight:300;position:relative;transition:color .2s}',
-    '#musicScreen .ms-tab.on{color:#1a1a1a;font-weight:400}',
-    '#musicScreen .ms-tab.on::after{content:"";position:absolute;left:50%;bottom:0;transform:translateX(-50%);width:14px;height:1.5px;background:#1a1a1a;border-radius:2px}',
+    '#musicScreen .ms-tab.on{color:#1a1a1a;font-weight:500}',
+    '#musicScreen .ms-tab.on::after{content:"";position:absolute;left:50%;bottom:0;transform:translateX(-50%);width:12px;height:1.5px;background:#1a1a1a;border-radius:2px}',
 
-    /* 列表 */
-    '#musicScreen .ms-list{flex:1;overflow-y:auto;padding:4px 24px 24px;scrollbar-width:none}',
+    '#musicScreen .ms-list{flex:none;max-height:180px;overflow-y:auto;padding:0 24px 24px;scrollbar-width:none}',
     '#musicScreen .ms-list::-webkit-scrollbar{display:none}',
-    '#musicScreen .ms-item{display:flex;align-items:center;gap:14px;padding:14px 6px;border-bottom:0.5px solid rgba(0,0,0,.05);cursor:pointer;transition:background .15s}',
-    '#musicScreen .ms-item:active{background:rgba(0,0,0,.02)}',
+    '#musicScreen .ms-item{display:flex;align-items:center;gap:14px;padding:12px 0;border-bottom:0.5px dashed #eaeaea;cursor:pointer}',
+    '#musicScreen .ms-item:active{opacity:0.6}',
     '#musicScreen .ms-item.on .ms-n{color:#1a1a1a;font-weight:500}',
     '#musicScreen .ms-item.on .ms-idx{color:#1a1a1a}',
-    '#musicScreen .ms-item .ms-idx{width:24px;flex:none;font-size:11px;color:#c8c4ba;font-family:Georgia,serif;text-align:right}',
+    '#musicScreen .ms-item .ms-idx{width:20px;flex:none;font-size:11px;color:#ccc;font-family:Georgia,serif;text-align:right}',
     '#musicScreen .ms-item .ms-info{flex:1;min-width:0}',
     '#musicScreen .ms-item .ms-n{font-size:14px;letter-spacing:.5px;font-weight:300;color:#444;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
     '#musicScreen .ms-item .ms-s{font-size:10px;color:#bbb;margin-top:4px;letter-spacing:.5px;font-family:Georgia,serif}',
     '#musicScreen .ms-item .ms-del{width:24px;height:24px;flex:none;border:none;background:transparent;color:#d0ccc0;font-size:13px;cursor:pointer;padding:0}',
     '#musicScreen .ms-item .ms-del:active{color:#1a1a1a}',
-    '#musicScreen .ms-empty{text-align:center;color:#c0bcb0;font-size:13px;padding:60px 30px;line-height:2;letter-spacing:1.5px;font-weight:300}',
+    '#musicScreen .ms-empty{text-align:center;color:#bbb;font-size:13px;padding:40px 30px;line-height:2;letter-spacing:1.5px;font-weight:300}',
     '#musicScreen .ms-empty .big{display:block;font-size:30px;color:#d8d4c8;margin-bottom:16px}',
-    '#musicScreen input[type=file]{display:none}'
+    '#musicScreen input[type=file]{display:none}',
+    
+    /* 侧边菜单 */
+    '.ms-menu-mask{position:fixed;inset:0;z-index:1201;background:rgba(0,0,0,.4);backdrop-filter:blur(2px);opacity:0;pointer-events:none;transition:opacity .3s}',
+    '.ms-menu-mask.show{opacity:1;pointer-events:auto}',
+    '.ms-menu-panel{position:absolute;top:0;left:0;bottom:0;width:260px;background:#fafafa;z-index:1202;transform:translateX(-100%);transition:transform .3s cubic-bezier(.22,1,.36,1);box-shadow:4px 0 24px rgba(0,0,0,.05);padding-top:60px;display:flex;flex-direction:column;border-right:0.5px solid #eaeaea;font-family:-apple-system,sans-serif}',
+    '.ms-menu-mask.show .ms-menu-panel{transform:translateX(0)}',
+    '.ms-menu-head{padding:0 24px 16px;font-size:16px;font-family:"Songti SC",serif;font-weight:300;letter-spacing:2px;border-bottom:0.5px dashed #eaeaea;margin-bottom:10px}',
+    '.ms-more-list{flex:1;overflow-y:auto;padding:10px 0}',
+    '.ms-more-item{display:flex;align-items:center;padding:16px 24px;cursor:pointer;transition:background .2s}',
+    '.ms-more-item:active{background:#f0f0f0}',
+    '.ms-more-item .ic{width:32px;height:32px;margin-right:16px;display:flex;align-items:center;justify-content:center}',
+    '.ms-more-item .ic svg{width:18px;height:18px;fill:none;stroke:#1a1a1a;stroke-width:1.2}',
+    '.ms-more-item .txt{flex:1;font-size:14px;color:#1a1a1a;letter-spacing:1px;font-weight:300}',
+    '.ms-more-item .sub{font-size:10px;color:#bbb;margin-top:4px;font-weight:300}'
   ].join('');
   document.head.appendChild(st);
 
@@ -1697,17 +1704,23 @@ function closeDeskCalendar(){
   wrap.id = 'musicScreen';
   wrap.innerHTML =
     '<div class="ms-top">' +
-      '<button class="ms-back" id="msBack" type="button">‹</button>' +
-      '<div class="ms-title">音 乐</div>' +
-      '<button class="ms-lyric-btn" id="msLyricBtn" type="button" title="上传歌词">' +
-        '<svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg>' +
+      '<button class="ms-back" id="msMenuBtn" type="button" title="更多">' +
+        '<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"><path d="M3 12h18M3 6h18M3 18h18"/></svg>' +
       '</button>' +
+      '<div class="ms-title">MUSIC</div>' +
       '<button class="ms-add" id="msAdd" type="button" title="导入音乐">＋</button>' +
     '</div>' +
-    '<div class="ms-cover-wrap">' +
-      '<div class="ms-cover" id="msCover"></div>' +
-      '<div class="ms-now-name" id="msNowName">还没选歌</div>' +
-      '<div class="ms-now-sub" id="msNowSub">NO TRACK SELECTED</div>' +
+    '<div class="ms-player-header">' +
+      '<div class="ms-title-area">' +
+        '<div class="ms-p-title"><small>NOW PLAYING</small><span id="msNowName">还没选歌</span></div>' +
+        '<div class="ms-p-meta" id="msNowSub">NO TRACK SELECTED</div>' +
+      '</div>' +
+      '<div class="together-wrapper" id="togetherStack" style="display:none;">' +
+        '<div class="together-stack">' +
+          '<div class="t-card"><svg viewBox="0 0 100 100"><circle cx="50" cy="38" r="19"/><path d="M12 100 C12 74 28 62 50 62 C72 62 88 74 88 100 Z"/></svg></div>' +
+          '<div class="t-card"><svg viewBox="0 0 100 100"><circle cx="50" cy="38" r="19"/><path d="M12 100 C12 74 28 62 50 62 C72 62 88 74 88 100 Z"/></svg></div>' +
+        '</div>' +
+      '</div>' +
     '</div>' +
     '<div class="ms-lyrics" id="msLyrics">' +
       '<div class="ms-lyrics-inner" id="msLyricsInner"></div>' +
@@ -1744,13 +1757,34 @@ function closeDeskCalendar(){
     '</div>' +
     '<div class="ms-list" id="msList"></div>' +
     '<input type="file" id="msFilePick" accept="audio/*" multiple>' +
-    '<input type="file" id="msLyricPick" accept=".lrc,.txt,text/plain">';
+    '<input type="file" id="msLyricPick" accept=".lrc,.txt,text/plain">' +
+    
+    /* 侧边菜单结构 */
+    '<div class="ms-menu-mask" id="msMenuMask">' +
+      '<div class="ms-menu-panel">' +
+        '<div class="ms-menu-head">更多功能</div>' +
+        '<div class="ms-more-list">' +
+          '<div class="ms-more-item" id="msMenuAdd">' +
+            '<div class="ic"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></div>' +
+            '<div><div class="txt">导入歌曲</div><div class="sub">支持本地或链接导入</div></div>' +
+          '</div>' +
+          '<div class="ms-more-item" id="msMenuTogether">' +
+            '<div class="ic"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>' +
+            '<div><div class="txt">一起听</div><div class="sub">开启双人头像</div></div>' +
+          '</div>' +
+          '<div class="ms-more-item" id="msMenuBeauty">' +
+            '<div class="ic"><svg viewBox="0 0 24 24"><path d="M12 3l2 5 5 .5-4 3.5 1.3 5L12 14.5 7.7 17l1.3-5-4-3.5L10 8z"/></svg></div>' +
+            '<div><div class="txt">美化面板</div><div class="sub">背景、字体、主题设置</div></div>' +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
   document.body.appendChild(wrap);
 
   /* ---- 3. JS 逻辑 ---- */
   var _msLists = { list: [] };
   var _msLyrics = {};  /* id -> [{t:秒, txt:歌词}] */
-  var _msState = { group:'list', idx:{list:-1}, mode:'loop', shuffle:false, repeat:'off' };
+  var _msState = { group:'list', idx:{list:-1}, mode:'loop', shuffle:false, repeat:'off', together:false };
   var _msAudio = new Audio();
   _msAudio.preload = 'metadata';
   _msAudio.volume = 0.7;
@@ -1906,8 +1940,6 @@ function closeDeskCalendar(){
     _msState.idx[g] = i;
     _msAudio.src = t.url;
     _msAudio.play().then(function(){
-      var cv = document.getElementById('msCover');
-      if(cv) cv.classList.add('spinning');
       var ip = document.getElementById('msIcoPlay');
       var ipause = document.getElementById('msIcoPause');
       if(ip) ip.style.display = 'none';
@@ -1923,20 +1955,23 @@ function closeDeskCalendar(){
     var idx = _msState.idx[g];
     var nameEl = document.getElementById('msNowName');
     var subEl  = document.getElementById('msNowSub');
-    var cv = document.getElementById('msCover');
     var ip = document.getElementById('msIcoPlay');
     var ipause = document.getElementById('msIcoPause');
+    
+    // 控制双头像显隐
+    var av = document.getElementById('togetherStack');
+    if (av) av.style.display = _msState.together ? 'flex' : 'none';
+
     if(idx < 0 || !_msLists[g][idx]){
       if(nameEl) nameEl.textContent = '还没选歌';
       if(subEl)  subEl.textContent  = 'NO TRACK SELECTED';
-      if(cv) cv.classList.remove('spinning');
       if(ip) ip.style.display = '';
       if(ipause) ipause.style.display = 'none';
       return;
     }
     var t = _msLists[g][idx];
     if(nameEl) nameEl.textContent = t.name;
-    if(subEl)  subEl.textContent  = 'PLAYING · ' + String(idx+1).padStart(2,'0');
+    if(subEl)  subEl.textContent  = 'TRACK ' + String(idx+1).padStart(2,'0') + ' · ' + (t.size ? (t.size/1024/1024).toFixed(1) + ' MB' : 'AUDIO');
   }
 
   function msNextByMode(){
@@ -2069,12 +2104,45 @@ function closeDeskCalendar(){
     el.classList.remove('on');
   };
 
-  /* 返回按钮 */
+  /* 侧边菜单开关 */
   document.addEventListener('click', function(e){
-    if(e.target && e.target.closest && e.target.closest('#msBack')){
-      e.preventDefault();
-      e.stopPropagation();
-      window.closeMusicScreen();
+    var t = e.target;
+    if(!t || !t.closest) return;
+    
+    var mask = document.getElementById('msMenuMask');
+    
+    if(t.closest('#msMenuBtn')){
+      e.preventDefault(); e.stopPropagation();
+      if(mask) mask.classList.add('show');
+      return;
+    }
+    if(t.closest('#msMenuAdd') || t.closest('#msAdd')){
+      e.preventDefault(); e.stopPropagation();
+      if(mask) mask.classList.remove('show');
+      var fp = document.getElementById('msFilePick');
+      if(fp){ fp.value = ''; fp.click(); }
+      return;
+    }
+    if(t.closest('#msMenuTogether')){
+      e.preventDefault(); e.stopPropagation();
+      if(mask) mask.classList.remove('show');
+      _msState.together = !_msState.together;
+      msUpdateNow();
+      if(typeof toast === 'function') toast(_msState.together ? '已开启一起听' : '已关闭一起听');
+      return;
+    }
+    if(t.closest('#msMenuBeauty')){
+      e.preventDefault(); e.stopPropagation();
+      if(mask) mask.classList.remove('show');
+      if(typeof openBeauty === 'function') openBeauty();
+      else toast('美化模块未加载');
+      return;
+    }
+    
+    /* 点击遮罩关闭菜单 */
+    if(t === mask){
+      mask.classList.remove('show');
+      return;
     }
   }, true);
 
@@ -2086,19 +2154,11 @@ function closeDeskCalendar(){
       e.preventDefault();
       _msState.group = tab.dataset.g;
       _msAudio.pause();
-      var cv = document.getElementById('msCover'); if(cv) cv.classList.remove('spinning');
       var ip = document.getElementById('msIcoPlay'); if(ip) ip.style.display = '';
       var ipause = document.getElementById('msIcoPause'); if(ipause) ipause.style.display = 'none';
       msUpdateNow();
       msRenderLyrics();
       window.renderMusicScreen();
-      return;
-    }
-
-    if(t.closest && t.closest('#msAdd')){
-      e.preventDefault();
-      var fp = document.getElementById('msFilePick');
-      if(fp){ fp.value = ''; fp.click(); }
       return;
     }
 
@@ -2122,13 +2182,11 @@ function closeDeskCalendar(){
       }
       if(_msAudio.paused){
         _msAudio.play().then(function(){
-          var cvv = document.getElementById('msCover'); if(cvv) cvv.classList.add('spinning');
           var ipp = document.getElementById('msIcoPlay'); if(ipp) ipp.style.display = 'none';
           var ipa = document.getElementById('msIcoPause'); if(ipa) ipa.style.display = '';
         }).catch(function(){});
       } else {
         _msAudio.pause();
-        var cv2 = document.getElementById('msCover'); if(cv2) cv2.classList.remove('spinning');
         var ip2 = document.getElementById('msIcoPlay'); if(ip2) ip2.style.display = '';
         var ipa2 = document.getElementById('msIcoPause'); if(ipa2) ipa2.style.display = 'none';
       }
@@ -2271,13 +2329,7 @@ function closeDeskCalendar(){
     msNextByMode();
   };
 
-  /* 初始化音量条 */
-  setTimeout(function(){
-    var fill = document.getElementById('msVolFill');
-    if(fill) fill.style.width = (_msAudio.volume*100) + '%';
-  }, 200);
-
-  /* ★ BGM 已删除：进站不再自动播放任何音乐 */
+  /* ★ 收尾：清理旧版音量条残留，确保 UI 干净 */
 
 })();
 window.__calendar = {
