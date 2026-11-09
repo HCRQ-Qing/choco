@@ -1504,21 +1504,25 @@
     <div class="txt-sec">
       <div class="txt-title">字体</div>
       <div class="txt-desc">上传 .ttf / .otf 字体文件，全站文字都换成这个字体。</div>
-      <div class="font-box">
-        <div class="font-row">
-          <div class="font-name empty" id="myFontName">还没上传</div>
-          <button class="font-btn primary" id="myFontUpload" type="button">上传字体</button>
-          <button class="font-btn ghost" id="myFontReset" type="button">恢复默认</button>
+      <div style="display:flex; align-items:center; justify-content:space-between; border-bottom:0.7px solid #eee; padding:12px 0;">
+        <div id="myFontName" style="font-size:13px; color:#999;">还没上传</div>
+        <div style="display:flex; gap:16px;">
+          <button id="myFontUpload" type="button" style="border:none; background:transparent; color:#1a1a1a; font-size:13px; font-family:inherit; padding:0; cursor:pointer;">上 传</button>
+          <button id="myFontReset" type="button" style="border:none; background:transparent; color:#bbb; font-size:13px; font-family:inherit; padding:0; cursor:pointer;">恢复默认</button>
         </div>
-        <div class="font-hint">上传后全站生效。字体文件较大，建议 5MB 以内。</div>
+      </div>
+      <div class="txt-desc" style="margin-top:10px; font-size:11.5px;">上传后全站生效。字体文件较大，建议 5MB 以内。</div>
+    </div>
+
+    <div class="txt-sec" style="margin-top:32px;">
+      <div class="txt-title">填入文字链接</div>
+      <div class="txt-desc">粘贴一个网页链接，点击「应用」，链接文字会自动填入上方输入框。</div>
+      <div style="display:flex; align-items:flex-end; gap:16px; margin-top:14px;">
+        <input type="text" id="myInLinkUrl" class="txt-input" placeholder="https://example.com" style="flex:1; padding-bottom:6px; border-bottom:0.7px solid #e0e0e0;">
+        <button id="myLinkApply" type="button" style="flex:none; padding:0 4px 6px; border:none; background:transparent; color:#1a1a1a; font-size:13px; font-family:inherit; letter-spacing:1.5px; cursor:pointer; outline:none;">应 用</button>
       </div>
     </div>
-    <div class="txt-prev">
-      <div class="txt-prev-lbl">P R E V I E W</div>
-      <div class="txt-prev-cn">我</div>
-      <div class="txt-prev-en" id="myPrevTitleEn">MY PROFILE</div>
-      <div class="txt-prev-en" id="myPrevVert" style="margin-top:14px">MY SPACE</div>
-    </div>
+ 
   </div>
 </div>
 <div class="sub-panel" id="spTheme">
