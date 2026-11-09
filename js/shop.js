@@ -238,14 +238,19 @@
   function addCollectionToStore(c){
     if(!c || !Array.isArray(c.cards)) return { added: 0, dup: 0, groupName: '' };
     var groups = cardStore.public;
-    
-    var g = groups.find(function(x){ return x && x.id === 'g-normal'; });
+
+    var targetName = '普通字卡';
+    var targetId = 'g-normal';
+    if(c.id === 'mood'){ targetName = '心情'; targetId = 'g-mood'; }
+    else if(c.id === 'status' || c.id === 'clean'){ targetName = '状态'; targetId = 'g-status'; }
+
+    var g = groups.find(function(x){ return x && (x.id === targetId || x.name === targetName); });
     if(!g){
-      g = { id: 'g-normal', name: '普通字卡', icon: 'doc', sub: '日常回复用', cats: [] };
-      groups.unshift(g);
+      g = { id: targetId, name: targetName, icon: 'doc', sub: '', cats: [] };
+      groups.push(g);
     }
     if(!Array.isArray(g.cats)) g.cats = [];
-    
+
     var catName = c.name || '未命名合集';
     var cat = g.cats.find(function(x){ return x && x.name === catName; });
     if(!cat){
@@ -271,7 +276,7 @@
     });
 
     saveCardStore();
-    return { added: added, dup: dup, groupName: '普通字卡 / ' + catName };
+    return { added: added, dup: dup, groupName: targetName + ' / ' + catName };
   }
 
   function downloadCollection(c){

@@ -8431,11 +8431,31 @@ function buildQuoteTarget(roleId){
 
 let moodTimer=null, statusTimer=null;
 function randBetween(min,max){ min=Math.max(1,Math.floor(min)); max=Math.max(min,Math.floor(max)); return Math.floor(min+Math.random()*(max-min+1)); }
-function getMoodList(){ const g = getGroupsByOwner('public').find(x=>x.id==='g-mood'); if(!g || !g.cats || !g.cats[0] || !Array.isArray(g.cats[0].list)) return []; return g.cats[0].list.filter(x=>x && x.mood); }
+function getMoodList(){
+  const rid = getCurrentRoleId();
+  const pg = getGroupsByOwner('public').find(x=>x.id==='g-mood');
+  const rg = getGroupsByOwner(rid).find(x=>x.id==='g-mood');
+  let arr = [];
+  if(pg && Array.isArray(pg.cats)){
+    pg.cats.forEach(c => { if(Array.isArray(c.list)) arr = arr.concat(c.list); });
+  }
+  if(rg && Array.isArray(rg.cats)){
+    rg.cats.forEach(c => { if(Array.isArray(c.list)) arr = arr.concat(c.list); });
+  }
+  return arr.filter(x=>x && x.mood);
+}
 function getStatusList(){
-  const g = getGroupsByOwner('public').find(x=>x.id==='g-status');
-  if(!g || !g.cats || !g.cats[0] || !Array.isArray(g.cats[0].list)) return [];
-  return g.cats[0].list.map(x=>{
+  const rid = getCurrentRoleId();
+  const pg = getGroupsByOwner('public').find(x=>x.id==='g-status');
+  const rg = getGroupsByOwner(rid).find(x=>x.id==='g-status');
+  let arr = [];
+  if(pg && Array.isArray(pg.cats)){
+    pg.cats.forEach(c => { if(Array.isArray(c.list)) arr = arr.concat(c.list); });
+  }
+  if(rg && Array.isArray(rg.cats)){
+    rg.cats.forEach(c => { if(Array.isArray(c.list)) arr = arr.concat(c.list); });
+  }
+  return arr.map(x=>{
     if(typeof x === 'string') return x;
     if(x && typeof x === 'object' && typeof x.text === 'string') return x.text;
     return '';
@@ -8517,33 +8537,38 @@ function scheduleStatus(){
   }, ms);
 }
 function rescheduleMoodStatus(){ scheduleMood(); scheduleStatus(); }
+function _validateMoodState(){
+  return getMoodState();
+}
 function applyMoodUI(){
   const ms = getMoodState();
   const list = getMoodList();
   const statusList = getStatusList();
   let changed = false;
 
-  /* 首次进入：mood 为空 → 从池子随机抽一个；池子空才退回默认 */
-  if(!ms.mood){
-    if(list.length){
+  if(list.length > 0) {
+    const names = list.map(function(x){ return x.mood; });
+    if(!ms.mood || names.indexOf(ms.mood) < 0) {
       ms.mood = list[Math.floor(Math.random()*list.length)].mood;
-    }else{
-      ms.mood = '开心';
+      changed = true;
     }
-    changed = true;
+  } else {
+    if(ms.mood !== '开心') {
+      ms.mood = '开心';
+      changed = true;
+    }
   }
 
-  /* 首次进入：status 为空，或还是旧版写死的默认值 → 从池子随机抽一个 */
-  /* 注意：这是"首次进入补随机"，不是"每次都随机"。
-     定时器到点后 scheduleStatus 照常覆盖，可以重复抽到同一个状态。 */
-  const OLD_DEFAULT_STATUS = '🎧 听歌中';
-  if(!ms.status || ms.status === OLD_DEFAULT_STATUS){
-    if(statusList.length){
+  if(statusList.length > 0) {
+    if(!ms.status || statusList.indexOf(ms.status) < 0) {
       ms.status = statusList[Math.floor(Math.random()*statusList.length)];
-    }else{
-      ms.status = OLD_DEFAULT_STATUS;
+      changed = true;
     }
-    changed = true;
+  } else {
+    if(ms.status !== '🎧 听歌中') {
+      ms.status = '🎧 听歌中';
+      changed = true;
+    }
   }
 
   if(changed) saveMoodState(ms);
@@ -13421,6 +13446,23 @@ function renderMyTxtSub(){
     var t = e.target;
     if(!t || !t.closest) return;
     if(t.closest('#myTxtBack')){ e.preventDefault(); e.stopPropagation(); document.getElementById('mySpTxt').classList.remove('show'); return; }
+    if(t.closest('#myLinkApply')){
+      e.preventDefault(); e.stopPropagation();
+      var url = document.getElementById('myInLinkUrl').value.trim();
+      if(!url){ if(typeof toast==='function') toast('请先粘贴链接'); return; }
+      var inputEn = document.getElementById('myInTitleEn');
+      if(inputEn) {
+        var txt = url.length > 24 ? url.slice(0, 24) : url;
+        inputEn.value = txt;
+        var c = getMyTitleCfg(); c.en = txt; saveMyTitleCfg(c); applyMyTitleText();
+        var countEl = document.getElementById('myTitleEnCount');
+        if(countEl) countEl.textContent = Array.from(txt).length;
+        var prevEn = document.getElementById('myPrevTitleEn');
+        if(prevEn) prevEn.textContent = txt || 'MY PROFILE';
+        if(typeof toast==='function') toast('已应用链接');
+      }
+      return;
+    }
     if(t.closest('#myFontUpload')){ e.preventDefault(); e.stopPropagation(); var f=document.getElementById('myFontFile'); if(f){f.value='';f.click();} return; }
     if(t.closest('#myFontReset')){
       e.preventDefault(); e.stopPropagation();
@@ -13439,28 +13481,39 @@ function renderMyTxtSub(){
     if(t.id === 'myInTitleEn'){
       var c = getMyTitleCfg(); c.en = t.value; saveMyTitleCfg(c); applyMyTitleText();
       var ce = document.getElementById('myTitleEnCount'); if(ce) ce.textContent = Array.from(t.value).length;
-      var pe = document.getElementById('myPrevTitleEn'); if(pe) pe.textContent = t.value||'MY PROFILE';
+      var liveEn = document.getElementById('myLivePrevEn'); if(liveEn) liveEn.textContent = t.value || 'MY PROFILE';
     }
     if(t.id === 'myInVert'){
       var c2 = getMyTitleCfg(); c2.vert = t.value; saveMyTitleCfg(c2); applyMyTitleText();
       var cv = document.getElementById('myVertCount'); if(cv) cv.textContent = Array.from(t.value).length;
-      var pv = document.getElementById('myPrevVert'); if(pv) pv.textContent = t.value||'MY SPACE';
     }
   }, true);
   document.addEventListener('change', function(e){
     var t = e.target;
     if(!t || t.id !== 'myFontFile') return;
-    var file = t.files && t.files[0]; t.value='';
+    var file = t.files && t.files[0]; 
+    t.value = '';
     if(!file) return;
+    
     var key = 'myfont_' + Date.now().toString(36);
+    if(!window.__idb || typeof window.__idb.set !== 'function'){
+      if(typeof toast === 'function') toast('数据库未加载，无法保存');
+      return;
+    }
+    
     __idb.set(key, file).then(function(){
       var fc = getMyFontCfg();
       if(fc.key) __idb.del(fc.key).catch(function(){});
       saveMyFontCfg({key:key, name:file.name});
       applyMyFont();
-      renderMyTxtSub();
-      toast('字体已上传');
-    }).catch(function(err){ console.error(err); toast('上传失败'); });
+      if(typeof renderMyTxtSub === 'function') renderMyTxtSub();
+      var liveCn = document.getElementById('myLivePrevCn');
+      if(liveCn) liveCn.textContent = '字体已应用';
+      if(typeof toast === 'function') toast('字体已上传');
+    }).catch(function(err){ 
+      console.error('字体存数据库失败', err); 
+      if(typeof toast === 'function') toast('上传失败：' + err.message); 
+    });
   }, true);
 })();
 (function ensureMyFiles(){
