@@ -513,6 +513,17 @@ body.sel-mode-on .cd-tab .cd-tab-del{display:flex}
   stroke:#ccc;fill:none;stroke-width:2;
 }
 .mood-item .mood-acts{display:flex;flex:none;gap:8px}
+.mood-item.mood-sel-mode{padding-left:0}
+.mood-item.mood-sel-mode .mood-anim-wrap,
+.mood-item.mood-sel-mode .mood-acts{display:none}
+.mood-item .mood-chk{width:22px;height:22px;flex:none;border-radius:50%;border:1.5px solid var(--th-faint);background:var(--th-bg1);color:var(--th-bg1);display:inline-flex;align-items:center;justify-content:center;font-size:12px;line-height:1;box-sizing:border-box;transition:background .15s ease,border-color .15s ease,color .15s ease}
+.mood-item.mood-selected .mood-chk{background:var(--th-text);border-color:var(--th-text);color:var(--th-bg1)}
+.mood-sel-bar{position:fixed;left:0;right:0;bottom:0;z-index:400;display:flex;align-items:center;gap:8px;padding:10px 16px calc(10px + env(safe-area-inset-bottom));background:var(--th-bg1);border-top:0.7px solid var(--th-border);max-width:520px;margin:0 auto}
+.mood-sel-bar .mood-sel-count{flex:1;font-size:11.5px;color:var(--th-text-soft);letter-spacing:0}
+.mood-sel-bar .mood-sel-btn{padding:6px 12px;border-radius:8px;font-size:11.5px;font-family:inherit;letter-spacing:.5px;color:var(--th-text);background:transparent;border:0.7px solid var(--th-faint);cursor:pointer;white-space:nowrap;transition:background .18s ease}
+.mood-sel-bar .mood-sel-btn:active{background:var(--th-accent-soft)}
+.mood-sel-bar .mood-sel-btn.danger{color:var(--th-bg1);background:var(--th-text);border-color:var(--th-text);font-weight:500}
+.mood-sel-bar .mood-sel-btn.danger:active{opacity:.8}
 .mood-item .mood-act{
   width:26px;height:26px;border-radius:0;
   display:flex;align-items:center;justify-content:center;
