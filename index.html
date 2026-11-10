@@ -4735,6 +4735,15 @@
 }
 #mSignSwitch #signSwCloseBtn:active{color:var(--th-text) !important}
 
+.send-blocked-mark{
+  cursor:pointer;
+  color:#e54b4b !important;
+  animation:blockedPulse 1.6s ease-in-out infinite;
+}
+@keyframes blockedPulse{
+  0%,100%{ opacity:1; }
+  50%{ opacity:.55; }
+}
 /* ★ 强制压缩弹窗高度：干掉所有大间距 */
 #mSignSwitch .sheet-body,
 #mSignSwitch #signSwitchBody{
