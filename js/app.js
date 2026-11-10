@@ -2700,9 +2700,12 @@ let msgs = [];
 function msgsKey(){ return 'mj_msgs_'+getCurrentRoleId(); }
 function loadMsgs(){
   let m = lsGet(msgsKey(), null);
-  if(!m){
-	m = [];              // ← 改成空数组，就没有默认消息了
-	lsSet(msgsKey(), m);
+  if(typeof m === 'string'){
+    try{ m = JSON.parse(m); }catch(e){ m = null; }
+  }
+  if(!Array.isArray(m)){
+    m = [];
+    lsSet(msgsKey(), m);
   }
   return m;
 }
