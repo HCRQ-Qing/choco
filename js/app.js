@@ -613,19 +613,7 @@ const DEFAULT_CARD_GROUPS = [
 	  {mood:'心动',kaomoji:'(♡´▽`♡)',anim:'1'}
 	] }
   ]},
-  { id:'g-status', name:'状态字卡', icon:'note', sub:'角色当前状态', cats:[ { id:'cs1', name:'状态', list:[
-    '🎧 听歌中','💭 发呆中','📖 看书','💼 忙碌','🚫 勿扰','🟢 在线','🫥 离线',
-    '💗 爱你','💕 恋爱中','😩 一言难尽','🥲 emo',
-    '📶 信号强','📵 信号弱','💤 睡觉','😪 疲惫','🥱 困倦',
-    '😑 无聊','🌙 熬夜',
-    '📱 刷手机','🍜 吃饭中','🚿 洗澡中','🛌 赖床','☕ 喝咖啡','🍵 喝茶中',
-    '🎮 打游戏','📺 追剧中',
-    '🍃 放松',
-    '🛒 逛街','🏃 跑步','🚴 骑车','🌳 散步',
-    '🤍 想你中','🩹 受伤了',
-    '😋 吃饱了',
-    '🌸 赏花'
-  ] } ] },
+  { id:'g-status', name:'状态字卡', icon:'note', sub:'角色当前状态', cats:[ { id:'cs1', name:'状态', list:[] } ] },
   { id:'g-moment', name:'动态字卡', icon:'star', sub:'专门发动动用', cats:[ { id:'cmo1', name:'日常', list:['今天天气很好。','分享一首歌。','刚看完一本书。'] } ] },
   { id:'g-namecard', name:'名片字卡', icon:'note', sub:'收到名片时角色的回应', cats:[
 	{ id:'cnc1', name:'同意', list:['加了','已加','OK'] },
@@ -965,41 +953,8 @@ syncBuiltinCards();
   try{
     var FLAG = 'mj_status_default_synced_v2';
     if(lsGet(FLAG, false)) return;
-
-    var gs = cardStore.public.find(function(g){ return g.id === 'g-status'; });
-    if(!gs || !gs.cats || !gs.cats[0] || !Array.isArray(gs.cats[0].list)) return;
-
-    var dftStatus = DEFAULT_CARD_GROUPS.find(function(g){ return g.id === 'g-status'; });
-    if(!dftStatus || !dftStatus.cats || !dftStatus.cats[0] || !Array.isArray(dftStatus.cats[0].list)) return;
-
-    /* 老数据里已有的状态名集合 */
-    var existNames = {};
-    gs.cats[0].list.forEach(function(item){
-      var name = '';
-      if(typeof item === 'string') name = item;
-      else if(item && typeof item === 'object') name = item.text || '';
-      if(name) existNames[name] = 1;
-    });
-
-    /* 从默认列表里，把老数据里没有的补进来 */
-    var added = 0;
-    dftStatus.cats[0].list.forEach(function(item){
-      var name = '';
-      if(typeof item === 'string') name = item;
-      else if(item && typeof item === 'object') name = item.text || '';
-      if(!name) return;
-      if(existNames[name]) return;
-      gs.cats[0].list.push(typeof item === 'string' ? item : JSON.parse(JSON.stringify(item)));
-      added++;
-    });
-
-    if(added){
-      saveCardStore();
-      console.log('[状态字卡] 补入了 ' + added + ' 条内置新增状态');
-    }
-
     lsSet(FLAG, true);
-  }catch(e){ console.error('syncNewStatusDefaults 出错', e); }
+  }catch(e){}
 })();
 
 /* ★ 一次性清理：把 16 条不要的状态从已存数据里删掉 */
@@ -9278,7 +9233,8 @@ document.addEventListener('click', function(e){
   if(t.closest('#qmAddTpl')){ e.preventDefault(); e.stopPropagation(); const m=document.getElementById('mQuizMenu'); if(m)m.classList.remove('show'); quizMenuAddTpl(); return; }
   if(t.closest('#qmMyList')){ e.preventDefault(); e.stopPropagation(); const m=document.getElementById('mQuizMenu'); if(m)m.classList.remove('show'); quizMenuMyList(); return; }
   if(t.closest('#qmFavList')){ e.preventDefault(); e.stopPropagation(); const m=document.getElementById('mQuizMenu'); if(m)m.classList.remove('show'); quizMenuFavList(); return; }
-  if(t.closest('#qmImport')){ e.preventDefault(); e.stopPropagation(); const m=document.getElementById('mQuizMenu'); if(m)m.classList.r
+  if(t.closest('#qmImport')){ e.preventDefault(); e.stopPropagation(); const m=document.getElementById('mQuizMenu'); if(m)m.classList.remove('show'); }
+  if(false){
     e.preventDefault();
     e.stopPropagation();
     const pickMask = document.getElementById('mQuizPick');
@@ -18936,7 +18892,7 @@ const ROLE_SELFSET_ITEMS = [
   { key:'callWin',     label:'通话发语音时间段' },
   { key:'callVoiceCnt',label:'通话里发几条语音' },
   { key:'maxBubbles',  label:'气泡最多' },
-  { key:'maxBlocks',   label:'拼好卡最多 / 概率' },
+  { key:'maxBlocks',   label:'拼字卡最多 / 概率' },
   { key:'pinyin',      label:'单字字卡最多 / 概率' },
   { key:'emoji',       label:'emoji 概率' },
   { key:'kao',         label:'颜文字概率' }
@@ -22079,7 +22035,6 @@ function getCardDemand(roleId){
   let d = all[rid];
   if(!d || typeof d !== 'object' || !Array.isArray(d.demands)) d = refreshCardDemand(d, rid);
   if(typeof d.maxCount !== 'number' || d.maxCount < 1) d.maxCount = 6;
-  if(d.maxCount > 6) d.maxCount = 6;
   return d;
 }
 function saveCardDemand(d, roleId){
@@ -22096,11 +22051,77 @@ function _rollCardDemandItems(maxCount){
   try{ r = getReply(getCurrentRoleId()); }catch(e){}
   
   if(r && r.noReplyOn !== false){
-    if(Math.random() < 0.60) out.push({ kind:'noReply' });
+    if(Math.random() < 0.05) out.push({ kind:'noReply' });
+    else if(Math.random() < 0.05) out.push({ kind:'noReplyRate', pct: 1 + Math.floor(Math.random() * 100) });
   } else {
-    if(Math.random() < 0.60) out.push({ kind:'openNoReply' });
+    if(Math.random() < 0.05) out.push({ kind:'openNoReply' });
   }
-  if(Math.random() < 0.75) out.push({ kind:'cards', n: 1 + Math.floor(Math.random() * Math.min(6, maxCount)) });
+  if(r && r.quoteOn !== false){
+    if(Math.random() < 0.05) out.push({ kind:'quoteOff' });
+    else {
+      if(Math.random() < 0.05) out.push({ kind:'quoteRate', pct: 1 + Math.floor(Math.random() * 100) });
+      if(Math.random() < 0.05) out.push({ kind:'quoteFullRate', pct: 1 + Math.floor(Math.random() * 100) });
+    }
+  } else {
+    if(Math.random() < 0.05) out.push({ kind:'quoteOn' });
+  }
+  if(r && r.recallOn !== false){
+    if(Math.random() < 0.05) out.push({ kind:'recallOff' });
+    else if(Math.random() < 0.05) out.push({ kind:'recallRate', pct: 1 + Math.floor(Math.random() * 100) });
+  } else {
+    if(Math.random() < 0.05) out.push({ kind:'recallOn' });
+  }
+  if(r && r.activeOn !== false){
+    if(Math.random() < 0.05) out.push({ kind:'activeRate', pct: 1 + Math.floor(Math.random() * 100) });
+  }
+  if(r && r.divineOn !== false){
+    if(Math.random() < 0.05) out.push({ kind:'divineOff' });
+    else if(Math.random() < 0.05) out.push({ kind:'divineRate', pct: 1 + Math.floor(Math.random() * 100) });
+  } else {
+    if(Math.random() < 0.05) out.push({ kind:'divineOn' });
+  }
+  if(r && r.divineReadOn !== false){
+    if(Math.random() < 0.05) out.push({ kind:'divineReadOff' });
+    else {
+      if(Math.random() < 0.05) out.push({ kind:'divineReadRate', pct: 1 + Math.floor(Math.random() * 100) });
+      if(Math.random() < 0.05) out.push({ kind:'divineReadCardMax', n: 1 + Math.floor(Math.random() * 15) });
+    }
+  } else {
+    if(Math.random() < 0.05) out.push({ kind:'divineReadOn' });
+  }
+  if(r && r.multiBlockOn !== false){
+    if(Math.random() < 0.05) out.push({ kind:'multiBlockOff' });
+    else {
+      if(Math.random() < 0.05) out.push({ kind:'multiBlockProb', pct: 1 + Math.floor(Math.random() * 100) });
+      if(Math.random() < 0.05) out.push({ kind:'maxBlocks', n: 1 + Math.floor(Math.random() * 5) });
+    }
+  } else {
+    if(Math.random() < 0.05) out.push({ kind:'multiBlockOn' });
+  }
+  if(r && r.pinyinOn !== false){
+    if(Math.random() < 0.05) out.push({ kind:'pinyinOff' });
+    else {
+      if(Math.random() < 0.05) out.push({ kind:'pinyinRate', pct: 1 + Math.floor(Math.random() * 100) });
+      if(Math.random() < 0.05) out.push({ kind:'pinyinMax', n: 1 + Math.floor(Math.random() * 5) });
+    }
+  } else {
+    if(Math.random() < 0.05) out.push({ kind:'pinyinOn' });
+  }
+  if(r && r.emojiOn !== false){
+    if(Math.random() < 0.05) out.push({ kind:'emojiOff' });
+    else if(Math.random() < 0.05) out.push({ kind:'emojiRate', pct: 1 + Math.floor(Math.random() * 100) });
+  } else {
+    if(Math.random() < 0.05) out.push({ kind:'emojiOn' });
+  }
+  if(r && r.kaoOn !== false){
+    if(Math.random() < 0.05) out.push({ kind:'kaoOff' });
+    else if(Math.random() < 0.05) out.push({ kind:'kaoRate', pct: 1 + Math.floor(Math.random() * 100) });
+  } else {
+    if(Math.random() < 0.05) out.push({ kind:'kaoOn' });
+  }
+  if(Math.random() < 0.50) out.push({ kind:'fastRead', sec: (Math.random() < 0.5 ? (1 + Math.floor(Math.random() * 1000)) : (1001 + Math.floor(Math.random() * 2000))) });
+  if(Math.random() < 0.50) out.push({ kind:'slowRead', sec: (Math.random() < 0.5 ? (1 + Math.floor(Math.random() * 1000)) : (1001 + Math.floor(Math.random() * 2000))) });
+  if(Math.random() < 0.75) out.push({ kind:'cards', n: Math.floor(Math.random() * (maxCount + 1)) });
   if(Math.random() < 0.50) out.push({ kind:'slowDelay', sec: 1 + Math.floor(Math.random() * 5000) });
   if(Math.random() < 0.50) out.push({ kind:'fastDelay', sec: 1 + Math.floor(Math.random() * 5000) });
   if(Math.random() < 0.45){
@@ -22122,6 +22143,43 @@ function _rollCardDemandItems(maxCount){
       out.push({ kind:'removePunct', list: picked });
     }
   }
+  if(r && r.endPunctOn !== false){
+    if(Math.random() < 0.40) out.push({ kind:'endPunctOff' });
+    else if(Math.random() < 0.40) out.push({ kind:'endPunctRate', pct: 1 + Math.floor(Math.random() * 100) });
+  } else {
+    if(Math.random() < 0.60) out.push({ kind:'endPunctOn' });
+  }
+  let cCfg = {};
+  try { cCfg = getCallCfg(getCurrentRoleId()); } catch(e){}
+  if(cCfg && cCfg.on !== false){
+    if(Math.random() < 0.05) out.push({ kind:'callVoiceOff' });
+    else if(Math.random() < 0.05) out.push({ kind:'callVoiceRate', pct: 1 + Math.floor(Math.random() * 100) });
+  } else {
+    if(Math.random() < 0.05) out.push({ kind:'callVoiceOn' });
+  }
+  if(cCfg && cCfg.talkOn !== false){
+    if(Math.random() < 0.05) out.push({ kind:'callTalkOff' });
+    else {
+      if(Math.random() < 0.05){
+        let a = 1 + Math.floor(Math.random() * 30);
+        let b = 1 + Math.floor(Math.random() * 30);
+        out.push({ kind:'callWin', min: Math.min(a, b), max: Math.max(a, b) });
+      }
+      if(Math.random() < 0.05){
+        let a = 1 + Math.floor(Math.random() * 10);
+        let b = 1 + Math.floor(Math.random() * 10);
+        out.push({ kind:'callVoiceCnt', min: Math.min(a, b), max: Math.max(a, b) });
+      }
+    }
+  } else {
+    if(Math.random() < 0.05) out.push({ kind:'callTalkOn' });
+  }
+  if(cCfg && cCfg.on !== false){
+    if(Math.random() < 0.05) out.push({ kind:'callVideoOff' });
+    else if(Math.random() < 0.05) out.push({ kind:'callVideoRate', pct: 1 + Math.floor(Math.random() * 100) });
+  } else {
+    if(Math.random() < 0.05) out.push({ kind:'callVideoOn' });
+  }
   if(!out.length) out.push({ kind:'cards', n: 1 + Math.floor(Math.random() * Math.min(6, maxCount)) });
   out.forEach(function(it){
     it.id = 'cdq' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
@@ -22132,9 +22190,14 @@ function _rollCardDemandItems(maxCount){
 
 function refreshCardDemand(prev, roleId){
   const rid = roleId || getCurrentRoleId();
-  /* 上限固定 1~6，默认 6；刷新不再改写上限 */
-  let maxCount = (prev && typeof prev.maxCount === 'number') ? prev.maxCount : 6;
-  maxCount = Math.max(1, Math.min(6, maxCount));
+  let maxCount = 6;
+  try {
+    const stored = getCardDemand(rid);
+    if(stored && typeof stored.maxCount === 'number'){
+      maxCount = stored.maxCount;
+    }
+  } catch(e) {}
+  maxCount = Math.max(1, maxCount);
 
   /* 类型：从「角色需求」分组抽，支持一次抽 1~6 个 */
   let type = null;
@@ -22192,149 +22255,390 @@ function refreshCardDemand(prev, roleId){
 }
 
 function openCardDemandScreen(){
-  const d = getCardDemand();
-  renderCardDemand(d);
   showScreen('cardDemandScreen');
   renderTopBar({
     host: 'utopHostCardDemand',
     title: '字 卡 需 求',
     onBack: function(){ closeScreen(); }
   });
+  renderCardDemand();
 }
 
- 
-
-function renderCardDemand(d){
+function renderCardDemand(){
   const wrap = document.getElementById('cardDemandWrap');
   if(!wrap) return;
   const rid = getCurrentRoleId();
-  let roleName = '';
-  try{ const r = getRoleById(rid); roleName = r ? r.displayName || r.name : ''; }catch(e){}
+  const d = getCardDemand(rid);
+  const role = getRoleById(rid);
+  const roleName = role ? ((role.remark && String(role.remark).trim()) || role.name) : '角色';
 
-  const demands = Array.isArray(d.demands) ? d.demands : [];
-  const demandHTML = demands.length
-    ? demands.map(function(it){
-        let txt = '';
-        if(it.kind === 'noReply') txt = '想要关掉「已读不回」';
-        else if(it.kind === 'openNoReply') txt = '想要开启「已读不回」';
-        else if(it.kind === 'cards') txt = '想要 ' + it.n + ' 张字卡';
-        else if(it.kind === 'slowDelay') txt = '想要把回复最慢延迟调到 ' + it.sec + ' 秒';
-        else if(it.kind === 'fastDelay') txt = '想要把回复最快延迟调到 ' + it.sec + ' 秒';
-        else if(it.kind === 'removePunct') txt = '想要关掉标点：' + (it.list || []).join(' ');
-        else txt = '一个小心愿';
-        return '<div class="cd-demand-item' + (it.done ? ' done' : '') + '">' +
-          '<span class="cd-demand-txt">' + escapeHTML(txt) + '</span>' +
-          (it.done
-            ? '<span class="cd-demand-done">已完成</span>'
-            : '<button class="cd-demand-btn" data-demand="' + escapeHTML(it.id) + '" type="button">满足</button>') +
-        '</div>';
-      }).join('')
-    : '<div class="cd-value none">暂时没有</div>';
+  const nameEl = document.getElementById('cdRoleName');
+  if(nameEl) nameEl.textContent = roleName;
 
-  const typeHTML = d.type
-    ? '<div class="cd-value">' + escapeHTML(d.type) + '</div>'
-    : '<div class="cd-value none">暂无类型需求</div>';
+  const demands = Array.isArray(d.demands) ? d.demands.filter(function(it){ 
+    if(it.done) return false;
+    if(it.kind === 'cards') return false;
+    if(!it.kind) return true;
+    const r = getReply(rid);
+    let c = {};
+    if(it.kind.indexOf('call') === 0){
+      try{ c = getCallCfg(rid); }catch(e){}
+    }
+    if(it.kind === 'openNoReply' && r.noReplyOn !== false) return false;
+    if(it.kind === 'quoteOn' && r.quoteOn !== false) return false;
+    if(it.kind === 'recallOn' && r.recallOn !== false) return false;
+    if(it.kind === 'divineOn' && r.divineOn !== false) return false;
+    if(it.kind === 'divineReadOn' && r.divineReadOn !== false) return false;
+    if(it.kind === 'multiBlockOn' && r.multiBlockOn !== false) return false;
+    if(it.kind === 'pinyinOn' && r.pinyinOn !== false) return false;
+    if(it.kind === 'emojiOn' && r.emojiOn !== false) return false;
+    if(it.kind === 'kaoOn' && r.kaoOn !== false) return false;
+    if(it.kind === 'endPunctOn' && r.endPunctOn !== false) return false;
+    if(it.kind === 'callVoiceOn' && c.voiceOn !== false) return false;
+    if(it.kind === 'callTalkOn' && c.talkOn !== false) return false;
+    if(it.kind === 'callVideoOn' && c.videoOn !== false) return false;
+    return true;
+  }) : [];
+  const demandList = document.getElementById('cdDemandList');
+  if(demandList){
+    let html = '';
+    if(d.multiBlockOn === false){
+      html += '<div class="cd-demand-item"><span class="cd-demand-txt">想要开启「拼字卡」</span><button class="cd-demand-btn" data-custom-demand="multiBlockOn" type="button">满足</button></div>';
+    }
+    if(d.enablePunct === false){
+      html += '<div class="cd-demand-item"><span class="cd-demand-txt">想要开启「标点拼接」</span><button class="cd-demand-btn" data-custom-demand="enablePunct" type="button">满足</button></div>';
+    }
+    
+    html += demands.map(function(it){
+      let txt = '';
+      if(it.kind === 'noReply') txt = '想要关掉「已读不回」';
+      else if(it.kind === 'openNoReply') txt = '想要开启「已读不回」';
+      else if(it.kind === 'noReplyRate') txt = '想要把已读不回概率调到 ' + it.pct + '%';
+      else if(it.kind === 'quoteOff') txt = '想要关掉「引用」';
+      else if(it.kind === 'quoteOn') txt = '想要开启「引用」';
+      else if(it.kind === 'quoteRate') txt = '想要把引用概率调到 ' + it.pct + '%';
+      else if(it.kind === 'quoteFullRate') txt = '想要把引用整段概率调到 ' + it.pct + '%';
+      else if(it.kind === 'recallOff') txt = '想要关掉「撤回」';
+      else if(it.kind === 'recallOn') txt = '想要开启「撤回」';
+      else if(it.kind === 'recallRate') txt = '想要把撤回概率调到 ' + it.pct + '%';
+      else if(it.kind === 'divineOff') txt = '想要关掉「主动占卜」';
+      else if(it.kind === 'divineOn') txt = '想要开启「主动占卜」';
+      else if(it.kind === 'divineRate') txt = '想要把主动占卜概率调到 ' + it.pct + '%';
+      else if(it.kind === 'divineReadOff') txt = '想要关掉「写占卜理解」';
+      else if(it.kind === 'divineReadOn') txt = '想要开启「写占卜理解」';
+      else if(it.kind === 'divineReadRate') txt = '想要把写占卜理解概率调到 ' + it.pct + '%';
+      else if(it.kind === 'divineReadCardMax') txt = '想要把写理解最多拼卡调到 ' + it.n + ' 张';
+      else if(it.kind === 'multiBlockOff') txt = '想要关掉「拼字卡」';
+      else if(it.kind === 'multiBlockOn') txt = '想要开启「拼字卡」';
+      else if(it.kind === 'multiBlockProb') txt = '想要把拼字卡概率调到 ' + it.pct + '%';
+      else if(it.kind === 'maxBlocks') txt = '想要把拼字卡最多拼 ' + it.n + ' 张';
+      else if(it.kind === 'pinyinOff') txt = '想要关掉「单字字卡」';
+      else if(it.kind === 'pinyinOn') txt = '想要开启「单字字卡」';
+      else if(it.kind === 'pinyinRate') txt = '想要把单字字卡概率调到 ' + it.pct + '%';
+      else if(it.kind === 'pinyinMax') txt = '想要把单字字卡最多抽 ' + it.n + ' 个';
+      else if(it.kind === 'emojiOff') txt = '想要关掉「emoji」';
+      else if(it.kind === 'emojiOn') txt = '想要开启「emoji」';
+      else if(it.kind === 'emojiRate') txt = '想要把emoji概率调到 ' + it.pct + '%';
+      else if(it.kind === 'kaoOff') txt = '想要关掉「颜文字」';
+      else if(it.kind === 'kaoOn') txt = '想要开启「颜文字」';
+      else if(it.kind === 'kaoRate') txt = '想要把颜文字概率调到 ' + it.pct + '%';
+                else if(it.kind === 'cards') txt = '想要新增 ' + it.n + ' 张字卡';
+      else if(it.kind === 'slowDelay') txt = '想要把回复最慢延迟调到 ' + it.sec + ' 秒';
+      else if(it.kind === 'fastDelay') txt = '想要把回复最快延迟调到 ' + it.sec + ' 秒';
+      else if(it.kind === 'activeRate') txt = '想要把主动发消息概率调到 ' + it.pct + '%';
+      else if(it.kind === 'fastRead') txt = '想要把已读最快延迟调到 ' + it.sec + ' 秒';
+      else if(it.kind === 'slowRead') txt = '想要把已读最慢延迟调到 ' + it.sec + ' 秒';
+      else if(it.kind === 'removePunct') txt = '想要关掉标点拼接：' + (it.list || []).join(' ');
+      else if(it.kind === 'endPunctOff') txt = '想要关掉「结尾标点」';
+      else if(it.kind === 'endPunctOn') txt = '想要开启「结尾标点」';
+      else if(it.kind === 'endPunctRate') txt = '想要把结尾标点触发概率调到 ' + it.pct + '%';
+      else if(it.kind === 'callVoiceOff') txt = '想要关掉「语音通话」';
+      else if(it.kind === 'callVoiceOn') txt = '想要开启「语音通话」';
+      else if(it.kind === 'callVoiceRate') txt = '想要把语音通话概率调到 ' + it.pct + '%';
+      else if(it.kind === 'callTalkOff') txt = '想要通话时不发语音';
+      else if(it.kind === 'callTalkOn') txt = '想要通话时发语音';
+      else if(it.kind === 'callWin') txt = '想要把通话发语音时间调到 ' + it.min + '~' + it.max + ' 秒';
+      else if(it.kind === 'callVoiceCnt') txt = '想要把通话发语音条数调到 ' + it.min + '~' + it.max + ' 条';
+      else if(it.kind === 'callVideoOff') txt = '想要关掉「视频通话」';
+      else if(it.kind === 'callVideoOn') txt = '想要开启「视频通话」';
+      else if(it.kind === 'callVideoRate') txt = '想要把视频通话概率调到 ' + it.pct + '%';
+      else txt = '一个小心愿';
+      return '<div class="cd-demand-item">' +
+        '<span class="cd-demand-txt">' + escapeHTML(txt) + '</span>' +
+        '<button class="cd-demand-btn" data-demand="' + escapeHTML(it.id) + '" type="button">满足</button>' +
+      '</div>';
+    }).join('');
+    
+    if(!html){
+      html = '<div class="cd-value none">暂时没有</div>';
+    }
+    demandList.innerHTML = html;
+  }
 
-  const countNum = (d.count !== null && d.count !== undefined) ? d.count : '无想法';
-  const countHTML = '<div class="cd-value"' + (countNum === '无想法' ? ' style="color:#ccc;font-style:italic"' : '') + '>' +
-    countNum + (countNum !== '无想法' ? ' 张' : '') + '</div>' +
-    '<div class="cd-max-row"><span>上限</span>' +
-      '<input type="number" id="cdMaxCount" min="1" max="6" value="' + d.maxCount + '"><span>张</span>' +
-    '</div>';
+  const typeVal = document.getElementById('cdTypeVal');
+  if(typeVal){
+    typeVal.innerHTML = d.type ? escapeHTML(d.type) : '<span class="none">暂无类型需求</span>';
+  }
 
-  const deleteHTML = (d.deleteList && d.deleteList.length)
-    ? '<div class="cd-value"><div class="cd-delete-list">' +
+  const countVal = document.getElementById('cdCountVal');
+  if(countVal){
+    const countNum = (d.count !== null && d.count !== undefined) ? d.count : '无想法';
+    countVal.innerHTML = countNum === '无想法'
+      ? '<span class="none">无想法</span>'
+      : '想要新增 ' + countNum + ' 张';
+  }
+
+  const mc = document.getElementById('cdMaxCount');
+  if(mc) mc.value = d.maxCount || 6;
+
+  const deleteVal = document.getElementById('cdDeleteVal');
+  if(deleteVal){
+    if(d.deleteList && d.deleteList.length){
+      deleteVal.innerHTML = '<div class="cd-delete-list">' +
         d.deleteList.map(function(n){ return '<span class="cd-del-chip">' + escapeHTML(n) + '</span>'; }).join('') +
-      '</div></div>'
-    : '<div class="cd-value none">无</div>';
+      '</div>';
+    } else {
+      deleteVal.innerHTML = '<span class="none">无</span>';
+    }
+  }
 
-  wrap.innerHTML =
-    '<div class="cd-hero" style="padding-top:12px">' +
-      '<div class="cd-sub">' + (roleName ? escapeHTML(roleName) + ' · ' : '') + 'CARD DEMAND</div>' +
-      '<div class="cd-refresh"><button class="cd-refresh-btn" id="cdRefreshNow" type="button">刷新需求</button></div>' +
-    '</div>' +
-    '<div class="cd-card"><div class="cd-label">现在的需求</div>' + demandHTML + '</div>' +
-    '<div class="cd-card"><div class="cd-label">想要的字卡类型</div>' + typeHTML + '</div>' +
-    '<div class="cd-card"><div class="cd-label">想要的字卡数量</div>' + countHTML + '</div>' +
-    '<div class="cd-card"><div class="cd-label">想删掉的字卡</div>' + deleteHTML + '</div>' +
-    '<div class="cd-toggle-row">' +
-      '<span class="cd-tlabel">是否想开启拼字卡</span>' +
-      '<label class="cd-switch"><input type="checkbox" id="cdEnableCombine" ' + (d.enableCombine?'checked':'') + '><span class="cd-sw-slider"></span></label>' +
-    '</div>' +
-    '<div class="cd-toggle-row">' +
-      '<span class="cd-tlabel">是否想开启标点拼接</span>' +
-      '<label class="cd-switch"><input type="checkbox" id="cdEnablePunct" ' + (d.enablePunct?'checked':'') + '><span class="cd-sw-slider"></span></label>' +
-    '</div>';
-
-  const rb = document.getElementById('cdRefreshNow');
-  if(rb) rb.onclick = function(){
-    const nd = refreshCardDemand(d, rid);
-    renderCardDemand(nd);
+  document.getElementById('cdRefreshNow').onclick = function(){
+    refreshCardDemand(d, rid);
+    renderCardDemand();
     toast('已刷新需求');
   };
 
-  wrap.querySelectorAll('[data-demand]').forEach(function(btn){
-    btn.onclick = function(){
-      const id = btn.dataset.demand;
+  document.getElementById('cdDemandList').onclick = function(e){
+    const cBtn = e.target.closest('[data-custom-demand]');
+    if(cBtn){
       const cur = getCardDemand(rid);
-      const it = (cur.demands || []).find(function(x){ return x.id === id; });
-      if(!it || it.done) return;
-      const r = getReply(rid);
-      if(it.kind === 'noReply'){
-        r.noReplyOn = false;
-      } else if(it.kind === 'openNoReply'){
-        r.noReplyOn = true;
-      } else if(it.kind === 'slowDelay'){
-        const sec = Math.max(1, Math.min(5000, it.sec || 1));
-        r.maxDelay = sec * 1000;
-        if(r.minDelay > r.maxDelay) r.minDelay = r.maxDelay;
-      } else if(it.kind === 'fastDelay'){
-        const sec = Math.max(1, Math.min(5000, it.sec || 1));
-        r.minDelay = sec * 1000;
-        if(r.maxDelay < r.minDelay) r.maxDelay = r.minDelay;
-      } else if(it.kind === 'removePunct'){
-        if(!Array.isArray(r.disabledPunctList)) r.disabledPunctList = [];
-        (it.list || []).forEach(function(p){
-          const i = r.punctList.indexOf(p);
-          if(i >= 0) r.punctList.splice(i, 1);
-          if(r.disabledPunctList.indexOf(p) < 0) r.disabledPunctList.push(p);
-        });
+      if(cBtn.dataset.customDemand === 'multiBlockOn'){
+        cur.enableCombine = true;
+        saveCardDemand(cur, rid);
+        renderCardDemand();
+        toast('已满足 Ta 的需求');
+      } else if(cBtn.dataset.customDemand === 'enablePunct'){
+        cur.enablePunct = true;
+        saveCardDemand(cur, rid);
+        renderCardDemand();
+        toast('已满足 Ta 的需求');
       }
-      saveReply();
-      it.done = true;
+      return;
+    }
+
+    const btn = e.target.closest('[data-demand]');
+    if(!btn) return;
+    const id = btn.dataset.demand;
+    const cur = getCardDemand(rid);
+    const it = (cur.demands || []).find(function(x){ return x.id === id; });
+    if(!it || it.done) return;
+    
+    const r = getReply(rid);
+    if(it.kind === 'noReply'){
+      r.noReplyOn = false;
+    } else if(it.kind === 'openNoReply'){
+      r.noReplyOn = true;
+    } else if(it.kind === 'noReplyRate'){
+      r.noReplyOn = true;
+      r.noReplyRate = (it.pct || 1) / 100;
+    } else if(it.kind === 'quoteOff'){
+      r.quoteOn = false;
+    } else if(it.kind === 'quoteOn'){
+      r.quoteOn = true;
+    } else if(it.kind === 'quoteRate'){
+      r.quoteOn = true;
+      r.quoteRate = (it.pct || 1) / 100;
+    } else if(it.kind === 'quoteFullRate'){
+      r.quoteOn = true;
+      const full = (it.pct || 1) / 100;
+      r.quoteFullRate = full;
+      r.quotePartRate = Math.round((1 - full) * 100) / 100;
+    } else if(it.kind === 'recallOff'){
+      r.recallOn = false;
+    } else if(it.kind === 'recallOn'){
+      r.recallOn = true;
+    } else if(it.kind === 'recallRate'){
+      r.recallOn = true;
+      r.recallRate = (it.pct || 1) / 100;
+    } else if(it.kind === 'divineOff'){
+      r.divineOn = false;
+    } else if(it.kind === 'divineOn'){
+      r.divineOn = true;
+    } else if(it.kind === 'divineRate'){
+      r.divineOn = true;
+      r.divineRate = (it.pct || 1) / 100;
+    } else if(it.kind === 'divineReadOff'){
+      r.divineReadOn = false;
+    } else if(it.kind === 'divineReadOn'){
+      r.divineReadOn = true;
+    } else if(it.kind === 'divineReadRate'){
+      r.divineReadOn = true;
+      r.divineReadRate = (it.pct || 1) / 100;
+    } else if(it.kind === 'divineReadCardMax'){
+      r.divineReadCardMax = Math.max(1, Math.min(15, it.n || 1));
+    } else if(it.kind === 'multiBlockOff'){
+      r.multiBlockOn = false;
+    } else if(it.kind === 'multiBlockOn'){
+      r.multiBlockOn = true;
+    } else if(it.kind === 'multiBlockProb'){
+      r.multiBlockOn = true;
+      r.multiBlockProb = (it.pct || 1) / 100;
+    } else if(it.kind === 'maxBlocks'){
+      r.maxBlocks = Math.max(1, Math.min(5, it.n || 1));
+    } else if(it.kind === 'pinyinOff'){
+      r.pinyinOn = false;
+    } else if(it.kind === 'pinyinOn'){
+      r.pinyinOn = true;
+    } else if(it.kind === 'pinyinRate'){
+      r.pinyinOn = true;
+      r.pinyinRate = (it.pct || 1) / 100;
+    } else if(it.kind === 'pinyinMax'){
+      r.pinyinMax = Math.max(1, Math.min(5, it.n || 1));
+    } else if(it.kind === 'emojiOff'){
+      r.emojiOn = false;
+    } else if(it.kind === 'emojiOn'){
+      r.emojiOn = true;
+    } else if(it.kind === 'emojiRate'){
+      r.emojiOn = true;
+      r.emojiRate = (it.pct || 1) / 100;
+    } else if(it.kind === 'kaoOff'){
+      r.kaoOn = false;
+    } else if(it.kind === 'kaoOn'){
+      r.kaoOn = true;
+    } else if(it.kind === 'kaoRate'){
+      r.kaoOn = true;
+      r.kaoRate = (it.pct || 1) / 100;
+    } else if(it.kind === 'slowDelay'){
+      const sec = Math.max(1, Math.min(5000, it.sec || 1));
+      r.maxDelay = sec * 1000;
+      if(r.minDelay > r.maxDelay) r.minDelay = r.maxDelay;
+    } else if(it.kind === 'fastDelay'){
+      const sec = Math.max(1, Math.min(5000, it.sec || 1));
+      r.minDelay = sec * 1000;
+      if(r.maxDelay < r.minDelay) r.maxDelay = r.minDelay;
+    } else if(it.kind === 'activeRate'){
+      r.activeOn = true;
+      r.activeRate = (it.pct || 1) / 100;
+    } else if(it.kind === 'fastRead'){
+      const sec = Math.max(1, Math.min(3000, it.sec || 1));
+      r.readDelayMinLo = sec;
+      r.readDelayMinHi = sec;
+      if(r.readDelayMaxLo < sec) r.readDelayMaxLo = sec;
+      if(r.readDelayMaxHi < sec) r.readDelayMaxHi = sec;
+      r.noReplyOn = false;
+    } else if(it.kind === 'slowRead'){
+      const sec = Math.max(1, Math.min(3000, it.sec || 1));
+      r.readDelayMaxLo = sec;
+      r.readDelayMaxHi = sec;
+      if(r.readDelayMinLo > sec) r.readDelayMinLo = sec;
+      if(r.readDelayMinHi > sec) r.readDelayMinHi = sec;
+      r.noReplyOn = false;
+    } else if(it.kind === 'removePunct'){
+      if(!Array.isArray(r.disabledPunctList)) r.disabledPunctList = [];
+      (it.list || []).forEach(function(p){
+        const i = r.punctList.indexOf(p);
+        if(i >= 0) r.punctList.splice(i, 1);
+        if(r.disabledPunctList.indexOf(p) < 0) r.disabledPunctList.push(p);
+      });
+    } else if(it.kind === 'endPunctOff'){
+      r.endPunctOn = false;
+    } else if(it.kind === 'endPunctOn'){
+      r.endPunctOn = true;
+    } else if(it.kind === 'endPunctRate'){
+      r.endPunctOn = true;
+      r.endPunctRate = (it.pct || 1) / 100;
+    } else if(it.kind === 'callVoiceOff'){
+      const c = getCallCfg(rid); c.voiceOn = false; saveCallCfg(c, rid);
+    } else if(it.kind === 'callVoiceOn'){
+      const c = getCallCfg(rid); c.voiceOn = true; c.on = true; saveCallCfg(c, rid);
+    } else if(it.kind === 'callVoiceRate'){
+      const c = getCallCfg(rid); c.voiceOn = true; c.on = true; c.voiceRate = (it.pct || 1) / 100; saveCallCfg(c, rid);
+    } else if(it.kind === 'callTalkOff'){
+      const c = getCallCfg(rid); c.talkOn = false; saveCallCfg(c, rid);
+    } else if(it.kind === 'callTalkOn'){
+      const c = getCallCfg(rid); c.talkOn = true; saveCallCfg(c, rid);
+    } else if(it.kind === 'callWin'){
+      const c = getCallCfg(rid); c.winMin = Math.max(1, it.min || 1); c.winMax = Math.max(c.winMin, it.max || 1); c.talkOn = true; saveCallCfg(c, rid);
+    } else if(it.kind === 'callVoiceCnt'){
+      const c = getCallCfg(rid); c.voiceMin = Math.max(1, it.min || 1); c.voiceMax = Math.max(c.voiceMin, it.max || 1); c.talkOn = true; saveCallCfg(c, rid);
+    } else if(it.kind === 'callVideoOff'){
+      const c = getCallCfg(rid); c.videoOn = false; saveCallCfg(c, rid);
+    } else if(it.kind === 'callVideoOn'){
+      const c = getCallCfg(rid); c.videoOn = true; c.on = true; saveCallCfg(c, rid);
+    } else if(it.kind === 'callVideoRate'){
+      const c = getCallCfg(rid); c.videoOn = true; c.on = true; c.videoRate = (it.pct || 1) / 100; saveCallCfg(c, rid);
+    }
+    saveReply();
+    
+    it.done = true;
+    saveCardDemand(cur, rid);
+    renderCardDemand();
+    toast('已满足 Ta 的需求');
+  };
+
+  if(mc) {
+    const saveMc = function(){
+      const v = Math.max(1, parseInt(mc.value, 10) || 6);
+      mc.value = v;
+      const cur = getCardDemand(rid);
+      cur.maxCount = v;
+      if(cur.count !== null && cur.count !== undefined && cur.count > v){
+        cur.count = Math.floor(Math.random() * (v + 1));
+      }
       saveCardDemand(cur, rid);
-      renderCardDemand(cur);
-      toast('已满足 Ta 的需求');
+      toast('上限已保存：' + v + ' 张');
+      renderCardDemand();
     };
+    mc.onblur = saveMc;
+    mc.onkeydown = function(e){
+      if(e.key === 'Enter'){ e.preventDefault(); mc.blur(); }
+    };
+  }
+}
+
+function checkDailyCardDemandRefresh(){
+  const now = new Date();
+  const nowTs = Date.now();
+  const todayStr = now.getFullYear() + '-' + (now.getMonth() + 1) + '-' + now.getDate();
+  const DAY_MS = 86400000;
+  let changed = false;
+  const all = _cardDemandMap();
+
+  const ids = getAllRoleIds();
+  ids.forEach(function(rid){
+    const role = getRoleById(rid);
+    if(!role || role.hidden) return;
+
+    let d = all[rid] || {};
+    let needSave = false;
+
+    if(!d.scheduleDay || d.scheduleDay !== todayStr){
+      d.scheduleDay = todayStr;
+      needSave = true;
+      if(Math.random() < 0.5){
+        const startMs = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0).getTime();
+        d.pendingRefreshAt = startMs + Math.floor(Math.random() * DAY_MS);
+      } else {
+        d.pendingRefreshAt = 0;
+      }
+    }
+
+    if(d.pendingRefreshAt && nowTs >= d.pendingRefreshAt){
+      d.pendingRefreshAt = 0;
+      needSave = true;
+      d = refreshCardDemand(d, rid);
+    }
+
+    if(needSave){
+      all[rid] = d;
+      changed = true;
+    }
   });
 
-  const mc = document.getElementById('cdMaxCount');
-  if(mc) mc.onchange = function(){
-    const v = Math.max(1, Math.min(6, parseInt(mc.value, 10) || 6));
-    mc.value = v;
-    const cur = getCardDemand(rid);
-    cur.maxCount = v;
-    if(cur.count !== null && cur.count !== undefined && cur.count > v){
-      cur.count = 1 + Math.floor(Math.random() * v);
-    }
-    saveCardDemand(cur, rid);
-    renderCardDemand(cur);
-  };
-
-  const cb = document.getElementById('cdEnableCombine');
-  if(cb) cb.onchange = function(){
-    const cur = getCardDemand(rid);
-    cur.enableCombine = cb.checked;
-    saveCardDemand(cur, rid);
-  };
-
-  const pb = document.getElementById('cdEnablePunct');
-  if(pb) pb.onchange = function(){
-    const cur = getCardDemand(rid);
-    cur.enablePunct = pb.checked;
-    saveCardDemand(cur, rid);
-  };
+  if(changed) saveCardDemandMap(all);
 }
+kaSchedule('demand-daily-refresh', checkDailyCardDemandRefresh, 60 * 1000);
+setTimeout(checkDailyCardDemandRefresh, 5000);
 
 /* ============================================================
    一起看 · 和角色一起看视频
@@ -23424,10 +23728,12 @@ function renderGroupList(){
 
   var html = orderedGroups.map(g=>{
 	const _useB = useBuiltinCards();
+	const _isMoodG = (g && g.id === 'g-mood');
 	const total = (g.cats||[]).reduce((n,c)=>{
 	  return n + (c.list||[]).filter(function(it){
 	    if(_useB) return true;
 	    if(it && typeof it === 'object' && it.src === 'builtin') return false;
+	    if(_isMoodG) return true;
 	    if(isBuiltinDefaultItem(g.id, c.id, it)) return false;
 	    return true;
 	  }).length;
@@ -25636,14 +25942,91 @@ function openMoodScreen(){
   renderMoodList();
   applyMoodUI();
 }
+var moodSelMode = false;
+var moodSelSet = new Set();
+
+function moodExitSelMode(){
+  moodSelMode = false;
+  moodSelSet = new Set();
+  var bar = document.getElementById('moodSelBar');
+  if(bar) bar.remove();
+  renderMoodList();
+}
+
+function moodUpdateSelCount(){
+  var el = document.getElementById('moodSelCount');
+  if(!el) return;
+  var cat = getMoodCat();
+  var total = (cat && Array.isArray(cat.list)) ? cat.list.length : 0;
+  el.textContent = '已选 ' + moodSelSet.size + ' 条';
+  var b = document.getElementById('moodSelAll');
+  if(b) b.textContent = (moodSelSet.size === total && total > 0) ? '取消全选' : '全选';
+}
+
+function moodRenderSelBar(){
+  var old = document.getElementById('moodSelBar');
+  if(old) old.remove();
+  if(!moodSelMode) return;
+  var host = document.getElementById('moodScreen');
+  if(!host) return;
+  var bar = document.createElement('div');
+  bar.id = 'moodSelBar';
+  bar.className = 'mood-sel-bar';
+  bar.innerHTML =
+    '<div class="mood-sel-count" id="moodSelCount">已选 0 条</div>' +
+    '<button type="button" class="mood-sel-btn" id="moodSelAll">全选</button>' +
+    '<button type="button" class="mood-sel-btn" id="moodSelCancel">取消</button>' +
+    '<button type="button" class="mood-sel-btn danger" id="moodSelDel">删除</button>';
+  host.appendChild(bar);
+
+  document.getElementById('moodSelAll').onclick = function(){
+    var cat = getMoodCat();
+    if(!cat || !Array.isArray(cat.list)) return;
+    if(moodSelSet.size === cat.list.length){
+      moodSelSet = new Set();
+    } else {
+      moodSelSet = new Set(cat.list.map(function(_, i){ return i; }));
+    }
+    renderMoodList();
+  };
+  document.getElementById('moodSelCancel').onclick = function(){
+    moodExitSelMode();
+  };
+  document.getElementById('moodSelDel').onclick = function(){
+    if(!moodSelSet.size){ toast('还没有选中'); return; }
+    var n = moodSelSet.size;
+    uniConfirm({
+      title: '删除心情',
+      body: '将删除选中的 ' + n + ' 条心情，删除后无法恢复。',
+      cancelText: '取 消',
+      okText: '删 除'
+    }).then(function(ok){
+      if(!ok) return;
+      var cat = getMoodCat();
+      if(!cat || !Array.isArray(cat.list)) return;
+      var idx = Array.from(moodSelSet).sort(function(a, b){ return b - a; });
+      idx.forEach(function(i){ cat.list.splice(i, 1); });
+      saveCardStore();
+      moodSelMode = false;
+      moodSelSet = new Set();
+      renderMoodList();
+      toast('已删除 ' + n + ' 条');
+    });
+  };
+  moodUpdateSelCount();
+}
+
 function renderMoodList(){
   const box = $('#moodList'); if(!box) return;
   const cat = getMoodCat();
-  if(!cat || !cat.list.length){ box.innerHTML = `<div class="cl-empty">还没有心情<br>点上方「添加心情」新建一个</div>`; return; }
+  if(!cat || !cat.list.length){ box.innerHTML = `<div class="cl-empty">还没有心情<br>点上方「添加心情」新建一个</div>`; moodRenderSelBar(); return; }
   box.innerHTML = cat.list.map((item,i)=>{
 	const m = typeof item === 'string' ? {mood:item, kaomoji:'(◍＞◡＜◍)', anim:'1'} : item;
 	const animName = {'1':'弹一下','3':'从左下飘','5':'淡入上浮'}[m.anim||'1'] || '弹一下';
-	return `<div class="mood-item" data-i="${i}">` +
+	const sel = moodSelMode && moodSelSet.has(i);
+	const cls = 'mood-item' + (moodSelMode ? ' mood-sel-mode' : '') + (sel ? ' mood-selected' : '');
+	const chkHTML = moodSelMode ? ('<div class="mood-chk">' + (sel ? '✓' : '') + '</div>') : '';
+	return `<div class="${cls}" data-i="${i}">` + chkHTML +
 	  `<div class="mood-info"><div class="mood-name">${escapeHTML(m.mood||'')}</div><div class="mood-kao">${escapeHTML(m.kaomoji||'')}</div></div>` +
 	  `<div class="mood-anim-wrap" data-anim-pick="${i}"><span class="mood-anim-val">${animName}</span><svg viewBox="0 0 24 24"><polyline points="6,9 12,15 18,9"/></svg></div>` +
 	  `<div class="mood-acts">` +
@@ -25658,36 +26041,51 @@ function renderMoodList(){
 	`</div>`;
   }).join('');
 
-  /* 编辑 / 删除 */
-  box.querySelectorAll('[data-edit]').forEach(el=>{ el.addEventListener('click',(e)=>{ e.stopPropagation(); openMoodEdit(+el.dataset.edit); }); });
+  box.querySelectorAll('[data-edit]').forEach(el=>{ el.addEventListener('click',(e)=>{ e.stopPropagation(); if(moodSelMode) return; openMoodEdit(+el.dataset.edit); }); });
   box.querySelectorAll('[data-del]').forEach(el=>{ el.addEventListener('click',(e)=>{
 	e.stopPropagation();
+	if(moodSelMode) return;
 	const i=+el.dataset.del;
 	const cat2=getMoodCat(); if(!cat2) return;
 	const item=cat2.list[i];
 	const m=typeof item==='string'?item:(item.mood||'');
-	if(!confirm('删除心情「'+m+'」？')) return;
-	cat2.list.splice(i,1);
-	saveCardStore();
-	renderMoodList();
+	uniConfirm({
+	  title: '删除心情',
+	  body: '删除心情「' + m + '」？删除后无法恢复。',
+	  cancelText: '取 消',
+	  okText: '删 除'
+	}).then(function(ok){
+	  if(!ok) return;
+	  var c2 = getMoodCat();
+	  if(!c2) return;
+	  c2.list.splice(i, 1);
+	  saveCardStore();
+	  renderMoodList();
+	  toast('已删除');
+	});
   }); });
 
-  /* ★ 点整行 → 直接在预览区播这条的动画 */
   box.querySelectorAll('.mood-item').forEach(row=>{
 	row.addEventListener('click', (e)=>{
-	  /* 点编辑 / 删除 / 小菜单里的选项时，不触发播放 */
 	  if(e.target.closest('[data-edit]')) return;
 	  if(e.target.closest('[data-del]')) return;
 	  if(e.target.closest('.map-opt')) return;
 	  if(e.target.closest('.mood-anim-panel')) return;
+	  if(e.target.closest('[data-anim-pick]')) return;
 
 	  const i = +row.dataset.i;
 	  const cat2 = getMoodCat();
 	  if(!cat2) return;
+
+	  if(moodSelMode){
+	    if(moodSelSet.has(i)) moodSelSet.delete(i);
+	    else moodSelSet.add(i);
+	    renderMoodList();
+	    return;
+	  }
+
 	  const item = cat2.list[i];
 	  const m = typeof item === 'string' ? {mood:item, kaomoji:'', anim:'1'} : item;
-
-	  /* 直接在预览区冒一次 */
 	  const mpMb = $('#mpMb');
 	  if(mpMb){
 	    mpMb.textContent = m.kaomoji || '';
@@ -25698,27 +26096,58 @@ function renderMoodList(){
 	});
   });
 
-  /* ★ 点「弹一下」→ 内嵌展开小菜单（点它本身不播动画，只展开） */
+  box.querySelectorAll('.mood-item').forEach(row=>{
+	var pressTimer = null;
+	var sx = 0, sy = 0;
+	function start(ev){
+	  if(moodSelMode) return;
+	  var p = ev.touches ? ev.touches[0] : ev;
+	  sx = p.clientX; sy = p.clientY;
+	  clearTimeout(pressTimer);
+	  pressTimer = setTimeout(function(){
+	    moodSelMode = true;
+	    moodSelSet = new Set([+row.dataset.i]);
+	    if(navigator.vibrate) navigator.vibrate(15);
+	    renderMoodList();
+	  }, 550);
+	}
+	function move(ev){
+	  if(!pressTimer) return;
+	  var p = ev.touches ? ev.touches[0] : ev;
+	  if(Math.abs(p.clientX - sx) > 8 || Math.abs(p.clientY - sy) > 8){
+	    clearTimeout(pressTimer); pressTimer = null;
+	  }
+	}
+	function end(){ if(pressTimer){ clearTimeout(pressTimer); pressTimer = null; } }
+	row.addEventListener('touchstart', start, {passive:true});
+	row.addEventListener('touchmove', move, {passive:true});
+	row.addEventListener('touchend', end);
+	row.addEventListener('touchcancel', end);
+	row.addEventListener('mousedown', start);
+	row.addEventListener('mousemove', move);
+	row.addEventListener('mouseup', end);
+	row.addEventListener('mouseleave', end);
+  });
+
   box.querySelectorAll('[data-anim-pick]').forEach(el=>{
 	el.addEventListener('click', (e)=>{
 	  e.stopPropagation();
+	  if(moodSelMode) return;
 	  const i = +el.dataset.animPick;
 	  const row = el.closest('.mood-item');
 	  const panel = row ? row.querySelector('[data-anim-panel]') : null;
 	  if(!panel) return;
-	  /* 先把所有其它行的面板关掉 */
 	  box.querySelectorAll('.mood-anim-panel').forEach(p=>{
 	    if(p !== panel) p.style.display = 'none';
 	  });
-	  /* 切换当前行 */
 	  panel.style.display = (panel.style.display === 'flex') ? 'none' : 'flex';
 	});
   });
 
-  /* ★ 点小菜单里的选项 → 立刻改动画，并播一次预览 */
   box.querySelectorAll('.map-opt').forEach(el=>{
 	el.addEventListener('click', (e)=>{
 	  e.stopPropagation();
+	  if(moodSelMode) return;
 	  const i = +el.dataset.i;
 	  const a = el.dataset.a;
 	  const cat2 = getMoodCat(); if(!cat2) return;
@@ -25727,7 +26156,6 @@ function renderMoodList(){
 	  m.anim = a;
 	  cat2.list[i] = m;
 	  saveCardStore();
-	  /* 立刻在预览区播一次 */
 	  const mpMb = $('#mpMb');
 	  if(mpMb){
 	    mpMb.textContent = m.kaomoji || '';
@@ -25739,13 +26167,14 @@ function renderMoodList(){
 	});
   });
 
-  /* 点空白处收起所有小菜单 */
   if(!box._panelDocBound){
 	box._panelDocBound = true;
 	document.addEventListener('click', function(){
 	  box.querySelectorAll('.mood-anim-panel').forEach(p=>{ p.style.display = 'none'; });
 	}, true);
   }
+
+  moodRenderSelBar();
 }
 function openMoodEdit(i){
   editingMoodIndex = (i===undefined) ? -1 : i;
@@ -25995,7 +26424,7 @@ function renderReplyPanel(tab){
 	  </div>
 	  <div class="section">
 		<div class="title title-sw">
-		  <span>拼好卡</span>
+		  <span>拼字卡</span>
 		  <label class="switch"><input type="checkbox" id="rsMultiBlockOn" ${(r.multiBlockOn!==false)?'checked':''}><span class="slider"></span></label>
 		</div>
 		${(r.multiBlockOn!==false) ? `
@@ -26118,21 +26547,7 @@ function renderReplyPanel(tab){
 			` : ''}
 		  </div>
 
-		  <div class="section">
-			<div class="title title-sw">
-			  <span>双击回应 · 角色自动贴</span>
-			  <label class="switch"><input type="checkbox" id="rsReactOn" ${r.reactOn?'checked':''}><span class="slider"></span></label>
-			</div>
-			<div class="desc">关：角色不许自己贴回应；开：角色可以贴。你自己双击不受影响</div>
-			${r.reactOn ? `
-			  <div class="rs-line">
-				<div class="rs-item"><span class="lbl">我的自定义回应（emoji / 颜文字，一行一个）</span></div>
-			  </div>
-			  <div class="rs-line">
-				<textarea id="rsReactList" rows="4" placeholder="例如：😎&#10;(◍＞◡＜◍)" style="width:100%;box-sizing:border-box;background:#f7f7f7;border:none;border-radius:10px;padding:8px 10px;font-size:13px;color:#1a1a1a;font-family:inherit;resize:vertical;min-height:80px;line-height:1.6">${escapeHTML((Array.isArray(r.reactList)?r.reactList:[]).join('\n'))}</textarea>
-			  </div>
-			` : ''}
-		  </div>
+ 
 		  `;
 
   }else if(tab === 'call'){
@@ -26363,13 +26778,7 @@ function renderReplyPanel(tab){
   bindSw('rsActiveOn','activeOn');
   bindSw('rsDivineOn','divineOn');
   bindSw('rsDivineReadOn','divineReadOn');
-  bindSw('rsReactOn','reactOn');
-  const rlEl = $('#rsReactList');
-  if(rlEl) rlEl.addEventListener('input', ()=>{
-    const cur = getReply();
-    cur.reactList = rlEl.value.split('\n').map(function(s){ return s.trim(); }).filter(Boolean);
-    saveReply();
-  });
+ 
   /* ★ bindSl 改为从存储里取最新 r，避免闭包里的旧 r 覆盖 */
   const bindSl = (id,valId,key)=>{
     const el = $('#'+id);
@@ -27898,7 +28307,10 @@ document.addEventListener('click', function(e){
       shape: 'square',
       topbarBg: '',
       star: false,
-      pinned: false
+      pinned: false,
+      hidden: false,
+      blocked: false,
+      builtin: false
     };
     friends.push(role);
     saveFriends(friends);
