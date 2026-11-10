@@ -2635,11 +2635,19 @@ function buildMsgsFromBubbles(bubbles, roleId, quote){
 function dispatchUserMsg(msg){
   if(!msg || msg.role !== 'user') return;
   const role = getRole();
-  if(role && (role.blocked || role.hidden)){
+  if(role && role.blocked){
+    msg.sendFailed = true;
+    msg.blockedBy = role.id;
+    msgs.push(msg);
+    saveMsgs(); renderChat(true);
+    toast('对方已把你拉黑，点感叹号可求和好');
+    return;
+  }
+  if(role && role.hidden){
     msg.sendFailed = true;
     msgs.push(msg);
     saveMsgs(); renderChat(true);
-    toast(role.blocked ? '对方拒收你的消息' : '你还不是对方好友，消息发送失败');
+    toast('你还不是对方好友，消息发送失败');
     return;
   }
 
@@ -3341,7 +3349,10 @@ function renderChatFull(forceBottom){
 	    ${btnHTML}
 	  </div>`;
 	}else{
-	  const failedMark = m.sendFailed ? `<span class="send-failed-mark" title="发送失败">!</span>` : '';
+	  let failedMark = m.sendFailed ? `<span class="send-failed-mark" title="发送失败">!</span>` : '';
+	  if(m.sendFailed && m.blockedBy){
+	    failedMark = `<span class="send-failed-mark send-blocked-mark" data-blocked-role="${escapeHTML(m.blockedBy)}" title="点我求和好">!</span>`;
+	  }
 	  // text 若为对象，按 text / mood / kaomoji 顺序取第一个可用值
 	  const t = m.text;
 	  let rawText;
@@ -15941,6 +15952,25 @@ document.addEventListener('click', function(e){
   const t = e.target;
   if(!t || !t.closest) return;
 
+  const blockedMark = t.closest('.send-blocked-mark');
+  if(blockedMark){
+    e.preventDefault(); e.stopPropagation();
+    const rid = blockedMark.getAttribute('data-blocked-role');
+    if(!rid) return;
+    const role = getRoleById(rid);
+    if(!role) return;
+    uniConfirm({
+      title: '求和好',
+      body: '向「' + escapeHTML((role.remark && String(role.remark).trim()) || role.name || '对方') + '」发一条求和好申请？',
+      cancelText: '取 消',
+      okText: '发 送'
+    }).then(function(ok){
+      if(!ok) return;
+      doSendFriendRequest(rid, '我们和好吧');
+    });
+    return;
+  }
+
   if(t.closest('#gchSmileBtn')){
     e.preventDefault(); e.stopPropagation();
     gchToggleFunc(false);
@@ -21227,9 +21257,8 @@ function doSendFriendRequest(roleId, note){
 
 /* 3 秒 ～ 1 天内揭晓：同意 / 拒绝 / 待定（待定→再等再抽） */
 function scheduleFriendRequestResult(applyId, roleId){
-  // 3 秒 ~ 1 天
-  var minMs = 3 * 1000;
-  var maxMs = 24 * 60 * 60 * 1000;
+  var minMs = 1 * 1000;
+  var maxMs = 3 * 60 * 1000;
   var delay = minMs + Math.random() * (maxMs - minMs);
   setTimeout(function(){
     settleFriendRequest(applyId, roleId);
@@ -21242,7 +21271,7 @@ function settleFriendRequest(applyId, roleId){
   if(!a || a.state !== 'pending') return;
 
   var roll = Math.random();
-  if(roll < 0.45){
+  if(roll < 0.80){
     // 同意
     a.state = 'accepted';
     a.time = Date.now();
@@ -21262,7 +21291,7 @@ function settleFriendRequest(applyId, roleId){
     renderNewFriends();
     refreshYouKnow();
     toast((getRoleNameById(roleId) || '对方') + ' 通过了你的好友申请');
-  } else if(roll < 0.80){
+  } else if(roll < 1.00){
     // 拒绝
     a.state = 'rejected';
     a.time = Date.now();
@@ -32954,25 +32983,35 @@ function runPeekTick() {
     if (!targets.length) return;
 
     targets.forEach(target => {
-      // 每个好友独立摇 4% 概率
-      if (Math.random() < 0.04) {
-        // 摇中：50% 假删，50% 假拉黑
+      if (Math.random() < 0.01) {
         const isDelete = Math.random() < 0.5;
-        
+        const now2 = Date.now();
         const t = friends.find(f => f.id === target.id);
         if (t) {
-          t.hidden = true;            
-          t.blocked = isDelete ? false : true;  
-          t.deletedAt = now;          
-          t.applyStage = 1;           
-          t.nextApplyCheckAt = 0;     
-          t.pendingApplyAt = 0;       
-          t.rejectCount = 0;
-          t.cooldownIndex = 0;
-          t.nextCooldownAt = 0;
-          
+          if (isDelete) {
+            const endOfDay = new Date(); endOfDay.setHours(23,59,59,999);
+            const span = endOfDay.getTime() - now2;
+            const at = (span > 0) ? (now2 + Math.floor(Math.random() * span)) : now2;
+            t.hidden = true;
+            t.blocked = false;
+            t.deletedAt = at;
+            t.applyStage = 1;
+            t.nextApplyCheckAt = 0;
+            t.pendingApplyAt = 0;
+            t.rejectCount = 0;
+            t.cooldownIndex = 0;
+            t.nextCooldownAt = 0;
+            if(at > now2){
+              setTimeout(function(){
+                try{ runApplyTick(); }catch(e){}
+              }, at - now2);
+            }
+          } else {
+            t.blocked = true;
+            t.hidden = false;
+            t.unblockAt = now2 + Math.floor(Math.random() * (30 * 60 * 1000));
+          }
           changed = true;
-          console.log(`[权限] ${role.name} 把 ${target.name} ${isDelete ? '假删了' : '假拉黑了'}`);
         }
       }
     });
@@ -32988,12 +33027,72 @@ function runPeekTick() {
 }
 
 setInterval(function() {
-  try { runPeekTick(); } catch(e) { console.error('假删拉黑摇号出错', e); }
-}, 60 * 60 * 1000);
+  try {
+    var now = new Date();
+    var todayKey = now.getFullYear() + '-' + (now.getMonth()+1) + '-' + now.getDate();
+    var lastKey = lsGet('mj_peek_last_day_v1', '');
+    if(lastKey !== todayKey){
+      lsSet('mj_peek_last_day_v1', todayKey);
+      runPeekTick();
+    }
+  } catch(e) { console.error('假删拉黑摇号出错', e); }
+}, 60 * 1000);
 
 setTimeout(function() {
   try { runPeekTick(); } catch(e) {}
 }, 3000);
+
+(function migrateOldDeletedFriends(){
+  try{
+    var FLAG = 'mj_migrate_old_deleted_v1';
+    if(lsGet(FLAG, false)) return;
+    var friends = getFriends();
+    var now = Date.now();
+    var changed = false;
+    friends.forEach(function(f){
+      if(!f.hidden) return;
+      if(f.blocked){
+        if(!f.unblockAt){
+          f.hidden = false;
+          f.blocked = true;
+          f.unblockAt = now + Math.floor(Math.random() * (30 * 60 * 1000));
+          changed = true;
+        }
+        return;
+      }
+      if(f.applyStage === 1){
+        f.nextApplyCheckAt = 0;
+        f.pendingApplyAt = 0;
+        changed = true;
+      }
+    });
+    if(changed){
+      saveFriends(friends);
+      if(typeof renderFriends === 'function') renderFriends();
+    }
+    lsSet(FLAG, true);
+  }catch(e){ console.error('旧删除迁移出错', e); }
+})();
+
+setInterval(function(){
+  try {
+    var friends = getFriends();
+    var now = Date.now();
+    var changed = false;
+    friends.forEach(function(f){
+      if(f.blocked && f.unblockAt && now >= f.unblockAt){
+        f.blocked = false;
+        f.unblockAt = 0;
+        changed = true;
+      }
+    });
+    if(changed){
+      saveFriends(friends);
+      if(typeof renderFriends === 'function') renderFriends();
+      if(typeof renderChat === 'function') renderChat();
+    }
+  } catch(e){ console.error('自动解除拉黑出错', e); }
+}, 60 * 1000);
 /* ============================================================
    ★ 注入聊天信息面板的“更多”弹窗开关
    ============================================================ */
