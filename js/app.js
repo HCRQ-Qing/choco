@@ -21260,6 +21260,15 @@ function scheduleFriendRequestResult(applyId, roleId){
   var minMs = 1 * 1000;
   var maxMs = 3 * 60 * 1000;
   var delay = minMs + Math.random() * (maxMs - minMs);
+  var dueAt = Date.now() + delay;
+  try{
+    var list = getApplyList();
+    var a = list.find(function(x){ return x.id === applyId; });
+    if(a){
+      a.dueAt = dueAt;
+      saveApplyList(list);
+    }
+  }catch(e){}
   setTimeout(function(){
     settleFriendRequest(applyId, roleId);
   }, delay);
@@ -21357,34 +21366,29 @@ function runApplyTick(){
       return;
     }
 
-    // 2. 如果还没定，先看是不是到了“该摇号的检查时间”
     if(!f.nextApplyCheckAt){
-      // 刚被删：一分钟到五天内
-      const d = (f.deletedAt || now) + (60 * 1000) + Math.random() * (4 * 86400000);
-      f.nextApplyCheckAt = d;
+      f.nextApplyCheckAt = (f.deletedAt || now) + 5 * 60 * 1000;
       changed = true;
       return;
     }
 
     if(now < f.nextApplyCheckAt) return;
 
-    // 3. 到了检查时间，摇那 50%
+    const sinceDeleted = now - (f.deletedAt || now);
+    if(sinceDeleted > 2 * 86400000){
+      f.applyStage = 0;
+      f.nextApplyCheckAt = 0;
+      f.pendingApplyAt = 0;
+      changed = true;
+      return;
+    }
     if(Math.random() < 0.5){
-      // 摇中：在 24 小时内随机挑个时间发
-      f.pendingApplyAt = now + Math.random() * 86400000;
-      f.nextApplyCheckAt = 0; 
+      const remain = 2 * 86400000 - sinceDeleted;
+      const delay = Math.min(remain, Math.random() * remain);
+      f.pendingApplyAt = now + delay;
+      f.nextApplyCheckAt = 0;
     } else {
-      // 没摇中：算下一次检查时间
-      const days = (now - (f.deletedAt || now)) / 86400000;
-      if(days < 5){
-        // 前5天：每小时摇一次
-        f.nextApplyCheckAt = now + 3600 * 1000;
-      } else {
-        // 5天后：每天0点摇一次
-        const t = new Date(now);
-        t.setHours(24, 0, 0, 0);
-        f.nextApplyCheckAt = t.getTime();
-      }
+      f.nextApplyCheckAt = now + 5 * 60 * 1000;
     }
     changed = true;
   });
@@ -33042,6 +33046,48 @@ setTimeout(function() {
   try { runPeekTick(); } catch(e) {}
 }, 3000);
 
+(function catchUpPendingApplies(){
+  try{
+    var list = getApplyList();
+    var now = Date.now();
+    var due = [];
+    list.forEach(function(a){
+      if(a.state === 'pending' && a.dueAt && now >= a.dueAt){
+        due.push(a);
+      }
+    });
+    if(!due.length) return;
+    due.forEach(function(a){
+      try{ settleFriendRequest(a.id, a.roleId); }catch(e){ console.error('补结算申请出错', e); }
+    });
+  }catch(e){ console.error('catchUpPendingApplies 出错', e); }
+})();
+(function migrateOldDeletedApplyStage(){
+  try{
+    var FLAG = 'mj_migrate_old_deleted_applystage_v1';
+    if(lsGet(FLAG, false)) return;
+    var friends = getFriends();
+    var now = Date.now();
+    var changed = false;
+    friends.forEach(function(f){
+      if(!f.hidden) return;
+      if(f.blocked) return;
+      if(f.applyStage !== 1) return;
+      f.deletedAt = now;
+      f.nextApplyCheckAt = 0;
+      f.pendingApplyAt = 0;
+      f.rejectCount = 0;
+      f.cooldownIndex = 0;
+      f.nextCooldownAt = 0;
+      changed = true;
+    });
+    if(changed){
+      saveFriends(friends);
+      if(typeof renderFriends === 'function') renderFriends();
+    }
+    lsSet(FLAG, true);
+  }catch(e){ console.error('旧删除 applyStage 迁移出错', e); }
+})();
 (function migrateOldDeletedFriends(){
   try{
     var FLAG = 'mj_migrate_old_deleted_v1';
