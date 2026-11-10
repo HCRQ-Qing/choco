@@ -13449,18 +13449,28 @@ function renderMyTxtSub(){
     if(t.closest('#myLinkApply')){
       e.preventDefault(); e.stopPropagation();
       var url = document.getElementById('myInLinkUrl').value.trim();
-      if(!url){ if(typeof toast==='function') toast('请先粘贴链接'); return; }
-      var inputEn = document.getElementById('myInTitleEn');
-      if(inputEn) {
-        var txt = url.length > 24 ? url.slice(0, 24) : url;
-        inputEn.value = txt;
-        var c = getMyTitleCfg(); c.en = txt; saveMyTitleCfg(c); applyMyTitleText();
-        var countEl = document.getElementById('myTitleEnCount');
-        if(countEl) countEl.textContent = Array.from(txt).length;
-        var prevEn = document.getElementById('myPrevTitleEn');
-        if(prevEn) prevEn.textContent = txt || 'MY PROFILE';
-        if(typeof toast==='function') toast('已应用链接');
+      if(!url){ if(typeof toast==='function') toast('请先粘贴字体链接'); return; }
+      if(!/\.(ttf|otf|woff|woff2)(\?.*)?$/i.test(url)){
+        if(typeof toast==='function') toast('链接必须是以 .ttf / .otf / .woff / .woff2 结尾的字体文件');
+        return;
       }
+      
+      var styleEl = document.getElementById('myFontStyle');
+      if(!styleEl){
+        styleEl = document.createElement('style');
+        styleEl.id = 'myFontStyle';
+        document.head.appendChild(styleEl);
+      }
+      
+      styleEl.textContent = '@font-face{font-family:"MyCustomFont";src:url("' + url + '");font-display:swap}' +
+        'body,body *:not(.msg-image-bubble):not(.d-emoji):not(.d-kao){font-family:"MyCustomFont",var(--app-font) !important}';
+      
+      saveMyFontCfg({key: '', name: '在线链接字体'});
+      
+      var fn = document.getElementById('myFontName');
+      if(fn) { fn.textContent = '在线链接字体'; fn.classList.remove('empty'); }
+      
+      if(typeof toast==='function') toast('字体已应用');
       return;
     }
     if(t.closest('#myFontUpload')){ e.preventDefault(); e.stopPropagation(); var f=document.getElementById('myFontFile'); if(f){f.value='';f.click();} return; }
