@@ -1317,11 +1317,30 @@ function saveMoodState(ms){
 const FRIENDS_KEY = 'mj_friends';
 const ROLE_KEY = 'mj_current_role_id';
 const GROUPS_KEY = 'mj_groups';
-function getFriends(){ let f=lsGet(FRIENDS_KEY,[]); if(!f.length) f=[{id:'r1',name:'角色',avatar:'',sub:SIGN_PLACEHOLDER,group:'',shape:'square',topbarBg:'',star:false,pinned:false}]; return f; }
+function getFriends(){
+  let f = lsGet(FRIENDS_KEY, []);
+  if(typeof f === 'string'){
+    try{ f = JSON.parse(f); }catch(e){ f = []; }
+  }
+  if(!Array.isArray(f)) f = [];
+  f = f.filter(function(x){ return x && typeof x === 'object' && x.id; });
+  if(!f.length) f = [{id:'r1',name:'角色',avatar:'',sub:SIGN_PLACEHOLDER,group:'',shape:'square',topbarBg:'',star:false,pinned:false}];
+  return f;
+}
 function saveFriends(f){ lsSet(FRIENDS_KEY, f); }
 function getGroups(){ const g=lsGet(GROUPS_KEY, []); return Array.isArray(g)?g:[]; }
 function saveGroupsArr(g){ lsSet(GROUPS_KEY, g); }
-function getCurrentRoleId(){ return lsGet(ROLE_KEY,'r1'); }
+function getCurrentRoleId(){
+  var rid = lsGet(ROLE_KEY, 'r1');
+  if(typeof rid === 'string'){
+    while(rid.length > 1 && rid.charAt(0) === '"' && rid.charAt(rid.length - 1) === '"'){
+      try { rid = JSON.parse(rid); } catch(e){ break; }
+    }
+    rid = String(rid).replace(/^"+|"+$/g, '');
+  }
+  if(!rid) rid = 'r1';
+  return rid;
+}
 function setCurrentRoleId(id){ lsSet(ROLE_KEY,id); }
 function getCurrentRoleName(){ const f = getFriends().find(x=>x.id===getCurrentRoleId()); return f?displayName(f):'角色'; }
 function getRole(){ const f = getFriends().find(x=>x.id===getCurrentRoleId()); return f || {id:'r1',name:'角色',avatar:'',sub:SIGN_PLACEHOLDER,topbarBg:'',shape:'square',star:false,pinned:false}; }
