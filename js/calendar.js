@@ -267,6 +267,10 @@ function fetchWeather(lat, lon, cityName){
       fetchedAt: Date.now()
     };
     const cfg = getWeatherCfg();
+    if(cfg.cache && typeof cfg.cache.temp === 'number'){
+      result.prevTemp = cfg.cache.temp;
+      result.prevFetchedAt = cfg.cache.fetchedAt || 0;
+    }
     cfg.cache = result;
     saveWeatherCfg(cfg);
     return result;

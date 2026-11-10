@@ -1895,30 +1895,38 @@ function pickCardFrom(pool){ if(!pool.length) return '嗯，我在。'; return p
    天气字卡 · 从「天气字卡」分组按今日天气抽一条
    ============================================================ */
 function pickWeatherCard(){
-  /* 检查开关 */
   if(!lsGet('mj_weather_card_on', true)) return '';
-  /* 拿今天天气 */
   const cfg = (typeof getWeatherCfg === 'function') ? getWeatherCfg() : null;
   if(!cfg || !cfg.cache) return '';
   const w = cfg.cache;
 
-  /* ★ 晴天时段限制：非 9~18 点 → 晴天字卡不触发 */
   const codeNow = Number(w.code);
   if(codeNow === 0){
     const h = new Date().getHours();
     if(h < 9 || h >= 18) return '';
   }
-  /* 天气类型 → 分类 id 统一交给 weather-cats.js */
-  let catId = 'cw-cloudy';
-  if(window.WeatherCats && typeof window.WeatherCats.weatherCodeToCatId === 'function'){
-    catId = window.WeatherCats.weatherCodeToCatId(w.code, w.temp, w.wind) || 'cw-cloudy';
+
+  let catIds = [];
+  if(window.WeatherCats && typeof window.WeatherCats.weatherCatIdsOf === 'function'){
+    catIds = window.WeatherCats.weatherCatIdsOf(w.code, w.temp, w.wind, w.prevTemp) || [];
+  } else if(window.WeatherCats && typeof window.WeatherCats.weatherCodeToCatId === 'function'){
+    catIds = [window.WeatherCats.weatherCodeToCatId(w.code, w.temp, w.wind, w.prevTemp) || 'cw-cloudy'];
   }
+  if(!catIds.length) return '';
 
   const g = getGroupsByOwner('public').find(x => x.id === 'g-weather');
   if(!g || !g.cats) return '';
-  const cat = g.cats.find(c => c.id === catId);
-  if(!cat || !cat.list || !cat.list.length) return '';
-  const pool = cat.list.map(cardText).map(s => String(s).trim()).filter(Boolean);
+
+  const pool = [];
+  catIds.forEach(function(cid){
+    const cat = g.cats.find(function(c){ return c.id === cid; });
+    if(!cat || !Array.isArray(cat.list)) return;
+    cat.list.forEach(function(item){
+      const txt = String(cardText(item) || '').trim();
+      if(txt) pool.push(txt);
+    });
+  });
+
   if(!pool.length) return '';
   return pool[Math.floor(Math.random() * pool.length)];
 }
@@ -1974,18 +1982,27 @@ function _getWeatherPool(){
       if(h < 9 || h >= 18) return [];
     }
 
-    /* 天气代码 → 分类 id 统一交给 weather-cats.js */
-    let catId = 'cw-cloudy';
-    if(window.WeatherCats && typeof window.WeatherCats.weatherCodeToCatId === 'function'){
-      catId = window.WeatherCats.weatherCodeToCatId(w.code, w.temp, w.wind) || 'cw-cloudy';
+    let catIds = [];
+    if(window.WeatherCats && typeof window.WeatherCats.weatherCatIdsOf === 'function'){
+      catIds = window.WeatherCats.weatherCatIdsOf(w.code, w.temp, w.wind, w.prevTemp) || [];
+    } else if(window.WeatherCats && typeof window.WeatherCats.weatherCodeToCatId === 'function'){
+      catIds = [window.WeatherCats.weatherCodeToCatId(w.code, w.temp, w.wind, w.prevTemp) || 'cw-cloudy'];
     }
+    if(!catIds.length) return [];
 
     const g = getGroupsByOwner('public').find(function(x){ return x.id === 'g-weather'; });
     if(!g || !g.cats || !g.cats.length) return [];
-    const cat = g.cats.find(function(c){ return c.id === catId; });
-    if(!cat) return [];
-    if(!cat.list || !cat.list.length) return [];
-    return cat.list.map(cardText).map(function(s){ return String(s).trim(); }).filter(Boolean);
+
+    const pool = [];
+    catIds.forEach(function(cid){
+      const cat = g.cats.find(function(c){ return c.id === cid; });
+      if(!cat || !Array.isArray(cat.list)) return;
+      cat.list.forEach(function(item){
+        const txt = String(cardText(item) || '').trim();
+        if(txt) pool.push(txt);
+      });
+    });
+    return pool;
   }catch(e){ return []; }
 }
 
@@ -13163,7 +13180,12 @@ function applyMyFont(){
     styleEl.id = 'myFontStyle';
     document.head.appendChild(styleEl);
   }
-  if(!c.key){ styleEl.textContent = ''; return; }
+  if(!c.key && !c.url){ styleEl.textContent = ''; return; }
+  if(c.url){
+    styleEl.textContent = '@font-face{font-family:"MyCustomFont";src:url("'+c.url+'");font-display:swap}'
+      + 'body,body *:not(.msg-image-bubble):not(.d-emoji):not(.d-kao){font-family:"MyCustomFont",var(--app-font) !important}';
+    return;
+  }
   __idb.toURL(c.key).then(function(url){
     if(!url){ styleEl.textContent = ''; return; }
     styleEl.textContent = '@font-face{font-family:"MyCustomFont";src:url("'+url+'");font-display:swap}'
@@ -13465,7 +13487,7 @@ function renderMyTxtSub(){
       styleEl.textContent = '@font-face{font-family:"MyCustomFont";src:url("' + url + '");font-display:swap}' +
         'body,body *:not(.msg-image-bubble):not(.d-emoji):not(.d-kao){font-family:"MyCustomFont",var(--app-font) !important}';
       
-      saveMyFontCfg({key: '', name: '在线链接字体'});
+      saveMyFontCfg({key: '', url: url, name: '在线链接字体'});
       
       var fn = document.getElementById('myFontName');
       if(fn) { fn.textContent = '在线链接字体'; fn.classList.remove('empty'); }
@@ -23548,7 +23570,14 @@ function renderCdTabs(){
   /* ★ 新增：天气字卡分组，分类同样固定不可增删 */
   if(isWeatherGroup && addBtnEl) addBtnEl.style.display = 'none';
   if(isWeatherGroup){
-    box.querySelectorAll('[data-del-cid]').forEach(el=>el.style.display='none');
+    var _delOk = { 'cw-migrated':1, 'cw-sunny':1 };
+    box.querySelectorAll('[data-del-cid]').forEach(el=>{
+      if(_delOk[el.dataset.delCid]){
+        el.style.display = 'flex';
+      } else {
+        el.style.display = 'none';
+      }
+    });
   }
 
   const addBtn = $('#addCatBtn');
