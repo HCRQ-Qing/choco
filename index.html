@@ -4276,6 +4276,55 @@
   cursor:pointer;
   transition:all .18s ease;
 }
+.video-card.vCard3{
+  width: 210px;
+  max-width: 100%;
+  box-sizing: border-box;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: #fafafa;
+  border: 1px solid rgba(0,0,0,.08);
+  border-radius: 16px;
+  box-shadow: inset 0 1px 1px #fff, 0 4px 10px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.04);
+  cursor: pointer;
+  transition: all .18s ease;
+}
+.video-card.vCard3 .vc-head{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  margin-bottom:0;
+}
+.video-card.vCard3 .vc-head .vc-platform{
+  font-size:10px;
+  font-weight:500;
+  color:#555;
+  display:flex;
+  align-items:center;
+  gap:4px;
+  background: transparent;
+  border: none;
+  padding: 0;
+}
+.video-card.vCard3 .vc-title{
+  font-size:14px;
+  font-weight:600;
+  color:#000;
+  letter-spacing:.3px;
+  margin:2px 0;
+  line-height: 1.4;
+}
+.video-card.vCard3 .vc-foot{
+  font-size:10px;
+  color:#999;
+  border-top:0.6px dashed #ddd;
+  padding-top:8px;
+  margin-top:2px;
+  display:flex;
+  justify-content:flex-end;
+}
 .video-card:active{background:var(--th-accent-soft)}
 .video-card .vc-head{
   display:flex;align-items:center;gap:8px;
@@ -5022,7 +5071,6 @@ textarea, input {
   gap:12px;
   padding:20px 22px 12px;
   background:var(--th-bg1);
-  border-bottom:0.6px dashed var(--th-bg0);
   box-sizing:border-box;
   width:100%;
 }
@@ -5117,6 +5165,8 @@ textarea, input {
 .utop-av img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
 </style>
 
+<!-- ===== 全局工具：base64 转 blob ===== -->
+<script src="js/data-url-blob.js"></script>
 <!-- ===== IndexedDB 数据底座 ===== -->
 <script src="js/indexeddb.js"></script>
 <!-- ===== 头像统一存取（IndexedDB） ===== -->
@@ -5137,6 +5187,7 @@ textarea, input {
 <script src="js/weather-cats.js"></script>
 
 <!-- ===== 主应用逻辑（聊天/字卡/朋友/我的等） ===== -->
+<script src="js/video-message.js"></script>
 <script src="js/app.js"></script>
 
 <!-- 引入 ECR 留言区逻辑 -->
@@ -5175,6 +5226,7 @@ textarea, input {
 <script src="js/msg-idb.js"></script>
 <script src="js/memory-fix.js"></script>
 <!-- ===== 共享池 + 角色刷视频 ===== -->
+<script src="js/video-fav.js"></script>
 <script src="js/video-pool.js"></script>
 <!-- ===== 日历页 + 编辑桌面 ===== -->
 <script src="js/calendar.js"></script>
