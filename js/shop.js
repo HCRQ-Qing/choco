@@ -33,7 +33,7 @@
           '</div>' +
           '<div class="shop-dr-sec">' +
             '<div class="shop-dr-lbl">标 签</div>' +
-            '<div class="shop-dr-chips"><span class="shop-chip on" data-tag="">全部</span><span class="shop-chip" data-tag="基础">基础</span><span class="shop-chip" data-tag="日常">日常</span><span class="shop-chip" data-tag="亲昵">亲昵</span></div>' +
+            '<div class="shop-dr-chips"><span class="shop-chip on" data-tag="">全部</span><span class="shop-chip" data-tag="基础">基础</span><span class="shop-chip" data-tag="日常">日常</span><span class="shop-chip" data-tag="名词">名词</span><span class="shop-chip" data-tag="情绪">情绪</span><span class="shop-chip" data-tag="亲昵">亲昵</span></div>' +
           '</div>' +
         '</div>' +
         '<div class="shop-dr-foot"><button id="shopDrReset">重 置</button><button id="shopDrOk">确 定</button></div>' +
@@ -112,6 +112,7 @@
     var arr = ((window.SHOP_DATA.cats[state.top] || {}).data || {})[state.sub] || [];
     if(state.healthMode){
       arr = arr.filter(function(c){
+        if(c.id === 'adj-size' || c.id === 'adj-trait') return false;
         return !(c.tags || []).some(function(t){ return t === '负能量' || t === '攻击性' || t === '虐'; });
       });
     }

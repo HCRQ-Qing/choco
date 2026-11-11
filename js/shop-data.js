@@ -275,3 +275,54 @@ window.SHOP_DATA = {
     '音乐': { subs: [], data: {} }
   }
 };
+
+(function fixShopCats(){
+  var data = window.SHOP_DATA;
+  if(!data || !data.cats['字卡']) return;
+  
+  data.cats['字卡'].subs = ['普通字卡', '心情', '状态'];
+
+  var oldData = data.cats['字卡'].data['普通字卡'] || [];
+  var newData = [];
+  
+  oldData.forEach(function(item){
+    var id = item.id;
+    
+    if(id === 'sweet-words' || id === 'love-daily' || id === 'comfort' || id === 'spoiled'){
+      item.tags = ['情绪'];
+      newData.push(item);
+    }
+    else if(id === 'food' || id === 'meat-staple' || id === 'animal-nature' || id === 'life-items' || id === 'family-people' || id === 'time-number' || id === 'body-status' || id === 'colors'){
+      item.tags = ['名词'];
+      newData.push(item);
+    }
+    else if(id === 'actions-daily'){
+      item.tags = ['日常'];
+      newData.push(item);
+    }
+    else if(id === 'adj-looks'){
+      var sizeWords = ['大','小','多','少','长','短','高','矮','胖','瘦','快','慢','早','晚','新','旧','美','丑','冷','热','干','湿','轻','重','硬','软'];
+      var traitWords = ['可爱','美丽','漂亮','帅气','聪明','笨','勇敢','胆小','善良','温柔','友好','热情','冷漠','傲慢','谦虚','勤奋','懒惰','诚实','虚伪','大方','小气'];
+      
+      var catAdj = { id: 'adj-size', name: '形容词', desc: '描述事物性质的词。', author: '@001', tags: ['基础'], cards: sizeWords };
+      var catTrait = { id: 'adj-trait', name: '品性', desc: '描述脾气性格的词。', author: '@001', tags: ['基础'], cards: traitWords };
+      
+      newData.push(catAdj);
+      newData.push(catTrait);
+    }
+    else if(id === 'adj-eval'){
+      item.tags = ['基础'];
+      newData.push(item);
+    }
+    else if(id === 'particle'){
+      item.tags = ['基础'];
+      newData.push(item);
+    }
+    else {
+      item.tags = ['日常'];
+      newData.push(item);
+    }
+  });
+
+  data.cats['字卡'].data['普通字卡'] = newData;
+})();

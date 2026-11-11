@@ -6,23 +6,22 @@ const ROLE_SCHEDULE_KEY = 'mj_role_schedule_v1';
 const VIDEO_SEEN_KEY = 'mj_video_seen_v1';
 const VIDEO_PUB_RATE = 0.5;
 
-/* 共享池扩展：蹲一蹲 / 内置视频 / 收藏 */
+/* 共享池扩展：蹲一蹲 / 收藏 */
 const VIDEO_WATCH_KEY = 'mj_video_watch_v1';
-const VIDEO_BUILTIN_FLAG = 'mj_video_builtin_seeded_v1';
 const VIDEO_FAV_ORDER = ['douyin', 'xhs', 'bili', 'weibo', 'kuaishou', 'youtube', 'other'];
-const VIDEO_BUILTIN_SEEDS = [
-  { url: 'https://www.douyin.com/', desc: '抖音首页，刷不完的短视频' },
-  { url: 'https://www.bilibili.com/', desc: 'B站首页，总有你想看的' },
-  { url: 'https://www.bilibili.com/v/popular/all', desc: 'B站热门榜，看看大家在追什么' },
-  { url: 'https://www.xiaohongshu.com/explore', desc: '小红书探索页，生活灵感一大堆' },
-  { url: 'https://weibo.com/', desc: '微博首页，看看今天发生了什么' },
-  { url: 'https://s.weibo.com/top/summary', desc: '微博热搜榜，今天都在聊这个' },
-  { url: 'https://www.kuaishou.com/', desc: '快手首页，记录每一种生活' },
-  { url: 'https://www.youtube.com/', desc: 'YouTube 首页，宝藏频道从这里开始' }
-];
 
 var _vpTab = 'all';
 var _vpWatchMode = 'random';
+
+const VIDEO_KW_KEY = 'mj_video_keywords_v1';
+function getVideoKeywords(){
+  let a = lsGet(VIDEO_KW_KEY, null);
+  if(!Array.isArray(a)) a = [];
+  return a;
+}
+function saveVideoKeywords(a){ lsSet(VIDEO_KW_KEY, a); }
+
+try{ if(typeof purgeBuiltinVideos === 'function') purgeBuiltinVideos(); }catch(e){ console.error('清理内置视频失败', e); }
 
 function getVideoPool(){
   let a = lsGet(VIDEO_POOL_KEY, null);
@@ -93,9 +92,33 @@ function hasSeen(roleId, videoId){
   const m = getVideoSeen();
   return m[roleId] && m[roleId].includes(videoId);
 }
-function pickRandomVideo(roleId){
+async function fetchBiliVideoByKeyword(kw) {
+  try {
+    const url = 'https://api.bilibili.com/x/web-interface/search/type?search_type=video&keyword=' + encodeURIComponent(kw);
+    const res = await fetch(url);
+    const json = await res.json();
+    if (json && json.data && json.data.result && json.data.result.length > 0) {
+      const first = json.data.result[0];
+      const bvMatch = first.bvid;
+      if (bvMatch) {
+        return {
+          id: bvMatch,
+          url: 'https://www.bilibili.com/video/' + bvMatch,
+          title: first.title.replace(/<[^>]+>/g, ''),
+          desc: first.description || '按关键词为你找到了这个，快去看看',
+          cover: first.pic,
+          isBili: true
+        };
+      }
+    }
+  } catch(e) {
+    console.error("B站搜索失败", e);
+  }
+  return null;
+}
+
+async function pickRandomVideo(roleId){
   const pool = getVideoPool();
-  if(!pool.length) return null;
   const fresh = pool.filter(v => !hasSeen(roleId, v.id));
   if(!fresh.length) return null;
   return fresh[Math.floor(Math.random() * fresh.length)];
@@ -174,8 +197,10 @@ function getOrBuildSchedule(roleId){
   let m = lsGet(ROLE_SCHEDULE_KEY, null);
   if(!m || typeof m !== 'object') m = {};
   const today = todayKey();
-  if(!m[roleId] || m[roleId].date !== today){
+  let kwFlag = lsGet('mj_kw_update_flag', 0);
+  if(!m[roleId] || m[roleId].date !== today || !m[roleId].kwFlag || m[roleId].kwFlag !== kwFlag){
     m[roleId] = buildScheduleForRole(roleId);
+    m[roleId].kwFlag = kwFlag;
     lsSet(ROLE_SCHEDULE_KEY, m);
   }
   return m[roleId];
@@ -271,17 +296,56 @@ function sendVideoMessage(roleId, video){
     toSend.push(cardMsg);
   }
 
-  // 统一写入
+  const key = 'mj_msgs_' + roleId;
+  let arr = lsGet(key, null);
+  if(!Array.isArray(arr)) arr = [];
+  toSend.forEach(m => arr.push(m));
+  lsSet(key, arr);
   if(getCurrentRoleId() === roleId){
-    toSend.forEach(m => msgs.push(m));
-    saveMsgs();
+    msgs = arr;
     renderChat(true);
-  } else {
-    const key = 'mj_msgs_' + roleId;
-    let arr = lsGet(key, null);
-    if(!Array.isArray(arr)) arr = [];
-    toSend.forEach(m => arr.push(m));
-    lsSet(key, arr);
+  }
+}
+
+async function runVideoScheduleTickAsync() {
+  const friends = getFriends().filter(f => !f.hidden && !f.blocked && !f.builtin);
+  const now = Date.now();
+  for (const f of friends) {
+    const sched = getOrBuildSchedule(f.id);
+    if(sched.rest) continue;
+    if(!sched.fired) sched.fired = [];
+    const catching = !!window.__kaCatchUpActive;
+    let caughtSent = 0;
+    for (let si = 0; si < sched.slots.length; si++) {
+      const slot = sched.slots[si];
+      for (let ti = 0; ti < slot.times.length; ti++) {
+        const t = slot.times[ti];
+        const key = si + '-' + ti;
+        if(sched.fired.includes(key)) continue;
+        const freshWin = catching ? 6 * 3600 * 1000 : 5 * 60 * 1000;
+        if(now >= t && now - t < freshWin){
+          if(catching && caughtSent >= 1){
+            sched.fired.push(key);
+            saveSchedule(f.id, sched);
+            continue;
+          }
+          flashVideoStatus(f.id, 15000);
+          const video = await pickRandomVideo(f.id);
+          if(video){
+            sched.fired.push(key);
+            saveSchedule(f.id, sched);
+            sendVideoMessage(f.id, video);
+            caughtSent++;
+          } else {
+            sched.fired.push(key);
+            saveSchedule(f.id, sched);
+          }
+        } else if(now - t >= 5*60*1000 && now - t < 24*3600*1000){
+          sched.fired.push(key);
+          saveSchedule(f.id, sched);
+        }
+      }
+    }
   }
 }
 
@@ -309,48 +373,7 @@ function pickShareCardReply(platform){
 }
 
 function runVideoScheduleTick(){
-  const friends = getFriends().filter(f => !f.hidden);
-  const now = Date.now();
-  friends.forEach(f => {
-    const sched = getOrBuildSchedule(f.id);
-    if(sched.rest) return;
-    if(!sched.fired) sched.fired = [];
-    /* ★ 冻结补跑：keepalive 判定页面被系统冻结过时，会把 __kaCatchUpActive 置真。
-       此时放宽时间窗到 6 小时，但每个角色最多只补 1 条，避免一次刷出一堆消息。 */
-    const catching = !!window.__kaCatchUpActive;
-    let caughtSent = 0;
-    sched.slots.forEach((slot, si) => {
-      slot.times.forEach((t, ti) => {
-        const key = si + '-' + ti;
-        if(sched.fired.includes(key)) return;
-        const freshWin = catching ? 6 * 3600 * 1000 : 5 * 60 * 1000;
-        if(now >= t && now - t < freshWin){
-          /* 补跑阶段已经补过一条 → 只标记不再发 */
-          if(catching && caughtSent >= 1){
-            sched.fired.push(key);
-            saveSchedule(f.id, sched);
-            return;
-          }
-          // 到点了：无论有没有视频可发，都先闪一下「刷视频中」
-          flashVideoStatus(f.id, 15000);
-
-          const video = pickRandomVideo(f.id);
-          if(video){
-            sched.fired.push(key);
-            saveSchedule(f.id, sched);
-            sendVideoMessage(f.id, video);
-            caughtSent++;
-          } else {
-            sched.fired.push(key);
-            saveSchedule(f.id, sched);
-          }
-        } else if(now - t >= 5*60*1000 && now - t < 24*3600*1000){
-          sched.fired.push(key);
-          saveSchedule(f.id, sched);
-        }
-      });
-    });
-  });
+  runVideoScheduleTickAsync().catch(e => console.error('视频调度出错', e));
 }
 /* 定时调度统一交给 keepalive 的 KA 调度器（只在主标签执行，多开不会重复发消息） */
 (function scheduleVideoTicks(){
@@ -374,9 +397,12 @@ function ensureVideoExtraStyles(){
   const st = document.createElement('style');
   st.id = 'videoExtraStyles';
   st.textContent = `
+    #videoPoolScreen{background:#fff !important; padding-top:0 !important;}
+    #videoPoolScreen .vp-body{padding-top:0 !important; margin-top:-8px;}
     #videoPoolScreen .vp-tabs{position:sticky;top:0;z-index:3;display:flex;
-      margin:-14px -18px 8px;padding:14px 18px 0;background:#f5f5f5;
-      border-bottom:0.7px solid #e8e8e8;}
+      margin:0 -18px 8px;padding:0 18px;background:#fff;
+      border-bottom:0.7px solid #f0f0f0;}
+    #videoPoolScreen .vp-tab{padding:8px 0 7px !important;}
     #videoPoolScreen .vp-tab{flex:1;padding:11px 0 10px;border:none;background:transparent;
       font-family:inherit;font-size:12px;font-weight:300;letter-spacing:3px;text-indent:3px;
       color:#aaa;cursor:pointer;position:relative;-webkit-font-smoothing:antialiased;
@@ -385,9 +411,7 @@ function ensureVideoExtraStyles(){
     #videoPoolScreen .vp-tab.on::after{content:'';position:absolute;left:50%;bottom:-1px;
       width:20px;height:2px;margin-left:-10px;background:#1a1a1a;border-radius:2px;}
 
-    #videoPoolScreen .vp-badge{display:inline-block;margin-left:6px;padding:1px 6px;
-      border:0.7px solid #e8e8e8;border-radius:8px;font-size:9.5px;font-weight:300;
-      color:#aaa;letter-spacing:1px;vertical-align:middle;}
+ 
     #videoPoolScreen .vp-item .vp-fav{width:26px;height:26px;flex:none;
       border:none;background:transparent;color:#ccc;font-size:15px;line-height:1;
       cursor:pointer;padding:0;display:flex;align-items:center;justify-content:center;
@@ -465,6 +489,16 @@ function ensureVideoExtraStyles(){
       border-radius:22px;background:#1a1a1a;color:#fff;font-family:inherit;font-size:13px;
       font-weight:300;letter-spacing:4px;text-indent:4px;cursor:pointer;}
     #vpWatchOverlay .vpw-save:active{opacity:.85;}
+
+    #videoPoolScreen .vp-kw-wrap{padding:8px 0 20px;}
+    #videoPoolScreen .vp-kw-input-box{display:flex;gap:8px;margin-bottom:20px;}
+    #videoPoolScreen .vp-kw-input{flex:1;height:40px;border:0.7px solid #e8e8e8;background:#fafafa;border-radius:10px;padding:0 14px;font-size:13.5px;outline:none;font-family:inherit;color:#1a1a1a;}
+    #videoPoolScreen .vp-kw-input:focus{border-color:#1a1a1a;background:#fff;}
+    #videoPoolScreen .vp-kw-btn{width:64px;height:40px;border:none;background:#1a1a1a;color:#fff;border-radius:10px;font-size:13px;font-family:inherit;cursor:pointer;}
+    #videoPoolScreen .vp-kw-list{display:flex;flex-wrap:wrap;gap:8px;}
+    #videoPoolScreen .kw-chip{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:#f5f5f5;border-radius:20px;font-size:13px;color:#1a1a1a;}
+    #videoPoolScreen .kw-del{font-size:12px;color:#aaa;padding:2px 4px;cursor:pointer;font-family:Arial;}
+    #videoPoolScreen .kw-del:active{color:#1a1a1a;}
   `;
   (document.head || document.body).appendChild(st);
 }
@@ -515,25 +549,16 @@ function checkWatch(){
 }
 kaSchedule('video-watch', checkWatch, 60 * 1000);
 
-/* ============ 内置视频：首次打开预置，删完不再恢复 ============ */
-function ensureBuiltinVideos(){
-  if(lsGet(VIDEO_BUILTIN_FLAG, false)) return;
+/* ============ 清理池子里遗留的内置视频：一次清完，不弹提示 ============ */
+function purgeBuiltinVideos(){
+  var FLAG = 'mj_video_builtin_purged_v1';
+  if(lsGet(FLAG, false)) return;
   const pool = getVideoPool();
-  if(pool.length) return;
-  const now = Date.now();
-  const seeded = VIDEO_BUILTIN_SEEDS.map(function(s, i){
-    return {
-      id: hashUrl(s.url),
-      url: s.url,
-      desc: s.desc,
-      platform: detectPlatform(s.url),
-      time: now - i * 1000,
-      builtin: true,
-      fav: false
-    };
-  });
-  saveVideoPool(seeded);
-  lsSet(VIDEO_BUILTIN_FLAG, true);
+  const kept = pool.filter(function(v){ return !(v && v.builtin === true); });
+  if(kept.length !== pool.length){
+    saveVideoPool(kept);
+  }
+  lsSet(FLAG, true);
 }
 
 /* ============ 共享池：渲染 ============ */
@@ -551,7 +576,6 @@ function vpItemHTML(v){
     '<div class="vp-ic">' + platformIcon(p) + '</div>' +
     '<div class="vp-main">' +
       '<div class="vp-name">' + esc(v.desc || platformName(p) + '视频') +
-        (v.builtin ? '<span class="vp-badge">内置</span>' : '') +
       '</div>' +
       '<div class="vp-url">' + esc(v.url) + '</div>' +
       '<div class="vp-time">' + vpTimeText(v.time) + '</div>' +
@@ -626,22 +650,25 @@ function vpRenderWatch(){
   }).join('');
   return html;
 }
-function vpRenderAbout(){
-  return '<div class="vp-about">' +
-    '<div class="vp-about-title">关 于 这 个 池 子</div>' +
-    '<p>这里是角色「刷视频」时分享视频的来源。角色会按自己的节奏，从这里随机挑一条视频发给你。</p>' +
-    '<p>你可以粘贴任意平台链接：抖音、B站、小红书、微博、快手、YouTube 都行。</p>' +
-    '<p>收藏只是给视频打个星标，方便按平台找回来；蹲一蹲会记下链接，到时间提醒你去看。</p>' +
-    '<p>所有数据只保存在这台设备的浏览器本地，不会上传任何东西。清理浏览器数据会一起清空。</p>' +
-    '<p>点任意一条视频，会在新窗口打开原链接。</p>' +
+function vpRenderKeywords(){
+  const keys = getVideoKeywords();
+  let chips = keys.map(k => '<div class="kw-chip" data-kw="' + esc(k) + '">' + esc(k) + ' <span class="kw-del" data-kw-del="' + esc(k) + '">×</span></div>').join('');
+  if(!keys.length){
+    chips = '<div style="font-size:12px;color:#bbb;padding:10px 0">还没有关键词，添加一个吧</div>';
+  }
+  return '<div class="vp-kw-wrap">' +
+    '<div class="vp-kw-input-box">' +
+      '<input class="vp-kw-input" id="vpKwInput" type="text" placeholder="输入关键词，如：搞笑猫猫">' +
+      '<button class="vp-kw-btn" id="vpKwAdd" type="button">添加</button>' +
+    '</div>' +
+    '<div class="vp-kw-list">' + chips + '</div>' +
   '</div>';
 }
 function vpTabBarHTML(){
   const tabs = [
     { k:'all',   label:'全部' },
     { k:'fav',   label:'收藏' },
-    { k:'watch', label:'蹲一蹲' },
-    { k:'about', label:'关于' }
+    { k:'watch', label:'蹲一蹲' }
   ];
   return '<div class="vp-tabs">' + tabs.map(function(t){
     return '<button class="vp-tab' + (_vpTab === t.k ? ' on' : '') + '" data-vtab="' + t.k +
@@ -661,13 +688,30 @@ function renderVideoPool(){
   const box = document.getElementById('vpBody');
   if(!box) return;
   ensureVideoExtraStyles();
-  ensureBuiltinVideos();
+  purgeBuiltinVideos();
   const pool = getVideoPool();
   let inner;
-  if(_vpTab === 'fav') inner = vpRenderFav(pool);
-  else if(_vpTab === 'watch') inner = vpRenderWatch();
-  else if(_vpTab === 'about') inner = vpRenderAbout();
-  else inner = vpRenderAll(pool);
+  
+  if(_vpTab === 'fav'){
+    if(window.VideoFav){
+      if(!window.__curFavGroup){
+        inner = window.VideoFav.renderFolders(pool, function(group){
+          window.__curFavGroup = group;
+          renderVideoPool();
+        });
+      } else {
+        inner = window.VideoFav.renderFolderDetail(pool, window.__curFavGroup, function(){
+          window.__curFavGroup = '';
+          renderVideoPool();
+        });
+      }
+    } else {
+      inner = vpRenderFav(pool);
+    }
+  } 
+  else if(_vpTab === 'watch') { inner = vpRenderWatch(); }
+  else { inner = vpRenderAll(pool); }
+  
   box.innerHTML = vpTabBarHTML() + '<div class="vp-tab-body">' + inner + '</div>';
 }
 
@@ -676,10 +720,30 @@ function toggleVideoFav(id){
   const arr = getVideoPool();
   const v = arr.find(function(x){ return x.id === id; });
   if(!v) return;
-  v.fav = !v.fav;
-  saveVideoPool(arr);
-  renderVideoPool();
-  toast(v.fav ? '已收藏' : '已取消收藏');
+  
+  if(v.fav){
+    v.fav = false;
+    v.favGroup = '';
+    saveVideoPool(arr);
+    renderVideoPool();
+    toast('已取消收藏');
+    return;
+  }
+
+  if(window.VideoFav){
+    window.VideoFav.promptGroup(id, function(groupName){
+      v.fav = true;
+      v.favGroup = groupName;
+      saveVideoPool(arr);
+      renderVideoPool();
+      toast('已收藏到：' + groupName);
+    });
+  } else {
+    v.fav = true;
+    saveVideoPool(arr);
+    renderVideoPool();
+    toast('已收藏');
+  }
 }
 function deleteVideoById(id){
   if(!confirm('删除这条视频？')) return;
@@ -796,6 +860,7 @@ document.addEventListener('click', function(e){
   if(tabBtn){
     e.preventDefault();
     _vpTab = tabBtn.getAttribute('data-vtab') || 'all';
+    window.__curFavGroup = '';
     renderVideoPool();
     return;
   }
@@ -1107,34 +1172,10 @@ document.addEventListener('click', (e) => {
   if(typeof origRender !== 'function') return;
   window.renderChat = function(forceBottom, force){
     origRender(forceBottom, force);
-    // 重建 chatList 后，同步气泡别名 message-sent / message-received
     if(window.__tagBubbles) window.__tagBubbles();
-    const list = document.getElementById('chatList');
-    if(!list) return;
-    msgs.forEach(m => {
-      if(!m.videoCard) return;
-      const el = list.querySelector('.msg[data-id="' + m.id + '"]');
-      if(!el) return;
-      if(el.querySelector('.video-card')) return;
-      const body = el.querySelector('.msg-body');
-      if(!body) return;
-      const card = document.createElement('div');
-      card.className = 'video-card';
-      card.innerHTML =
-        '<div class="vc-head">' +
-          '<span class="vc-platform ' + platformClass(m.videoCard.platform) + '">' +
-            m.videoCard.platformIcon + ' ' + esc(m.videoCard.platformName) +
-          '</span>' +
-          '<span>视频分享</span>' +
-        '</div>' +
-        '<div class="vc-title">' + esc(m.videoCard.title) + '</div>' +
-        (m.videoCard.desc ? '<div class="vc-desc">' + esc(m.videoCard.desc) + '</div>' : '') +
-        '<div class="vc-foot"><span>点击打开</span><span>›</span></div>';
-      card.onclick = () => {
-        if(m.videoCard.url) window.open(m.videoCard.url, '_blank');
-      };
-      body.appendChild(card);
-    });
+    if(window.VideoMsg && typeof window.VideoMsg.bindClickDelegation === 'function'){
+      window.VideoMsg.bindClickDelegation();
+    }
   };
 })();/* ============ 刷视频时，临时改状态栏 ============ */
 let _videoStatusTimer = null;
@@ -1359,32 +1400,28 @@ function forceSendVideo(){
   if(!role){ toast('找不到当前角色'); return; }
 
   const pool = getVideoPool();
-  if(!pool.length){
-    toast('池子是空的，先去共享池上传几条吧');
+  const kws = getVideoKeywords();
+  if(!pool.length && !kws.length){
+    toast('池子是空的，也没有设置关键词，先去加几条吧');
     return;
   }
 
-  const video = pickRandomVideo(roleId);
-  if(!video){
-    const total = pool.length;
-    const seen = (getVideoSeen()[roleId] || []).length;
-    toast('这个角色已经看过池子里全部 ' + total + ' 条了');
-    return;
-  }
-
-  // 先显示"正在刷"
   toast(role.name + ' 正在刷手机…');
-
-  // 1~2 秒后发出来
-  setTimeout(() => {
-    try{
-      sendVideoMessage(roleId, video);
-      toast('已发送');
-    }catch(e){
-      console.error(e);
-      toast('发送失败：' + e.message);
+  pickRandomVideo(roleId).then(video => {
+    if(!video){
+      toast('没有找到可发送的视频，可能池子空了或网络不佳');
+      return;
     }
-  }, 1000 + Math.random() * 1000);
+    setTimeout(() => {
+      try{
+        sendVideoMessage(roleId, video);
+        toast('已发送');
+      }catch(e){
+        console.error(e);
+        toast('发送失败：' + e.message);
+      }
+    }, 1000 + Math.random() * 1000);
+  });
 }
 /* 迁移后清掉旧 key，释放 localStorage 空间 */
 (function cleanupLegacyStickerKey(){
@@ -1561,3 +1598,4 @@ window.__memoDebug = function(){
   }   /* ← _run 结束 */
   _start();
 })();
+ 

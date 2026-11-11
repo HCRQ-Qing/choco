@@ -3208,23 +3208,24 @@ function renderChatFull(forceBottom){
 	if(m.videoCard && m.videoCard.url){
 	  const vc = m.videoCard;
 	  const dirCls = isUser ? 'user' : 'char';
-	  const _pc = (typeof platformClass === 'function') ? platformClass(vc.platform) : '';
+	  const _cardHTML = (window.VideoMsg && typeof window.VideoMsg.buildCardHTML === 'function')
+	    ? window.VideoMsg.buildCardHTML(vc)
+	    : '';
+	  if(!_cardHTML) {
+	    return `<div class="msg ${dirCls}" data-id="${m.id}">
+	      ${av}
+	      <div class="msg-body" style="max-width:100%">
+	        ${timeSep}
+	        <div class="bubble message-${isUser?'sent':'received'}">[视频链接失效]</div>
+	      </div>
+	    </div>`;
+	  }
 	  return `<div class="msg ${dirCls}" data-id="${m.id}">
-		${av}
-		<div class="msg-body" style="max-width:100%">
-		  ${timeSep}
-		  <div class="bubble wx-card-bubble message-sent">
-			<div class="video-card" data-vcurl="${esc(vc.url)}">
-			  <div class="vc-head">
-				<span class="vc-platform ${_pc}">${esc(vc.platformIcon||'🔗')} ${esc(vc.platformName||'链接')}</span>
-				<span>视频分享</span>
-			  </div>
-			  <div class="vc-title">${esc(vc.title||'')}</div>
-			  ${vc.desc ? `<div class="vc-desc">${esc(vc.desc)}</div>` : ''}
-			  <div class="vc-foot"><span>点击打开</span><span>›</span></div>
-			</div>
-		  </div>
-		</div>
+	    ${av}
+	    <div class="msg-body" style="max-width:100%">
+	      ${timeSep}
+	      ${_cardHTML}
+	    </div>
 	  </div>`;
 	}
 	/* ★ 单条转发卡片（收藏转发） */
@@ -16764,20 +16765,24 @@ function renderGroupChat(){
       const nm = isMe ? userName() : escapeHTML(displayName(getRoleById(m.roleId) || {}) || '?');
       const cls = isMe ? 'gch-msg me' : 'gch-msg';
       const vc = m.videoCard;
+      const _cardHTML = (window.VideoMsg && typeof window.VideoMsg.buildCardHTML === 'function')
+        ? window.VideoMsg.buildCardHTML(vc)
+        : '';
+      if(!_cardHTML){
+        return '<div class="' + cls + '" data-id="' + m.id + '">' +
+          '<div class="gch-mav">' + av + '</div>' +
+          '<div class="gch-body" style="max-width:100%"><div class="gch-name">' + nm + '</div>' +
+          timeSep + quoteHTML +
+          '<div class="gch-bubble" style="background:transparent;padding:0">[视频链接失效]</div>' +
+          '</div>' +
+        '</div>';
+      }
       return '<div class="' + cls + '" data-id="' + m.id + '">' +
         '<div class="gch-mav">' + av + '</div>' +
         '<div class="gch-body" style="max-width:100%"><div class="gch-name">' + nm + '</div>' +
         timeSep + quoteHTML +
         '<div class="gch-bubble" style="background:transparent;padding:0">' +
-          '<div class="video-card" data-vcurl="' + escapeHTML(vc.url) + '">' +
-            '<div class="vc-head">' +
-              '<span class="vc-platform ' + (typeof platformClass === "function" ? platformClass(vc.platform) : '') + '">' + escapeHTML(vc.platformIcon||'🔗') + ' ' + escapeHTML(vc.platformName||'链接') + '</span>' +
-              '<span>视频分享</span>' +
-            '</div>' +
-            '<div class="vc-title">' + escapeHTML(vc.title||'') + '</div>' +
-            (vc.desc ? '<div class="vc-desc">' + escapeHTML(vc.desc) + '</div>' : '') +
-            '<div class="vc-foot"><span>点击打开</span><span>›</span></div>' +
-          '</div>' +
+          _cardHTML +
         '</div>' +
         '</div>' +
       '</div>';
