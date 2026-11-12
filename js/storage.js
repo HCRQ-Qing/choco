@@ -2,24 +2,17 @@
   if(window.__storagePageReady) return;
   window.__storagePageReady = true;
 
-  var PREFIX_MAP = [
-    { key:'mj_msgs_',           label:'聊天记录' },
-    { key:'mj_group_msgs_',     label:'聊天记录' },
-    { key:'mj_sticker_store',   label:'表情图' },
-    { key:'mj_voice_lib',       label:'语音' },
-    { key:'mj_video_lib',       label:'语音' },
-    { key:'mj_card_groups',     label:'字卡' },
-    { key:'mj_card_trash',      label:'字卡' },
-    { key:'mj_builtin_card',    label:'字卡' }
-  ];
-
   var ORDER = ['聊天记录','表情图','语音','字卡','头像背景','其它设置'];
   var LIMIT_BYTES = 5 * 1024 * 1024;
 
+  var __enc = (function(){
+    try{ if(window.TextEncoder) return new TextEncoder(); }catch(e){}
+    return null;
+  })();
   function bytesOf(str){
     if(!str) return 0;
     try{
-      if(window.TextEncoder) return new TextEncoder().encode(str).length;
+      if(__enc) return __enc.encode(str).length;
     }catch(e){}
     return str.length * 2;
   }
@@ -30,31 +23,39 @@
     return (b / 1024 / 1024).toFixed(2) + ' MB';
   }
 
-  function scanLocalStorage(){
+  function scanLocalStorage(cb){
     var buckets = {};
     ORDER.forEach(function(k){ buckets[k] = 0; });
+    var keys = [];
     try{
       for(var i = 0; i < localStorage.length; i++){
         var k = localStorage.key(i);
-        if(!k) continue;
-        var v = '';
-        try{ v = localStorage.getItem(k) || ''; }catch(e){ v = ''; }
-        var size = bytesOf(k) + bytesOf(v);
-        var label = '';
-        for(var j = 0; j < PREFIX_MAP.length; j++){
-          if(k.indexOf(PREFIX_MAP[j].key) === 0){ label = PREFIX_MAP[j].label; break; }
-        }
-        if(!label){
-          if(k.indexOf('bg_') === 0 || k.indexOf('tarot_') === 0 || k.indexOf('drawer_bg_') === 0 || k.indexOf('mybg_') === 0 || k.indexOf('mycardbg_') === 0 || k.indexOf('myfont_') === 0){
-            label = '头像背景';
-          } else {
-            label = '其它设置';
-          }
-        }
-        buckets[label] = (buckets[label] || 0) + size;
+        if(k) keys.push(k);
       }
-    }catch(e){ console.warn('[storage] 扫描失败', e); }
-    return buckets;
+    }catch(e){ console.warn('[storage] 取键失败', e); cb(buckets); return; }
+    var idx = 0;
+    function step(){
+      if(idx >= keys.length){ cb(buckets); return; }
+      var k = keys[idx++];
+      var v = '';
+      try{ v = localStorage.getItem(k) || ''; }catch(e){ v = ''; }
+      var size = bytesOf(k) + bytesOf(v);
+      var label = '其它设置';
+      if(k.indexOf('mj_msgs_') === 0 || k.indexOf('mj_group_msgs_') === 0){
+        label = '聊天记录';
+      } else if(k.indexOf('mj_sticker_store') === 0){
+        label = '表情图';
+      } else if(k.indexOf('mj_voice_lib') === 0 || k.indexOf('mj_video_lib') === 0){
+        label = '语音';
+      } else if(k.indexOf('mj_card_groups') === 0 || k.indexOf('mj_card_trash') === 0 || k.indexOf('mj_builtin_card') === 0){
+        label = '字卡';
+      } else if(k.indexOf('bg_') === 0 || k.indexOf('tarot_') === 0 || k.indexOf('drawer_bg_') === 0 || k.indexOf('mybg_') === 0 || k.indexOf('mycardbg_') === 0 || k.indexOf('myfont_') === 0){
+        label = '头像背景';
+      }
+      buckets[label] = (buckets[label] || 0) + size;
+      setTimeout(step, 0);
+    }
+    step();
   }
 
   function scanIDB(cb){
@@ -95,7 +96,7 @@
   function render(){
     var box = document.getElementById('storageBody');
     if(!box) return;
-    var local = scanLocalStorage();
+    scanLocalStorage(function(local){
     scanIDB(function(idb){
       var merged = {};
       ORDER.forEach(function(k){ merged[k] = (local[k] || 0) + (idb[k] || 0); });
@@ -123,12 +124,15 @@
       var localColor = localPct > 90 ? '#DD1440' : (localPct > 70 ? '#E68A00' : 'var(--th-text)');
 
       var btnHTML = 
-        '<div style="margin-top:24px; padding:0 2px 20px;">' +
-          '<button id="btnCleanOrphan" type="button" style="width:100%;padding:15px;border-radius:14px;border:none;background:var(--th-text);color:var(--th-bg1);font-size:13.5px;letter-spacing:2px;font-family:inherit;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,.1);">' +
-            '清 理 无 主 废 图' +
+        '<div style="margin-top:24px; padding:0 2px 20px; display:flex; flex-direction:column; gap:10px;">' +
+          '<button id="btnMigrateImages" type="button" style="width:100%;padding:15px;border-radius:14px;border:none;background:var(--th-text);color:var(--th-bg1);font-size:13.5px;letter-spacing:2px;font-family:inherit;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,.1);">' +
+            '把老的贴图搬到 IndexedDB (腾 localStorage)' +
+          '</button>' +
+          '<button id="btnMigrateMsgs" type="button" style="width:100%;padding:15px;border-radius:14px;border:none;background:var(--th-text);color:var(--th-bg1);font-size:13.5px;letter-spacing:2px;font-family:inherit;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,.1);">' +
+            '把聊天记录搬到 IndexedDB (腾出空间)' +
           '</button>' +
           '<div style="text-align:center;font-size:11px;color:#bbb;margin-top:12px;line-height:1.6;letter-spacing:.5px;">' +
-            '将彻底删除已废弃的图片，释放手机空间。' +
+            '如果点了搬家发现聊天记录空了，点下面的「搬回本地」即可恢复。' +
           '</div>' +
         '</div>';
 
@@ -141,14 +145,7 @@
           '<div class="stg-total-hint">只做查看，不做清理。文字数据满时，新消息将无法保存，请先导出备份。</div>' +
         '</div>' +
         btnHTML;
-
-      var btn = document.getElementById('btnCleanOrphan');
-      if(btn){
-        btn.onclick = function(e){
-          e.preventDefault();
-          cleanOrphanImages();
-        };
-      }
+    });
     });
   }
 
@@ -175,6 +172,7 @@
     document.head.appendChild(st);
   }
 
+  var __stgScanToken = 0;
   function openStorageScreen(){
     injectStyle();
     var old = document.getElementById('storageScreen');
@@ -186,6 +184,9 @@
         '<div class="stg-wrap">' +
           '<div id="utopHostStorage"></div>' +
           '<div id="storageBody" class="stg-body"></div>' +
+          '<div style="padding:0 22px 24px;">' +
+            '<button id="btnRestoreMsgs" type="button" style="width:100%;padding:15px;border-radius:14px;border:0.7px solid #1a1a1a;background:transparent;color:#1a1a1a;font-size:13.5px;letter-spacing:2px;font-family:inherit;cursor:pointer;">把聊天记录搬回本地 (找回记录)</button>' +
+          '</div>' +
         '</div>';
       document.body.appendChild(old);
     }
@@ -205,17 +206,184 @@
     render();
   }
 
-  document.addEventListener('click', function(e){
-    var t = e.target;
-    if(!t || !t.closest) return;
-    var row = t.closest('.set-row[data-set="storage"]');
-    if(!row) return;
-    e.preventDefault();
-    e.stopPropagation();
-    openStorageScreen();
-  }, true);
+  /* ============================================================
+     ★ 新增：聊天记录搬回本地（找回丢失数据）
+     ============================================================ */
+  function restoreMsgsFromIdb(){
+    if(!window.__idb || !window.__msgIdb){
+      if(typeof toast === 'function') toast('底层数据库未加载，请刷新网页重试');
+      return;
+    }
+    
+    if(typeof uniConfirm === 'function'){
+      uniConfirm({
+        title: '找回聊天记录',
+        body: '把你之前搬到 IndexedDB 的聊天记录找回来，重新放到本地。确定要找吗？',
+        okText: '开始找回',
+        cancelText: '取 消'
+      }).then(function(ok){ if(ok) doRestore(); });
+    } else {
+      if(confirm('要把之前搬到 IndexedDB 的聊天记录找回来吗？')) doRestore();
+    }
+  }
 
-  window.openStorageScreen = openStorageScreen;
+  function doRestore(){
+    if(typeof toast === 'function') toast('正在寻找搬走的聊天记录…');
+    
+    window.__idb.keys().then(function(keys){
+      var targetKeys = (keys || []).filter(function(k){ return k.indexOf('mj_msgs_') === 0; });
+      if(!targetKeys.length){
+        if(typeof toast === 'function') toast('没找到搬走的记录，可能被系统彻底清除了');
+        return;
+      }
+
+      var count = 0;
+      var pending = targetKeys.length;
+
+      targetKeys.forEach(function(k){
+        window.__msgIdb.get(k, function(arr){
+          if(Array.isArray(arr) && arr.length > 0){
+            try{
+              localStorage.setItem(k, JSON.stringify(arr));
+              localStorage.setItem('mj_idb_' + k, '1');
+              count++;
+            }catch(e){
+              console.error('写回本地失败', k, e);
+            }
+          }
+          pending--;
+          if(pending === 0){
+            if(count > 0){
+              if(typeof toast === 'function') toast('成功找回了 ' + count + ' 个角色的记录，即将刷新…');
+              setTimeout(function(){ location.reload(); }, 1000);
+            } else {
+              if(typeof toast === 'function') toast('数据都在，但已经是空记录，无法恢复');
+            }
+          }
+        });
+      });
+    }).catch(function(e){
+      console.error('[找回聊天记录] 失败', e);
+      if(typeof toast === 'function') toast('找回失败：' + e.message);
+    });
+  }
+
+ 
+
+  /* ============================================================
+     ★ 新增：把老的贴图搬到 IndexedDB（腾出 localStorage 空间）
+     ============================================================ */
+  function migrateImagesToIdb(){
+    var idb = window.__idb;
+    if(!idb || typeof idb.keys !== 'function'){
+      if(typeof toast === 'function') toast('当前环境不支持搬家');
+      return;
+    }
+    
+    if(typeof uniConfirm !== 'function'){
+      if(!confirm('确定要把本地旧图片搬进 IndexedDB 吗？\n\n这会腾出很多手机空间，防止聊天记录存不下。')) return;
+      doMigrate();
+      return;
+    }
+
+    uniConfirm({
+      title: '贴图搬家',
+      body: '把原本存在文字库里的图片，搬进图片库（IndexedDB）。\n\n能腾出大量空间，防止新消息发不出去，确定要搬吗？',
+      okText: '开始搬家',
+      cancelText: '取 消'
+    }).then(function(ok){
+      if(ok) doMigrate();
+    });
+  }
+
+  function doMigrate(){
+    if(typeof toast === 'function') toast('正在搬运图片，请稍候…');
+    var changedCount = 0;
+    
+    function toBlob(dataUrl){
+      try{
+        var parts = dataUrl.split(',');
+        var mime = (parts[0].match(/:(.*?);/) || [])[1] || 'image/jpeg';
+        var bin = atob(parts[1]);
+        var len = bin.length;
+        var arr = new Uint8Array(len);
+        for(var i = 0; i < len; i++) arr[i] = bin.charCodeAt(i);
+        return new Blob([arr], { type: mime });
+      }catch(e){ return null; }
+    }
+
+    function processStorageValue(key, valStr){
+      if(!valStr || valStr.indexOf('data:image/') < 0) return valStr;
+      
+      try{
+        var data = JSON.parse(valStr);
+        var modified = false;
+        
+        function walk(obj){
+          if(!obj) return;
+          if(Array.isArray(obj)){
+            obj.forEach(walk);
+            return;
+          }
+          if(typeof obj === 'object'){
+            Object.keys(obj).forEach(function(k){
+              var v = obj[k];
+              if(typeof v === 'string' && v.indexOf('data:image/') === 0){
+                // 生成一个唯一的 idb key
+                var idbKey = 'mig_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2,6);
+                var blob = toBlob(v);
+                if(blob){
+                  window.__idb.set(idbKey, blob).then(function(){
+                    changedCount++;
+                  }).catch(function(){});
+                  obj[k] = 'idb:' + idbKey;
+                  modified = true;
+                }
+              } else if(typeof v === 'object'){
+                walk(v);
+              }
+            });
+          }
+        }
+        
+        walk(data);
+        if(modified){
+          return JSON.stringify(data);
+        }
+      }catch(e){}
+      return valStr;
+    }
+
+    try{
+      for(var i = 0; i < localStorage.length; i++){
+        var k = localStorage.key(i);
+        if(!k) continue;
+        if(k.indexOf('mj_') === 0){
+          var v = localStorage.getItem(k);
+          var newV = processStorageValue(k, v);
+          if(newV !== v){
+            localStorage.setItem(k, newV);
+          }
+        }
+      }
+      
+      setTimeout(function(){
+        if(typeof toast === 'function') toast('搬家完成，处理了 ' + changedCount + ' 张图片');
+        if(typeof render === 'function') render();
+      }, 1500);
+      
+    }catch(e){
+      console.error('[搬家] 失败', e);
+      if(typeof toast === 'function') toast('搬家出错，可能空间不够');
+    }
+  }
+
+ 
+
+  /* ============================================================
+     ★ 新增：把聊天记录搬到 IndexedDB（腾出 5MB 限制）
+     ============================================================ */
+ 
 
   function cleanOrphanImages(){
     var idb = window.__idb;

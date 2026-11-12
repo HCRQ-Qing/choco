@@ -214,13 +214,11 @@
 
   window.__storageGuard = {
     run: function(){
-      return cleanStickerStore()
-        .then(cleanChatMsgs)
-        .catch(function(e){ console.warn('[storageGuard] 迁移出错', e); });
+      return Promise.resolve();
     }
   };
 
   setTimeout(function(){
-    try{ window.__storageGuard.run(); }catch(e){ console.warn(e); }
+    return;
   }, 2000);
 })();

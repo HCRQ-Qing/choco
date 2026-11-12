@@ -957,58 +957,50 @@ syncBuiltinCards();
   }catch(e){}
 })();
 
-/* ★ 一次性清理：把 16 条不要的状态从已存数据里删掉 */
+/* ★ 一次性清理：把 16 条不要的状态从已存数据里删掉，并补全内置状态 */
 (function removeUnwantedStatuses(){
   try{
-    var FLAG = 'mj_status_removed_v1';
+    var FLAG = 'mj_status_removed_v2';
     if(lsGet(FLAG, false)) return;
 
-    /* 要删的 16 条（按文本精确匹配） */
     var REMOVE = [
-      '☕ 喝咖啡',
-      '🍵 喝茶中',
-      '🎵 唱歌中',
-      '🎨 画画中',
-      '✍️ 写东西',
-      '📚 学习',
-      '💻 加班',
-      '☁️ 走神了',
-      '🐱 撸猫',
-      '💭 想你',
-      '🥶 冷到了',
-      '🥵 热到了',
-      '😴 想睡了',
-      '😋 吃饱了',
-      '💧 喝水',
-      '🌸 赏花'
+      '☕ 喝咖啡', '🍵 喝茶中', '🎵 唱歌中', '🎨 画画中', '✍️ 写东西',
+      '📚 学习', '💻 加班', '☁️ 走神了', '🐱 撸猫', '💭 想你',
+      '🥶 冷到了', '🥵 热到了', '😴 想睡了', '😋 吃饱了', '💧 喝水', '🌸 赏花'
     ];
     var removeSet = {};
     REMOVE.forEach(function(s){ removeSet[s] = 1; });
 
-    /* 遍历所有分组（公用 + 角色专属）的 g-status → cs1，删掉命中的 */
-    function cleanGroups(groups){
+    function processGroups(groups){
       if(!Array.isArray(groups)) return;
       groups.forEach(function(g){
         if(!g || g.id !== 'g-status') return;
         (g.cats || []).forEach(function(c){
-          if(!c || c.id !== 'cs1' || !Array.isArray(c.list)) return;
-          var before = c.list.length;
+          if(!c || c.id !== 'cs1') return;
+          if(!Array.isArray(c.list)) c.list = [];
+          
           c.list = c.list.filter(function(item){
             var name = '';
             if(typeof item === 'string') name = item;
             else if(item && typeof item === 'object') name = item.text || '';
             return !removeSet[name];
           });
-          if(c.list.length !== before){
-            console.log('[状态字卡] 清理 ' + (before - c.list.length) + ' 条');
+
+          var hasVideo = c.list.some(function(it){
+            var t = typeof it === 'string' ? it : (it && it.text) || '';
+            return t.indexOf('刷视频') >= 0;
+          });
+          
+          if(!hasVideo){
+            c.list.push({ text: '📱 刷视频', t: Date.now(), isBuiltin: true });
           }
         });
       });
     }
 
-    cleanGroups(cardStore.public);
+    processGroups(cardStore.public);
     Object.keys(cardStore.roles || {}).forEach(function(rid){
-      cleanGroups(cardStore.roles[rid]);
+      processGroups(cardStore.roles[rid]);
     });
 
     saveCardStore();
@@ -1863,7 +1855,7 @@ function getAllNormalCards(owner){
   });
   return arr;
 }
-function pickCardFrom(pool){ if(!pool.length) return '嗯，我在。'; return pool[Math.floor(Math.random()*pool.length)]; }
+function pickCardFrom(pool){ if(!pool.length) return '这个界面可以左右滑的，回复设置点击+号，即可找到。'; return pool[Math.floor(Math.random()*pool.length)]; }
 
 /* ============================================================
    天气字卡 · 从「天气字卡」分组按今日天气抽一条
@@ -1983,7 +1975,7 @@ function _getWeatherPool(){
 /* 从池子里挑一张，池子为空则回退到兜底句 */
 function _pickOrFallback(pool){
   if(pool && pool.length) return pickCardFrom(pool);
-  return '嗯，我在。';
+  return '这个界面可以左右滑的，回复设置点击+号，即可找到。';
 }
 /* ★ 天气 / 时间段 / 单词字卡与普通字卡「等权重」抽取：
    先等概率选一个非空池，再从池内随机一张。
@@ -2703,9 +2695,33 @@ function loadMsgs(){
   if(typeof m === 'string'){
     try{ m = JSON.parse(m); }catch(e){ m = null; }
   }
+  
   if(!Array.isArray(m)){
-    m = [];
-    lsSet(msgsKey(), m);
+    try{
+      const raw = localStorage.getItem('mj_idb_' + msgsKey());
+      if(raw === '1'){
+        const xhr = new XMLHttpRequest();
+        xhr.open('GET', 'data:application/json,{}', false);
+      }
+    }catch(e){}
+    
+    if(window.__msgIdb && typeof window.__msgIdb.get === 'function'){
+      let isSyncLoaded = false;
+      window.__msgIdb.get(msgsKey(), function(idbArr){
+        if(Array.isArray(idbArr)){
+          m = idbArr;
+          lsSet(msgsKey(), m);
+          if(window.__diagLog) window.__diagLog('数据', ['从 IndexedDB 恢复了聊天记录: ' + msgsKey()]);
+        }
+        isSyncLoaded = true;
+      });
+      if(m && m.length > 0) return m;
+    }
+    
+    if(!Array.isArray(m)){
+      m = [];
+      lsSet(msgsKey(), m);
+    }
   }
   return m;
 }
@@ -3143,10 +3159,13 @@ function renderChatFull(forceBottom){
 	    '</span><br>' +
 	    escapeHTML(cc.answer) +
 	    (ccImgs ? '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">' + ccImgs + '</div>' : '');
+	  
+	  /* 强制使用标准的文字气泡结构 */
 	  const bubbleCls = isUser
-	    ? 'bubble message-sent message-bubble-user'
-	    : 'bubble message-received message-bubble-char';
+	    ? 'bubble text-bubble message-sent msg-out message-bubble-user'
+	    : 'bubble text-bubble message-received msg-in message-bubble-char';
 	  const sideAttr = isUser ? 'user' : 'char';
+	  
 	  return `<div class="msg ${dirCls}" data-id="${m.id}">${av}<div class="msg-body">${timeSep}<div class="${bubbleCls}" data-side="${sideAttr}">${innerHTML}</div></div></div>`;
 	}
 	/* ★ 试卷卡 */
@@ -7611,6 +7630,7 @@ function _showPersistentNotification(title, body){
   window.__mjVisibilityBound = true;
   document.addEventListener('visibilitychange', function(){
     if(document.hidden){
+      try{ if(typeof saveMsgs === 'function') saveMsgs(); }catch(e){}
       try{ lsSet('mj_last_seen_at_v1', Date.now()); }catch(e){}
       try{
         if(getKeepAliveOn()){
@@ -8628,7 +8648,7 @@ $$('.d-tab').forEach(t=>{ t.addEventListener('click',e=>{ e.stopPropagation(); $
   var el = document.createElement('div');
   el.className = 'func-item';
   el.dataset.func = 'active';
-  el.innerHTML = '<div class="fi-box"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-8.5 8.3 9 9 0 0 1-3.6-.7L4 20.5l1.4-4.1a8.1 8.1 0 0 1-1.3-4.4A8.4 8.4 0 0 1 12.5 3.2 8.4 8.4 0 0 1 21 11.5z"/><path d="M8 12h8M12 8v8"/></svg></div><span class="fi-label">主动一下</span>';
+  el.innerHTML = '<div class="fi-box"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg></div><span class="fi-label">主动一下</span>';
   
   el.onclick = function(e){
     e.stopPropagation();
@@ -20249,17 +20269,31 @@ function wipeAllData(){
       toast('未确认，已取消');
       return;
     }
+    // 1. 暴力尝试删除底层的 IndexedDB 数据库
     try{
-      localStorage.clear();
-    }catch(e){
-      console.error('清空 localStorage 失败', e);
-      toast('清除失败：' + e.message);
-      return;
-    }
-    toast('已清除，正在刷新…');
+      indexedDB.deleteDatabase('mj_media_idb_v1');
+      indexedDB.deleteDatabase('mj_msg_idb');
+      indexedDB.deleteDatabase('mj_idb_v1');
+    }catch(e){}
+
+    // 2. 暴力清空内存中的数据，防止视图重建时又从内存里读出来
+    try{
+      if(typeof msgs !== 'undefined' && Array.isArray(msgs)){ msgs.length = 0; }
+      window.__getCurMsgs = function(){ return []; };
+      if(window.__msgIdb && window.__msgIdb.del){
+        window.__msgIdb.getAllKeys(function(keys){
+          (keys || []).forEach(function(k){ 
+            try{ window.__msgIdb.del(k); }catch(e){} 
+          });
+        });
+      }
+    }catch(e){}
+
+    // 3. 提示并延迟刷新，给底层删库留出时间
+    toast('已彻底清除，正在刷新…');
     setTimeout(function(){
       location.reload();
-    }, 400);
+    }, 3000);
   });
 }
 function renderSettingsCounts(){
@@ -22042,7 +22076,10 @@ function bindDeskApps(){
           onAct:function(){ if(typeof openRelationSet === 'function') openRelationSet(); }
         });
       }
-      else if(k==='music'){ openMusicScreen(); }
+      else if(k==='music'){
+        if(typeof window.openMusicScreen === 'function'){ window.openMusicScreen(); }
+        else { toast('音乐模块还没加载好，请刷新页面'); }
+      }
       else if(k==='moments'){ if(typeof window.openMoments === 'function') window.openMoments(); }
       else if(k==='friends'){ window.__deskMode=false; if(window.__goPage) window.__goPage(0); }
       else if(k==='videopool'){ openVideoPool(); }
@@ -23862,7 +23899,8 @@ function renderCdTabs(){
   const cats = g.cats || [];
   box.innerHTML = cats.map(c=>{
     /* ★ 「修改后的字卡」分类不可删 */
-    const noDel = (c.id === 'ce-edited');
+    var isVideoStatus = (c.list || []).some(function(it){ return String(cardText(it)||'').indexOf('刷视频') >= 0; });
+    const noDel = (c.id === 'ce-edited') || isVideoStatus;
     const delHTML = noDel ? '' : `<span class="cd-tab-del" data-del-cid="${c.id}">✕</span>`;
     const _useB = useBuiltinCards();
     const _cnt = (c.list||[]).filter(function(it){
@@ -27301,14 +27339,7 @@ function saveProfileTagView(){ lsSet('mj_tag_view_v1', profileTagView); }
 
 /* ===== 统一输入弹窗 · 方案 A ===== */
 let _uniResolve = null;
-let _uniOpen = false;
 function uniAsk(opts){
-  if(_uniOpen){
-    // 前一个弹窗还没关，直接拒绝，避免弹窗叠加
-    try { if(opts && typeof opts.onBusy === 'function') opts.onBusy(); } catch(e){}
-    return Promise.resolve(null);
-  }
-  _uniOpen = true;
   opts = opts || {};
   return new Promise(resolve => {
     _uniResolve = resolve;
@@ -27329,8 +27360,7 @@ function uniAsk(opts){
 
     okBtn.onclick = () => {
       const v = input.value;
-      uniClose();
-      if(typeof opts.onOk === 'function'){ opts.onOk(v); }
+      mask.classList.remove('show');
       if(_uniResolve){ const r = _uniResolve; _uniResolve = null; r(v); }
     };
 
@@ -27346,7 +27376,6 @@ function uniAsk(opts){
 function uniClose(){
   const mask = document.getElementById('uniMask');
   if(mask) mask.classList.remove('show');
-  _uniOpen = false;
 }
 function uniCancel(){
   const mask = document.getElementById('uniMask');
@@ -33262,4 +33291,3 @@ function replaceNickname(text, roleId){
   return out;
 }
 
- 
